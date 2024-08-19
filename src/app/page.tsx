@@ -10,6 +10,7 @@ import { InputText } from "primereact/inputtext";
 
 import { Password } from "primereact/password";
 import { View } from "@/components/view";
+import Link from "next/link";
 
 //TODO need to fix hydration error
 export default function Home() {
@@ -18,15 +19,13 @@ export default function Home() {
   // }
 
   return (
-    <main className="min-h-screen bg-akin-cosmic-latte">
+    <main className="min-h-screen ">
       <section className="grid md:grid-cols-3 *:min-h-screen ">
         <aside className="space-y-14 p-[10%]  md:col-span-1 flex flex-col justify-center relative">
           <Image
             className="absolute top-[11%] left-[10%] w-[11rem]"
             src={APP_CONFIG.LOGO}
             alt="Akin logo"
-            // width={150}
-            // height={150}
           />
           <View.Vertical className="space-y-2 ">
             <View.Vertical>
@@ -50,7 +49,9 @@ export default function Home() {
               <Input.Switch />
             </View.Horizontal>
             <View.Horizontal className="justify-end pt-4">
-              <Button.Primary label="Entrar" />
+              <Link href="reception">
+                <Button.Primary label="Entrar" />
+              </Link>
             </View.Horizontal>
           </View.Vertical>
         </aside>

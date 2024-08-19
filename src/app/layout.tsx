@@ -20,7 +20,9 @@ export default function RootLayout({
   return (
     <html lang="pt">
       <PrimeReactProvider>
-        <body className={inter.className}>{children}</body>
+        <body className={inter.className + " bg-akin-cosmic-latte"}>
+          {children}
+        </body>
       </PrimeReactProvider>
     </html>
   );
