@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import { PrimeReactProvider, PrimeReactContext } from "primereact/api";
+import "primereact/resources/themes/lara-light-cyan/theme.css";
+
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -16,7 +19,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt">
-        <body className={inter.className}>{children}</body>
+      <PrimeReactProvider>
+        <body className={inter.className + " bg-akin-cosmic-latte"}>
+          {children}
+        </body>
+      </PrimeReactProvider>
     </html>
   );
 }
