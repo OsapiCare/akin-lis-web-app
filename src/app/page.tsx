@@ -18,16 +18,17 @@ export default function Home() {
   // }
 
   return (
-    <main className="min-h-svh bg-akin-cosmic-latte">
-      <section className="grid md:grid-cols-3  container m-auto ">
-        <aside className="space-y-24 p-8 md:col-span-1">
+    <main className="min-h-screen bg-akin-cosmic-latte">
+      <section className="grid md:grid-cols-3 *:min-h-screen ">
+        <aside className="space-y-14 p-[10%]  md:col-span-1 flex flex-col justify-center relative">
           <Image
+            className="absolute top-[11%] left-[10%] w-[11rem]"
             src={APP_CONFIG.LOGO}
             alt="Akin logo"
-            width={150}
-            height={150}
+            // width={150}
+            // height={150}
           />
-          <View.Vertical className="space-y-2">
+          <View.Vertical className="space-y-2 ">
             <View.Vertical>
               <strong className="text-akin-turquoise">Email:</strong>
               <InputText
@@ -53,8 +54,9 @@ export default function Home() {
             </View.Horizontal>
           </View.Vertical>
         </aside>
-        <aside className="col-span-2 hidden md:flex ">
-          <Image src={ImageAkinDemo} alt="Akin Demo" />
+        <aside className="col-span-2 hidden md:flex flex-col justify-center items-end">
+          {/* <Image src={ImageAkinDemo} alt="Akin Demo" className="w-full" /> */}
+          <Image src={ImageAkinDemo} alt="Akin Demo" className="w-svw" />
         </aside>
       </section>
     </main>
