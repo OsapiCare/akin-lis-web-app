@@ -14,9 +14,10 @@ const config: Config = {
           "conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))",
       },
       colors: {
-        "akin-color-cosmic-latte": "##fffcf7",
-        "akin-color-teal-blue": "#0080a7",
-        // "akin-color-blue-light": "#009CFF",
+        "akin-cosmic-latte": "##fffcf7",
+        "akin-turquoise": "#0080a7",
+        "akin-white-smoke": "#f5f5f5",
+        "akin-yellow-light": "#f7ebd2",
       },
     },
   },
