@@ -13,6 +13,11 @@ const config: Config = {
         "gradient-conic":
           "conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))",
       },
+      colors: {
+        "akin-color-cosmic-latte": "##fffcf7",
+        "akin-color-teal-blue": "#0080a7",
+        // "akin-color-blue-light": "#009CFF",
+      },
     },
   },
   plugins: [],
