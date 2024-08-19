@@ -1,11 +1,23 @@
 import Image from "next/image";
-import { APP_CONFIG } from "@/config/app";
+import { APP_CONFIG, SERVER_ENVIRONMENT } from "@/config/app";
 import ImageAkinDemo from "@/assets/images/akin-demo.png";
+import { Button } from "@/components/button";
 
+import { InputSwitch } from "primereact/inputswitch";
+import { Input } from "@/components/input";
 
+import { InputText } from "primereact/inputtext";
+
+import { Password } from "primereact/password";
+
+//TODO need to fix hydration error
 export default function Home() {
+  // if (typeof window === 'undefined') {
+  //   return null; // Não renderiza no servidor
+  // }
+
   return (
-    <main className="min-h-screen bg-akin-color-cosmic-latte">
+    <main className="min-h-screen bg-akin-cosmic-latte">
       <section className="grid grid-cols-3 *:border">
         <aside>
           <Image
@@ -17,20 +29,26 @@ export default function Home() {
           <div>
             <div>
               <label>
-                Email:
-                <input type="email" />
+                <strong className="text-akin-turquoise">Email:</strong>
+                <InputText type="email" placeholder="Digite o seu e-amail" />
               </label>
             </div>
             <div>
-              <label htmlFor="password">
-                Password
-                <input type="password" />
+              <label>
+                <strong className="text-akin-turquoise">Password:</strong>
+                <Password
+                  placeholder="Digite a sua password"
+                  feedback={false}
+                  tabIndex={1}
+                  toggleMask
+                />
               </label>
             </div>
-            <div>
+            <div className="flex justify-between items-center">
               <p>Relembrar-me</p>
+              <Input.Switch />
             </div>
-            <button className="bg-akin-color-teal-blue"  >OLa</button>
+            <Button.Primary label="Entrar" />
           </div>
         </aside>
         <aside className="col-span-2">
@@ -39,4 +57,14 @@ export default function Home() {
       </section>
     </main>
   );
+}
+
+
+function VStack () {
+  return
+  
+}
+function HStack () {
+  return
+  
 }
