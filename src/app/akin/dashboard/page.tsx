@@ -16,7 +16,7 @@ export default function Dashboard({}: IDashboard) {
       <div className="grid grid-cols-4 gap-4 *:bg-akin-turquoise text-akin-white-smoke *:rounded-lg ">
         {MOCK_RESUME.map((data) => (
           <div key={data.id} className="flex gap-4 items-center  font-bold text-xl px-3 py-2 ">
-            <data.icon size={45} className="bg-akin-yellow-light/30 p-0.5 rounded-lg" />
+            <data.icon size={50} className="bg-akin-yellow-light/30 p-0.5 rounded-lg" />
             <div className="flex-1">
               <p>{data.value}</p>
               <p className="border-t">{data.label}</p>
@@ -25,13 +25,13 @@ export default function Dashboard({}: IDashboard) {
         ))}
       </div>
 
-      <div className="flex flex-col gap-4 mt-6">
-        <Link href={"/"}>Registro de Pacientes</Link>
-        <Link href={"/"}>Gestão dos Dados do Paciente</Link>
-        <Link href={"/"}>Registro de Pagamentos</Link>
-        <Link href={"/"}>Registro de Pedido de Exames</Link>
-        <Link href={"/"}>Agendamento de Exames</Link>
-      </div>
+      {/* <div className="flex flex-col gap-4 mt-6"> */}
+      {/* <Link href={"/"}>Registro de Pacientes</Link> */}
+      {/* <Link href={"/"}>Gestão dos Dados do Paciente</Link> */}
+      {/* <Link href={"/"}>Registro de Pagamentos</Link> */}
+      {/* <Link href={"/"}>Registro de Pedido de Exames</Link> */}
+      {/* <Link href={"/"}>Agendamento de Exames</Link> */}
+      {/* </div> */}
     </main>
   );
 }

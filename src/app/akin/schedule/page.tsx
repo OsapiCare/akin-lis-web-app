@@ -1,9 +1,9 @@
-interface ISchedule {}
+interface IPage {}
 
-export default function Schedule({}:ISchedule) {
+export default function Page({}:IPage) {
     return (
         <>
-            <h1>Schedule</h1>
+            AAAAAAAAAAAAAAAAAAAAAA
         </>
     );
 }

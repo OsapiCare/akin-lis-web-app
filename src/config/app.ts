@@ -1,6 +1,5 @@
 import osapiLogo from "@/assets/images/osapi-logo.png";
 import osapiLogoWhite from "@/assets/images/osapi-logo-white.png";
-import path from "path";
 import { Home, CalendarCheck, LayoutDashboard, UserRound, CreditCard, MessageSquareMore, Send, Mail, LogOut, Settings2, Settings, Cog, Wrench } from "lucide-react";
 
 export const APP_CONFIG = {
@@ -19,8 +18,18 @@ export const APP_CONFIG = {
       { label: "Definições", icon: Settings, path: "/akin/setting" },
       { label: "Sair", icon: LogOut, path: "/logout" },
     ],
+    SCHEDULE: [
+      { label: "Novo Agendamento", icon: Settings, path: "/akin/schedule/new" },
+      { label: "Solicitação de Agenadamento", icon: Settings, path: "/akin/schedule/request" },
+      { label: "Agendamentos Concluídos", icon: Settings, path: "/akin/schedule/completed" },
+    ],
+    PATIENT: [
+      { label: "Todos Pacientes", icon: Settings, path: "/akin/schedule/new" },
+      { label: "Paciente", icon: Settings, path: "/akin/schedule/request" },
+      { label: "Histórico", icon: Settings, path: "/akin/schedule/completed" },
+    ],
     ALTERNATIVE: {
-      PROFILE: { label: "Perfil", icon: LogOut, path: "/akin/..." },
+      PROFILE: { label: "Perfil", icon: null, path: "/akin/..." },
     },
   },
 };
