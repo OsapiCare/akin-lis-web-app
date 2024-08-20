@@ -18,10 +18,11 @@
     "tailwind-merge": "^2.5.2"
   },
   "devDependencies": {
-    "@faker-js/faker": "^8.4.1",
+    "@types/chance": "^1.1.6",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
+    "chance": "^1.1.12",
     "eslint": "^8",
     "eslint-config-next": "14.2.5",
     "msw": "^2.3.5",

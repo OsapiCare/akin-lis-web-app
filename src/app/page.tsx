@@ -31,7 +31,7 @@ export default function Home() {
               <Input.Switch />
             </View.Horizontal>
             <View.Horizontal className="justify-end pt-4">
-              <Link href="/dashboard">
+              <Link href="/auth">
                 <Button.Primary label="Entrar" />
               </Link>
             </View.Horizontal>
