@@ -2,6 +2,30 @@
 @tailwind components;
 @tailwind utilities;
 
+
+.model .p-scrollpanel-wrapper {
+  /* border-right: 10px solid red; */
+}
+
+.model .p-scrollpanel-bar {
+  /* background-color: #0080a7; */
+  /* background-color ; */
+  opacity: 0.5;
+  transition: background-color .3s;
+  transition: opacity .3s;
+}
+
+.model .p-scrollpanel-bar:hover {
+  /* background-color: #0080a7; */
+  opacity: 1;
+}
+
+.scrollpanel-demo .col-12 {
+  padding: 2rem;
+}
+
+
+
 /* :root {
   --foreground-rgb: 0, 0, 0;
   --background-start-rgb: 214, 219, 220;

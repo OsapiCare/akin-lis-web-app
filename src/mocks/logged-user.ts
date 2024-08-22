@@ -1,4 +1,4 @@
-import { _randomFakeData } from "./data/random";
+import { _randomFakeData } from "../lib/chance";
 
 const { randomFullName, randomUUID, randomAvatar, randomEmail } = _randomFakeData();
 
