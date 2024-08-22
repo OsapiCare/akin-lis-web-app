@@ -1,6 +1,6 @@
 import osapiLogo from "@/assets/images/osapi-logo.png";
 import osapiLogoWhite from "@/assets/images/osapi-logo-white.png";
-import { Home, CalendarCheck, LayoutDashboard, UserRound, CreditCard, MessageSquareMore, Send, Mail, LogOut, Settings2, Settings, Cog, Wrench } from "lucide-react";
+import { Home, CalendarCheck, LayoutDashboard, UserRound, CreditCard, MessageSquareMore, Send, Mail, LogOut, Settings2, Settings, Cog, Wrench, CalendarPlus2, CalendarSearch, CalendarCheck2 } from "lucide-react";
 
 export const APP_CONFIG = {
   COMPANY_NAME: "OsapiCare AKIN",
@@ -19,9 +19,9 @@ export const APP_CONFIG = {
       { label: "Sair", icon: LogOut, path: "/logout" },
     ],
     SCHEDULE: [
-      { label: "Novo Agendamento", icon: Settings, path: "/akin/schedule/new" },
-      { label: "Solicitação de Agenadamento", icon: Settings, path: "/akin/schedule/request" },
-      { label: "Agendamentos Concluídos", icon: Settings, path: "/akin/schedule/completed" },
+      { label: "Novo Agendamento", icon: CalendarPlus2, path: "/akin/schedule/new" },
+      { label: "Solicitação de Agenadamento", icon: CalendarSearch, path: "/akin/schedule/request" },
+      { label: "Agendamentos Concluídos", icon: CalendarCheck2, path: "/akin/schedule/completed" },
     ],
     PATIENT: [
       { label: "Todos Pacientes", icon: Settings, path: "/akin/schedule/new" },
