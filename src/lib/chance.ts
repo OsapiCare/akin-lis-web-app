@@ -21,6 +21,8 @@ export function _randomFakeData() {
   const randomDateTime = chance.date();
   const randomBirthdayInRange = ""; //chance.birthday({ min: 1988, max: 2005 });
   const randomDateTimeInRange = ""; // chance.date({ year: startDate.getFullYear(), month: startDate.getMonth(), day: startDate.getDate() });
+  const randomRole = chance.profession();
+  const randomTechRole = chance.profession({ rank: true });
   //   faker.date.birthdate()
   //   const firstRandom = faker.number.int();
   // faker.seed(123);
@@ -41,5 +43,7 @@ export function _randomFakeData() {
     randomBirthdayInRange,
     randomDateTime,
     randomDateTimeInRange,
+    randomRole,
+    randomTechRole,
   };
 }

@@ -16,7 +16,7 @@ export default function PatientById({ params }: IPatientById) {
   return (
     <View.Vertical className="h-screen">
       <AppLayout.ContainerHeader goBack label="Perfil do Paciente" />
-      <div className="flex gap-4 bg-akin-turquoise/10 p-6  rounded-lg ">
+      <div className="flex gap-4 bg-akin-turquoise/5 p-6  rounded-lg ">
         <PatientResumeInfo />
         <div className=" flex flex-col gap-y-2">
           PROCURANDO IDEIA...

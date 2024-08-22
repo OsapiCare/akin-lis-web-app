@@ -30,11 +30,11 @@ export default function Message({}: IMessage) {
 }
 
 function MessageCard({ message, name, wasSent, avatar }: { avatar: string; message: string; wasSent: string; name: string }) {
-  const nameAbreviation = name.split(" ")[0].charAt(0) + name.split(" ")[1].charAt(0);
+  
   return (
     <div className=" flex py-1 px-4 justify-between has-[:hover]:bg-akin-turquoise/10 rounded-lg trasition ease-out">
       <div className="flex flex-1 gap-x-2 items-center cursor-pointer ">
-        <Avatar label={nameAbreviation} image={avatar} />
+        <Avatar userName={name} image={avatar} />
         <div className="">
           <p className="font-bold text-akin-turquoise/80 text-md">{name}</p>
           <span>{message.substring(0, 90).concat("...")}</span>
