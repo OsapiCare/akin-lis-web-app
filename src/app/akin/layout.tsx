@@ -1,5 +1,5 @@
-import { appLayout } from "@/components/layout";
-import { MOCK_LOGGED_USER } from "@/mocks/logged-user";
+import { AppLayout } from "@/components/layout";
+import { MessageCircleMore } from "lucide-react";
 
 interface IDashboard {
   children: React.ReactNode;
@@ -7,12 +7,12 @@ interface IDashboard {
 
 export default function Akin({ children }: IDashboard) {
   return (
-    <div className="flex h-screen">
-      <appLayout.Menu />
-      <main className="flex flex-col flex-1 p-4">
-        <div className="space-y-8">
-          <appLayout.Header avatar={MOCK_LOGGED_USER.avatar} name={MOCK_LOGGED_USER.fullName} email={MOCK_LOGGED_USER.email} />
-          {children}
+    <div className="flex max-h-screen relative">
+      <AppLayout.Menu />
+      <main className="gap-y-8 flex-1  h-screen *:p-4 ">
+        {children}
+        <div className="absolute z-50 bottom-4 right-4 rounded-full flex items-center justify-center bg-akin-turquoise transition ease-in-out hover:cursor-pointer hover:bg-akin-yellow-light group border hover:border-akin-turquoise" title="Chat Kin">
+          <MessageCircleMore className="text-akin-yellow-light group-hover:text-akin-turquoise " />
         </div>
       </main>
     </div>
