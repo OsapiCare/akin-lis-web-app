@@ -3,8 +3,8 @@ import { ArrowRight } from "lucide-react";
 import { Checkbox } from "primereact/checkbox";
 import CheckBoxExam from "./CheckBoxExam";
 import { useState } from "react";
-import CheckBoxExamFirst from "./CheckBoxExamFirst";
-import CheckBoxSecond from "./CheckBoxExamSecond";
+import CheckBoxExamFirst from "./SelectExamFirst";
+import CheckBoxSecond from "./SelectExamSecond";
 import clsx from "clsx";
 
 
@@ -18,8 +18,6 @@ export default function ExameForm() {
                 {
                     step == 1 ? <CheckBoxExamFirst/> : <CheckBoxSecond/>
                 }
-         
-        
                 <div className="mt-8 flex justify-between items-center">
                     <div className="flex items-center">
                         <div className={clsx("w-10 h-10 ring-1 ring-blue-400 rounded-full flex items-center justify-center", step == 1 && "bg-blue-500 text-white" )}>1</div>

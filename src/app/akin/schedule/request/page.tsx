@@ -1,9 +1,19 @@
+import { InputText } from "@/components/input/input-text";
+import CardRequestSchdule from "./components/CardRequestSchedule";
+
 interface IRequest {}
 
 export default function Request({}:IRequest) {
     return (
-        <div className="bg-blue-300 h-screen">
-            Request
+        <div className=" h-screen px-6 mx-auto">   
+           <div className="flex items-center justify-between ">
+                <h1 className="font-light text-3xl my-6">Solicitação de Agendamentos</h1> 
+                <InputText className="w-96" placeholder="Procurar"/>
+           </div>
+           <div className=" grid grid-cols-4 gap-8 mt-1">
+                <CardRequestSchdule />
+                <CardRequestSchdule />
+           </div>
         </div>
     );
 }
