@@ -11,7 +11,7 @@ export const APP_CONFIG = {
   ROUTES: {
     MENU: [
       { label: "Dashboard", icon: LayoutDashboard, path: "/akin/dashboard" },
-      { label: "Agendamentos", icon: CalendarCheck, path: "/akin/schedule" },
+      { label: "Agendamentos", icon: CalendarCheck, path: "/akin/schedule/new" },
       { label: "Pacientes", icon: UsersRound, path: "/akin/patient" },
       { label: "Pagamentos", icon: CreditCard, path: "/akin/payment" },
       { label: "Mensagens", icon: MessageSquareMore, path: "/akin/message" },

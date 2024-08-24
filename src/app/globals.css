@@ -3,6 +3,10 @@
 @tailwind utilities;
 
 
+body::-webkit-scrollbar {
+  display: none; /* Chrome, Safari e Opera */
+}
+
 .model .p-scrollpanel-wrapper {
   /* border-right: 10px solid red; */
 }
@@ -13,6 +17,11 @@
   opacity: 0.5;
   transition: background-color .3s;
   transition: opacity .3s;
+
+  scrollbar-width: none; /* Firefox: Oculta a barra de rolagem */
+  -ms-overflow-style: none; /* IE e Edge: Oculta a barra de rolagem */
+  display: none; /* Chrome, Safari e Opera: Oculta a barra de rolagem */
+
 }
 
 .model .p-scrollpanel-bar:hover {
@@ -24,7 +33,16 @@
   padding: 2rem;
 }
 
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
 
+/* Remove as setas no Firefox */
+input[type="number"] {
+    -moz-appearance: textfield;
+}
 
 /* :root {
   --foreground-rgb: 0, 0, 0;
