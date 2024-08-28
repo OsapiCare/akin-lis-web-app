@@ -1,22 +1,24 @@
 // import { unstable_cache } from "next/cache";
 
+import { AppLayout } from "@/components/layout";
+import { View } from "@/components/view";
+
 interface IPayment {}
 
 // export const cache = "no-store";
 
-// const getData = unstable_cache(async () => {
-//   await new Promise((resolve) => setTimeout(resolve, 2000));
-//   console.log("Payment");
-//   return new Date().toLocaleString();
-// }, ["my-app-user"]);
+const getData = async () => {
+  await new Promise((resolve) => setTimeout(resolve, 2000));
+  console.log("Payment");
+  return new Date().toLocaleString();
+};
 
 export default async function Payment({}: IPayment) {
-//   const data = await getData();
-  console.log("---");
+  const data = await getData();
   return (
-    <>
-      {/* {data} */}
-      <h1>Payment</h1>
-    </>
+    <View.Vertical className="h-screen ">
+      <AppLayout.ContainerHeader label="Pagamentos" />
+      <p>{data}</p>
+    </View.Vertical>
   );
 }

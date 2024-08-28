@@ -9,11 +9,11 @@ export function _randomFakeData() {
   const randomFullName = chance.name();
   const randomEmail = chance.email();
   const randomAvatar = chance.avatar({ protocol: "https", fileExtension: "jpg" });
-  const randomPhome = chance.phone();
+  const randomPhone = chance.phone();
   const randomUUID = chance.guid();
   const randomSex = chance.gender();
   const randomInteger = chance.integer({ min: 1, max: 100 });
-  const randomFloat = chance.floating({ min: 1, max: 100, fixed: 2 });
+  const randomFloat = chance.floating({ min: 1, max: 1000000, fixed: 2 });
   const randomText = chance.sentence({ words: randomInteger });
   const randomParagraph = chance.paragraph({ sentences: randomInteger });
   const randomMessage = chance.sentence({ words: randomInteger });
@@ -31,7 +31,7 @@ export function _randomFakeData() {
   return {
     randomFullName,
     randomEmail,
-    randomPhome,
+    randomPhone,
     randomAvatar,
     randomUUID,
     randomSex,
@@ -44,6 +44,7 @@ export function _randomFakeData() {
     randomDateTime,
     randomDateTimeInRange,
     randomRole,
+    randomInteger,
     randomTechRole,
   };
 }

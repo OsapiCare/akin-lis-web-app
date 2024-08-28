@@ -1,0 +1,74 @@
+// model UnidadeDeSaude {
+//     Patient Patient[]
+// }
+
+model Patient {
+    id                       String      @id @default(cuid())
+    fullName                 String
+    dateOfBirth              DateTime
+    gender                   String
+    address                  String
+    phone                    String
+    email                    String?
+    identificationNumber     String?
+    // medicalId                String?
+    photo                    String?
+    emergencyContactName     String
+    emergencyContactRelation String
+    emergencyContactPhone    String
+    // preExistingConditions    String[] //--
+    allergies                Allergies[]
+    // currentMedications       String[] //--
+    // surgicalHistory          String[] //--
+    insurancePolicyNumber    String?
+    insuranceProviderName    String?
+    insuranceExpirationDate  DateTime?
+    maritalStatus            String?
+    occupation               String?
+    educationLevel           String?
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    // unidadeDeSaude UnidadeDeSaude @relation(fields: [], references: []) //--
+
+    // @@index([identificationNumber])
+    // @@index([medicalId])
+    // @@index([phone])
+    // @@index([email])
+}
+
+model Allergies {
+    id          String      @id @default(cuid())
+    type        AllergyType @relation(fields: [allergyTypeId], references: [id])
+    description String //quais alimentos causam reações alérgicas; ou quais produtos causam reações alérgicas
+    severity    String
+    symptoms    String
+    history     String
+    treatments  String
+    prevention  String
+    notes       String?
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    //   @@index([patientId])
+    Patient       Patient? @relation(fields: [patientId], references: [id])
+    patientId     String?
+    allergyTypeId String
+}
+
+model AllergyType {
+    id          String      @id @default(cuid())
+    description String      @unique // Alergias a medicamentos; Alergias alimentares; Alergias a substâncias ambientais; Alergias a produtos químicos
+    Allergies   Allergies[]
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+}
+
+// > Tipo de Alergia:
+// Alergias a medicamentos: Quais medicamentos causam reações alérgicas.
+// Alergias alimentares: Quais alimentos causam reações alérgicas.
+// Alergias a substâncias ambientais: Como pólen, ácaros, pelos de animais, etc.
+// Alergias a produtos químicos: Como cosméticos, produtos de limpeza, etc.

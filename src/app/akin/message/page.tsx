@@ -8,7 +8,13 @@ import Avatar from "@/components/avatar";
 
 interface IMessage {}
 
-export default function Message({}: IMessage) {
+async function getMessages() {
+  await new Promise((resolve) => setTimeout(resolve, 3000));
+  return MOCK_MESSAGES;
+}
+
+export default async function Message({}: IMessage) {
+  const messages = await getMessages();
   return (
     <View.Vertical className=" h-screen ">
       <AppLayout.ContainerHeader label="Mensagens" />
@@ -21,7 +27,7 @@ export default function Message({}: IMessage) {
       </div>
 
       <View.Scroll className="mx-0.5 mt-4">
-        {MOCK_MESSAGES.map((message) => (
+        {messages.map((message) => (
           <MessageCard key={message.id} avatar={message.avatar} name={message.name} wasSent="5s atrás" message={message.message} />
         ))}
       </View.Scroll>
@@ -30,7 +36,6 @@ export default function Message({}: IMessage) {
 }
 
 function MessageCard({ message, name, wasSent, avatar }: { avatar: string; message: string; wasSent: string; name: string }) {
-  
   return (
     <div className=" flex py-1 px-4 justify-between has-[:hover]:bg-akin-turquoise/10 rounded-lg trasition ease-out">
       <div className="flex flex-1 gap-x-2 items-center cursor-pointer ">
