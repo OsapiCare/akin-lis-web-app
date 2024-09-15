@@ -1,7 +1,24 @@
-import axios from 'axios'
+import axios from "axios";
+export const API_BASE_URL = "https://magnetic-buzzard-osapicare-a83d5229.koyeb.app";
+export const api = axios.create({
+  baseURL: API_BASE_URL,
+});
 
-const api = axios.create({
-  baseURL: 'http://localhost:8080',
-})
+/*
+api.get('/endpoint')
+  .then(response => {
+    console.log(response.data);
+  })
+  .catch(error => {
+    console.error('Erro:', error);
+  });
 
-export default api
+// Para fazer uma requisição POST
+api.post('/endpoint', { dados: 'exemplo' })
+  .then(response => {
+    console.log(response.data);
+  })
+  .catch(error => {
+    console.error('Erro:', error);
+  });
+  */

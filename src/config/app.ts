@@ -25,7 +25,7 @@ export const APP_CONFIG = {
       { label: "Agendamentos Concluídos", icon: CalendarCheck2, path: "/akin/schedule/completed" },
     ],
     PATIENT: {
-      INDIVIDUAL_PATIENT_LINK(id: number) {
+      INDIVIDUAL_PATIENT_LINK(id: string) {
         return `/akin/patient/${id}`;
       },
     },

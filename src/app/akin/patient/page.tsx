@@ -1,27 +1,68 @@
-import { Input } from "@/components/input";
 import { AppLayout } from "@/components/layout";
 import { APP_CONFIG } from "@/config/app";
 import { Search } from "lucide-react";
 import Link from "next/link";
-import BasicDemo from "./lista-beta";
 import { View } from "@/components/view";
+import { api } from "@/lib/axios";
 
-interface IPatient {}
 
-export default function Patient({}: IPatient) {
+export default async function Patient() {
+  let patients: PatientType[] = [];
+  try {
+    patients = await api.get("/pacients").then((response) => response.data);
+  } catch (error) {
+    throw new Error(`Buscando Pacientes:${error}`);
+  }
+
   return (
     <View.Vertical className=" h-screen ">
       <AppLayout.ContainerHeader label="Pacientes" />
-
       <View.Scroll>
-        {Array.from({ length: 1 }).map((_, index) => (
-          <Link key={index} href={APP_CONFIG.ROUTES.PATIENT.INDIVIDUAL_PATIENT_LINK(index)}>
-            <p>Clica aqui para testar - Paciente {index + 1}</p>
-          </Link>
-        ))}
-
-        <BasicDemo />
+        <PatientTableData patients={patients} />
       </View.Scroll>
     </View.Vertical>
+  );
+}
+
+interface PatientTableDataProps {
+  patients: PatientType[];
+}
+
+function PatientTableData({ patients }: PatientTableDataProps) {
+  return (
+    <>
+      <div className="overflow-x-auto p-4">
+        <table className="min-w-full divide-y-2 divide-gray-200 bg-white text-sm">
+          <thead className=" bg-sky-300 *:text-left text-sky-800 ">
+            <tr className="*:whitespace-nowrap *:py-2 *:p-2 *:font-bold">
+              <th>Nome do Paciente</th>
+              <th>Nº do BI</th>
+              <th>Idade</th>
+              <th>Data de Nascimento</th>
+              <th>Contacto</th>
+              <th></th>
+            </tr>
+          </thead>
+
+          <tbody className="divide-y divide-gray-200">
+            {patients.map((patient, index) => (
+              <tr className="*:p-2 even:bg-sky-100 odd:bg-sky-50">
+                <td>{patient.nome}</td>
+                <td>{patient.numero_identificacao}</td>
+                <td>{2024 - Number(new Date(patient.data_nascimento).getFullYear())}</td>
+                <td>{new Date(patient.data_nascimento).toLocaleDateString()}</td>
+                <td>{patient.contacto_telefonico}</td>
+
+                <td>
+                  <Link key={patient.id} href={APP_CONFIG.ROUTES.PATIENT.INDIVIDUAL_PATIENT_LINK(patient.id)} className="inline-block rounded bg-sky-600 px-4 py-2 text-xs font-medium text-white hover:bg-sky-700">
+                    <p>Ver Paciente</p>
+                  </Link>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
   );
 }
