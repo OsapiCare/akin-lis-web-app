@@ -1,3 +1,3 @@
-export const _Mask = {
-  formatPrice,
-};
+// export function _Mask() {
+//   return { formatPrice };
+// }

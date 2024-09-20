@@ -1,12 +1,16 @@
 "use client";
 import { Button } from "@/components/button/index";
-import { LucideServerOff, Server, ServerOff } from "lucide-react";
+import { ArrowUpLeft, ChevronLeft, LucideServerOff, RefreshCw, RotateCw, Server, ServerOff } from "lucide-react";
+import { useRouter } from "next/navigation";
+
 import { useEffect } from "react";
 
 export default function Error({ error, reset }: { error: Error; reset: () => void }) {
   useEffect(() => {
     console.error(error);
   }, [error]);
+
+  const route = useRouter();
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-akin-turquoise/30 text-akin-white-smoke">
@@ -20,12 +24,10 @@ export default function Error({ error, reset }: { error: Error; reset: () => voi
           <hr />
           <p>{error.stack}</p>
           <hr />
-          <Button.Primary
-            onClick={
-              () => reset()
-            }
-            label="Tentar Novamente"
-          />
+          <div className="space-x-2 gap-y-2">
+            <Button.Primary onClick={() => route.back()} label="Voltar" icon={<ChevronLeft />} />
+            <Button.Primary onClick={() => reset()} label="Tentar Novamente" icon={<RotateCw />} />
+          </div>
         </div>
       </div>
     </div>

@@ -23,11 +23,11 @@ export default function Dashboard({}: IDashboard) {
       <div className="grid  grid-cols-4  gap-4 *:bg-akin-turquoise text-akin-white-smoke *:rounded-lg ">
         {MOCK_RESUME.map((data) => (
           <div key={data.id} className="px-3 py-2 space-y-3 shadow-xl border-l-4 border-l-sky-300/50">
-            <p className="border-b pb-2">{data.label}</p>
+            <p className="border-b pb-2 font-bold text-lg">{data.label}</p>
 
-            <div className=" flex items-center justify-between">
-              <p className="text-xl ">{data.value}</p>
+            <div className=" flex items-center space-x-2">
               <data.icon size={40} className="bg-sky-300/50 p-1 rounded-lg" />
+              <p className="text-xl ">{data.value}</p>
             </div>
           </div>
         ))}

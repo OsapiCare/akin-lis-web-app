@@ -1,82 +1,48 @@
+import { api } from "@/lib/axios";
+import { _formatPrice } from "@/utils/mask/currency";
 
-interface IExamsHistory {}
+interface IExamsHistory {
+  patientId: string;
+}
 
-export default function ExamsHistory({}: IExamsHistory) {
+export default async function ExamsHistory({ patientId }: IExamsHistory) {
+  let exames: ExamsType[] = [];
+  try {
+    exames = await api.get(`exams/pacient/${patientId}`).then((response) => response.data);
+  } catch (error) {
+    throw new Error(`Buscando Exames ${patientId}:${error}`);
+  }
+
   return (
-    <div className="flex flex-col gap-4 p-4 ">
-     
-      <p>Irure et labore sit irure pariatur do dolore ex ut.</p>
-      <p>Cillum duis velit commodo.</p>
-      <p>Irure id excepteur non.</p>
-      <p>Officia in duis ipsum.</p>
-      <p>Minim incididunt ex culpa velit eiusmod anim tempor elit sunt.</p>
-      <p>Do laborum enim ea est est sit sunt.</p>
-      <p>Irure et labore sit irure pariatur do dolore ex ut.</p>
-      <p>Cillum duis velit commodo.</p>
-      <p>Irure id excepteur non.</p>
-      <p>Officia in duis ipsum.</p>
-      <p>Minim incididunt ex culpa velit eiusmod anim tempor elit sunt.</p>
-      <p>Do laborum enim ea est est sit sunt.</p>
-      <p>Irure et labore sit irure pariatur do dolore ex ut.</p>
-      <p>Cillum duis velit commodo.</p>
-      <p>Irure id excepteur non.</p>
-      <p>Officia in duis ipsum.</p>
-      <p>Minim incididunt ex culpa velit eiusmod anim tempor elit sunt.</p>
-      <p>Do laborum enim ea est est sit sunt.</p>
-      <p>Irure et labore sit irure pariatur do dolore ex ut.</p>
-      <p>Cillum duis velit commodo.</p>
-      <p>Irure id excepteur non.</p>
-      <p>Officia in duis ipsum.</p>
-      <p>Minim incididunt ex culpa velit eiusmod anim tempor elit sunt.</p>
-      <p>Do laborum enim ea est est sit sunt.</p>
-      <p>Irure et labore sit irure pariatur do dolore ex ut.</p>
-      <p>Cillum duis velit commodo.</p>
-      <p>Irure id excepteur non.</p>
-      <p>Officia in duis ipsum.</p>
-      <p>Minim incididunt ex culpa velit eiusmod anim tempor elit sunt.</p>
-      <p>Do laborum enim ea est est sit sunt.</p>
-      <p>Irure et labore sit irure pariatur do dolore ex ut.</p>
-      <p>Cillum duis velit commodo.</p>
-      <p>Irure id excepteur non.</p>
-      <p>Officia in duis ipsum.</p>
-      <p>Minim incididunt ex culpa velit eiusmod anim tempor elit sunt.</p>
-      <p>Do laborum enim ea est est sit sunt.</p>
-      <p>Irure et labore sit irure pariatur do dolore ex ut.</p>
-      <p>Cillum duis velit commodo.</p>
-      <p>Irure id excepteur non.</p>
-      <p>Officia in duis ipsum.</p>
-      <p>Minim incididunt ex culpa velit eiusmod anim tempor elit sunt.</p>
-      <p>Do laborum enim ea est est sit sunt.</p>
-      <p>Irure et labore sit irure pariatur do dolore ex ut.</p>
-      <p>Cillum duis velit commodo.</p>
-      <p>Irure id excepteur non.</p>
-      <p>Officia in duis ipsum.</p>
-      <p>Minim incididunt ex culpa velit eiusmod anim tempor elit sunt.</p>
-      <p>Do laborum enim ea est est sit sunt.</p>
-      <p>Irure et labore sit irure pariatur do dolore ex ut.</p>
-      <p>Cillum duis velit commodo.</p>
-      <p>Irure id excepteur non.</p>
-      <p>Officia in duis ipsum.</p>
-      <p>Minim incididunt ex culpa velit eiusmod anim tempor elit sunt.</p>
-      <p>Do laborum enim ea est est sit sunt.</p>
-      <p>Irure et labore sit irure pariatur do dolore ex ut.</p>
-      <p>Cillum duis velit commodo.</p>
-      <p>Irure id excepteur non.</p>
-      <p>Officia in duis ipsum.</p>
-      <p>Minim incididunt ex culpa velit eiusmod anim tempor elit sunt.</p>
-      <p>Do laborum enim ea est est sit sunt.</p>
-      <p>Irure et labore sit irure pariatur do dolore ex ut.</p>
-      <p>Cillum duis velit commodo.</p>
-      <p>Irure id excepteur non.</p>
-      <p>Officia in duis ipsum.</p>
-      <p>Minim incididunt ex culpa velit eiusmod anim tempor elit sunt.</p>
-      <p>Do laborum enim ea est est sit sunt.</p>
-      <p>Irure et labore sit irure pariatur do dolore ex ut.</p>
-      <p>Cillum duis velit commodo.</p>
-      <p>Irure id excepteur non.</p>
-      <p>Officia in duis ipsum.</p>
-      <p>Minim incididunt ex culpa velit eiusmod anim tempor elit sunt.</p>
-      <p>Do laborum enim ea est est sit sunt.</p>
+    <div className="flex flex-col p-4 ">
+      {
+      exames.length > 0 ? (
+
+          <div className="flex flex-col gap-4 ">
+            {exames.map((exam) => (
+              <EachExam key={exam.id} exam={exam} />
+            ))}
+          </div>
+   
+      ) : (
+        <p className="text-center text-gray-500">Nenhum Exame encontrado</p>
+      )
+      }
+    </div>
+  );
+}
+
+function EachExam({ exam }: { exam: ExamsType }) {
+  return (
+    <div className="flex justify-between p-2 border-b  rounded-lg mb-1 ">
+      <div>
+        <p className="font-bold text-lg ">
+          {exam.nome} - {_formatPrice(exam.preco)}
+        </p>
+        <p>Detalhes: {exam.descricao}</p>
+        <p>ID do Agendamento: {exam.id_agendamento}</p>
+      </div>
+      <p data-ative={exam.status} title={exam.status} className="lowercase size-6  data-[ative=ATIVO]:bg-green-300 bg-red-300 rounded-full"></p>
     </div>
   );
 }
