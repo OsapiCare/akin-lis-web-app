@@ -1,0 +1,23 @@
+export const AVALIABLE_EXAMES = [
+    { id: 1, exame: "Covid-19", details: "..." },
+    { id: 2, exame: "Hepatite B", details: "..." },
+    { id: 3, exame: "Hepatite C", details: "..." },
+    { id: 4, exame: "Hepatite D", details: "..." },
+    { id: 5, exame: "Hepatite E", details: "..." },
+    { id: 6, exame: "Gripe A", details: "..." },
+    { id: 7, exame: "Zika Vírus", details: "..." },
+    { id: 8, exame: "Dengue", details: "..." },
+    { id: 9, exame: "Chikungunya", details: "..." },
+    { id: 10, exame: "Febre Amarela", details: "..." },
+    { id: 11, exame: "HIV", details: "..." },
+    { id: 12, exame: "Tuberculose", details: "..." },
+    { id: 13, exame: "Sífilis", details: "..." },
+    { id: 14, exame: "Malária", details: "..." },
+    { id: 15, exame: "Sarampo", details: "..." },
+    { id: 16, exame: "Rubéola", details: "..." },
+    { id: 17, exame: "Catapora", details: "..." },
+    { id: 18, exame: "Leptospirose", details: "..." },
+    { id: 19, exame: "Toxoplasmose", details: "..." },
+    { id: 20, exame: "Câncer de Mama", details: "..." },
+  ];
+  
