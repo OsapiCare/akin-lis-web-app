@@ -37,9 +37,9 @@ function EachExam({ exam }: { exam: ExamsType }) {
     <div className="flex justify-between p-2 border-b  rounded-lg mb-1 ">
       <div>
         <p className="font-bold text-lg ">
-          {exam.nome} - {_formatPrice(exam.preco)}
+          {exam.exame.nome} - {_formatPrice(exam.preco)}
         </p>
-        <p>Detalhes: {exam.descricao}</p>
+        <p>Detalhes: {exam.exame.descricao}</p>
         <p>ID do Agendamento: {exam.id_agendamento}</p>
       </div>
       <p data-ative={exam.status} title={exam.status} className="lowercase size-6  data-[ative=ATIVO]:bg-green-300 bg-red-300 rounded-full"></p>

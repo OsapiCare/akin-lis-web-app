@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { AutoComplete as PrimeAutoComplete } from "primereact/autocomplete";
+import { AutoComplete as PrimeAutoComplete, AutoCompleteProps } from "primereact/autocomplete";
 import { FakeService } from "./service/fake-data";
+import clsx from "clsx";
+import "./index.css";
+import { twMerge } from "tailwind-merge";
 
 interface ICountry {
   name: string;
@@ -8,16 +11,18 @@ interface ICountry {
 }
 
 interface IAutoComplete {
-//   field: string;
-//   value: string;
-//   suggestions: ICountry[];
-//   completeMethod: (event: any) => void;
-//   onChange: (event: any) => void;
-//   itemTemplate: (item: ICountry) => React.ReactNode;
-//   panelFooterTemplate: () => React.ReactNode;
+  //   field: string;
+  //   value: string;
+  //   suggestions: ICountry[];
+  //   completeMethod: (event: any) => void;
+  //   onChange: (event: any) => void;
+  //   itemTemplate: (item: ICountry) => React.ReactNode;
+  //   panelFooterTemplate: () => React.ReactNode;
 }
 
-export default function AutoComplete() {
+interface IAutoComplete extends AutoCompleteProps {}
+
+export default function AutoComplete({ className, ...rest }: IAutoComplete) {
   const [countries, setCountries] = useState<ICountry[]>([]);
   const [selectedCountry, setSelectedCountry] = useState(null);
   const [filteredCountries, setFilteredCountries] = useState<ICountry[]>([]);
@@ -68,8 +73,16 @@ export default function AutoComplete() {
   }, []);
 
   return (
-    <div className="card flex justify-content-center">
-      <PrimeAutoComplete field="name" value={selectedCountry} suggestions={filteredCountries} completeMethod={search} onChange={(e) => setSelectedCountry(e.value)} itemTemplate={itemTemplate} panelFooterTemplate={panelFooterTemplate} />
-    </div>
+    <PrimeAutoComplete
+      field="name"
+      value={selectedCountry}
+      suggestions={filteredCountries}
+      completeMethod={search}
+      onChange={(e) => setSelectedCountry(e.value)}
+      itemTemplate={itemTemplate}
+      panelFooterTemplate={panelFooterTemplate}
+      className={twMerge("border-2 border-akin-yellow-light rounded-lg bg-akin-yellow-light/20 ring-0 ", className)}
+      {...rest}
+    />
   );
 }

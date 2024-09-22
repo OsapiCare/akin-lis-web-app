@@ -16,7 +16,7 @@ export default function CheckBoxExam({description, checked, value, onChangecheck
         setIsChecked((state) => !state)
     }
  return (
-    <div className="flex gap-2 items-center">
+    <div className="flex gap-1.5 items-center">
         <Checkbox checked={isChecked} onChange={onChange} value={value} inputId={value}></Checkbox>
         <label htmlFor={value} className="">{description}</label>
     </div>

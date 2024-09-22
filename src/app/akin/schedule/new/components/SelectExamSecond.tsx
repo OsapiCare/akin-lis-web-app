@@ -5,7 +5,7 @@ export default function CheckBoxSecond()
 {
     const [date,setDate] = useState<Date|null>()
     return(
-        <div className="flex flex-col gap-2">
+        <div className="">
             <h1 className="font-semibold">Agenda</h1>
             <div className="flex flex-col gap-4">
                 <Calendar  value={date} onChange={(e) => setDate(e.value)} showIcon/>
