@@ -20,9 +20,9 @@ export const APP_CONFIG = {
       { label: "Sair", icon: LogOut, path: "/logout" },
     ],
     SCHEDULE: [
-      { label: "Novo Agendamento", icon: CalendarPlus2, path: "/akin/schedule/new" },
-      { label: "Solicitação de Agenadamento", icon: CalendarSearch, path: "/akin/schedule/request" },
-      { label: "Agendamentos Concluídos", icon: CalendarCheck2, path: "/akin/schedule/completed" },
+      { label: "Novo", icon: CalendarPlus2, path: "/akin/schedule/new" },
+      { label: "Solicitações", icon: CalendarSearch, path: "/akin/schedule/request" },
+      { label: "Concluídos", icon: CalendarCheck2, path: "/akin/schedule/completed" },
     ],
     PATIENT: {
       INDIVIDUAL_PATIENT_LINK(id: string) {
