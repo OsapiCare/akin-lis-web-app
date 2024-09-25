@@ -12,8 +12,6 @@ export default function Completed({}: IRequest) {
         <InputText className="w-96" placeholder="Procurar" />
       </div>
       <div className=" grid grid-cols-4 gap-8">
-        <CardRequestSchdule />
-        <CardRequestSchdule />
 
         {MOCK_SCHEDULE_DATA.map((data, index) => (
           <CardRequestSchdule key={index} />

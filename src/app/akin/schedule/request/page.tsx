@@ -11,10 +11,9 @@ export default function Request({}: IRequest) {
         <h1 className="font-light text-3xl my-6">Solicitação de Agendamentos</h1>
         <InputText className="w-96" placeholder="Procurar" />
       </div>
-      <div className=" grid grid-cols-4 gap-8 mt-1">
-        <CardRequestSchdule />
-        <CardRequestSchdule />
-
+      <div className=" grid grid-cols-3 gap-8 mt-1">
+        
+        {}
         {MOCK_SCHEDULE_DATA.map((data, index) => (
           <CardRequestSchdule key={index} />
         ))}

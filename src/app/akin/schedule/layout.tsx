@@ -28,7 +28,7 @@ export default function Schedule({ children }: ISchedule) {
       <div className="flex justify-between  items-center">
         <AppLayout.ContainerHeader noBottomLine label="Agendamento" />
         <TabMenu className="text-gray-700 *:gap-0" model={items} activeIndex={activeIndex} onTabChange={(e) => setActiveIndex(e.index)} />
-        <TabMenuArea />
+        {/* <TabMenuArea /> */}
       </div>
       <hr />
       <View.Scroll className="">{children}</View.Scroll>
