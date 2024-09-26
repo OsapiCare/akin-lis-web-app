@@ -25,7 +25,8 @@ export default function ExameForm() {
     <div className="  h-[29rem] w-[15rem] flex flex-col border-2 border-akin-yellow-light  rounded-lg bg-akin-yellow-light/20 ">
       <div className="space-y-4 flex-1 p-2  ">{step == 1 ? <SelectExamFirst /> : <CheckBoxSecond />}</div>
 
-      {step == 2 && <Button.Primary className="m-2" onClick={() => setMessageDialog(true)} label="Agendar" />}
+      {/* {step == 2 && <Button.Primary className="m-2" onClick={() => setMessageDialog(true)} label="Agendar" />} */}
+      {step == 2 && <Button.Primary className="m-2" type="submit" label="Agendar" />}
       <Button.Primary className="m-2" onClick={handleClickNextStep} label={step == 1 ? "Próximo" : "Voltar"} />
       <DialogWindow.Message type="Sucesso" visible={messageDialog} setVisible={setMessageDialog} />
     </div>

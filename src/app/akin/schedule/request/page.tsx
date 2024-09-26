@@ -1,23 +1,25 @@
-import { InputText } from "@/components/input/input-text";
-import CardSchdule from "../CardRequestSchedule";
+"use client";
+
 import { MOCK_SCHEDULE_DATA } from "@/mocks/schedule";
+import { useState } from "react";
+import CardScheduleContainer from "../CardScheduleContainer";
 
-interface IRequest {}
+export default function Request() {
+  // const [schedule, setSchedule] = useState<ScheduleType[]>([]);
+  const [requestSchedule, setRequestSchedule] = useState<ScheduleType[]>(() => {
+    const data = MOCK_SCHEDULE_DATA.filter((data) => data.status == "ATIVO");
+    return data ? data : [];
+  });
 
-export default function Request({}: IRequest) {
+  // useEffect(() => {
+  // const data = MOCK_SCHEDULE_DATA.find((data) => data.status == "ATIVO");
+  // console.log(data);
+  // setSchedule(data);
+  // }, []);
+
   return (
     <div className=" h-screen px-6 mx-auto">
-      <div className="flex items-center justify-between ">
-        <h1 className="font-light text-3xl my-6">Solicitação de Agendamentos</h1>
-        <InputText className="w-96" placeholder="Procurar" />
-      </div>
-      <div className=" grid grid-cols-3 gap-8 mt-1">
-        
-        {}
-        {MOCK_SCHEDULE_DATA.map((data, index) => (
-          <CardSchdule key={index} data={data} />
-        ))}
-      </div>
+      <CardScheduleContainer title="Agendamentos em Andamento" schedule={requestSchedule} />
     </div>
   );
 }

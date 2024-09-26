@@ -5,13 +5,13 @@ export const MOCK_SCHEDULE_DATA: ScheduleType[] = [
       id_unidade_de_saude: 101,
       data_agendamento: "2024-09-20",
       hora_agendamento: "08:30",
-      status: "ATIVO",
+      status: "DESATIVO",
       id_tecnico_alocado: 201,
       data_pagamento: "2024-09-18",
       patiente: {
         id: "P12345",
         numero_identificacao: "123456789",
-        nome: "João",
+        nome: "Peter Thornton",
         data_nascimento: "20/05/1990",
         contacto_telefonico: "(11) 99999-9999",
         data_registro: "2024-09-20",
@@ -23,11 +23,147 @@ export const MOCK_SCHEDULE_DATA: ScheduleType[] = [
         {
           id: 1,
           preco: 150.00,
+          status: "DESATIVO",
+          id_agendamento: 1,
+          id_tipo_Exame: 1,
+          exame: { id: 1, nome: "Covid-19", descricao: "Exame para detecção do coronavírus." }
+        },
+        {
+          id: 1,
+          preco: 150.00,
+          status: "DESATIVO",
+          id_agendamento: 1,
+          id_tipo_Exame: 1,
+          exame: { id: 1, nome: "Covid-19", descricao: "Exame para detecção do coronavírus." }
+        },
+        {
+          id: 1,
+          preco: 150.00,
           status: "ATIVO",
           id_agendamento: 1,
           id_tipo_Exame: 1,
           exame: { id: 1, nome: "Covid-19", descricao: "Exame para detecção do coronavírus." }
-        }
+        },
+        {
+          id: 1,
+          preco: 150.00,
+          status: "ATIVO",
+          id_agendamento: 1,
+          id_tipo_Exame: 1,
+          exame: { id: 1, nome: "Covid-19", descricao: "Exame para detecção do coronavírus." }
+        },
+        {
+          id: 1,
+          preco: 150.00,
+          status: "ATIVO",
+          id_agendamento: 1,
+          id_tipo_Exame: 1,
+          exame: { id: 1, nome: "Covid-19", descricao: "Exame para detecção do coronavírus." }
+        },
+        {
+          id: 1,
+          preco: 150.00,
+          status: "ATIVO",
+          id_agendamento: 1,
+          id_tipo_Exame: 1,
+          exame: { id: 1, nome: "Covid-19", descricao: "Exame para detecção do coronavírus." }
+        },
+        {
+          id: 1,
+          preco: 150.00,
+          status: "ATIVO",
+          id_agendamento: 1,
+          id_tipo_Exame: 1,
+          exame: { id: 1, nome: "Covid-19", descricao: "Exame para detecção do coronavírus." }
+        },
+        {
+          id: 1,
+          preco: 150.00,
+          status: "ATIVO",
+          id_agendamento: 1,
+          id_tipo_Exame: 1,
+          exame: { id: 1, nome: "Covid-19", descricao: "Exame para detecção do coronavírus." }
+        },
+        {
+          id: 1,
+          preco: 150.00,
+          status: "ATIVO",
+          id_agendamento: 1,
+          id_tipo_Exame: 1,
+          exame: { id: 1, nome: "Covid-19", descricao: "Exame para detecção do coronavírus." }
+        },
+        {
+          id: 1,
+          preco: 150.00,
+          status: "ATIVO",
+          id_agendamento: 1,
+          id_tipo_Exame: 1,
+          exame: { id: 1, nome: "Covid-19", descricao: "Exame para detecção do coronavírus." }
+        },
+        {
+          id: 1,
+          preco: 150.00,
+          status: "ATIVO",
+          id_agendamento: 1,
+          id_tipo_Exame: 1,
+          exame: { id: 1, nome: "Covid-19", descricao: "Exame para detecção do coronavírus." }
+        },
+        {
+          id: 1,
+          preco: 150.00,
+          status: "ATIVO",
+          id_agendamento: 1,
+          id_tipo_Exame: 1,
+          exame: { id: 1, nome: "Covid-19", descricao: "Exame para detecção do coronavírus." }
+        },
+        {
+          id: 1,
+          preco: 150.00,
+          status: "ATIVO",
+          id_agendamento: 1,
+          id_tipo_Exame: 1,
+          exame: { id: 1, nome: "Covid-19", descricao: "Exame para detecção do coronavírus." }
+        },
+        {
+          id: 1,
+          preco: 150.00,
+          status: "ATIVO",
+          id_agendamento: 1,
+          id_tipo_Exame: 1,
+          exame: { id: 1, nome: "Covid-19", descricao: "Exame para detecção do coronavírus." }
+        },
+        {
+          id: 1,
+          preco: 150.00,
+          status: "ATIVO",
+          id_agendamento: 1,
+          id_tipo_Exame: 1,
+          exame: { id: 1, nome: "Covid-19", descricao: "Exame para detecção do coronavírus." }
+        },
+        {
+          id: 1,
+          preco: 150.00,
+          status: "ATIVO",
+          id_agendamento: 1,
+          id_tipo_Exame: 1,
+          exame: { id: 1, nome: "Covid-19", descricao: "Exame para detecção do coronavírus." }
+        },
+        {
+          id: 1,
+          preco: 150.00,
+          status: "ATIVO",
+          id_agendamento: 1,
+          id_tipo_Exame: 1,
+          exame: { id: 1, nome: "Covid-19", descricao: "Exame para detecção do coronavírus." }
+        },
+        {
+          id: 1,
+          preco: 150.00,
+          status: "ATIVO",
+          id_agendamento: 1,
+          id_tipo_Exame: 1,
+          exame: { id: 1, nome: "Covid-19", descricao: "Exame para detecção do coronavírus." }
+        },
       ]
     },
     {
@@ -36,13 +172,13 @@ export const MOCK_SCHEDULE_DATA: ScheduleType[] = [
       id_unidade_de_saude: 102,
       data_agendamento: "2024-09-21",
       hora_agendamento: "09:00",
-      status: "ATIVO",
+      status: "DESATIVO",
       id_tecnico_alocado: 202,
       data_pagamento: "2024-09-19",
       patiente: {
         id: "P12346",
         numero_identificacao: "123456789",
-        nome: "João",
+        nome: "Lillian Todd",
         data_nascimento: "20/05/1990",
         contacto_telefonico: "(11) 99999-9999",
         data_registro: "2024-09-21",
@@ -73,7 +209,7 @@ export const MOCK_SCHEDULE_DATA: ScheduleType[] = [
       patiente: {
         id: "P12347",
         numero_identificacao: "123456789",
-        nome: "João",
+        nome: "Lela Greer",
         data_nascimento: "20/05/1990",
         contacto_telefonico: "(11) 99999-9999",
         data_registro: "2024-09-22",
@@ -98,13 +234,13 @@ export const MOCK_SCHEDULE_DATA: ScheduleType[] = [
       id_unidade_de_saude: 104,
       data_agendamento: "2024-09-23",
       hora_agendamento: "11:00",
-      status: "DESATIVO",
+      status: "ATIVO",
       id_tecnico_alocado: 204,
       data_pagamento: "2024-09-20",
       patiente: {
         id: "P12348",
         numero_identificacao: "123456789",
-        nome: "João",
+        nome: "Minerva Logan",
         data_nascimento: "20/05/1990",
         contacto_telefonico: "(11) 99999-9999",
         data_registro: "2024-09-23",
@@ -135,7 +271,7 @@ export const MOCK_SCHEDULE_DATA: ScheduleType[] = [
       patiente: {
         id: "P12349",
         numero_identificacao: "123456789",
-        nome: "João",
+        nome: "Lewis Vargas",
         data_nascimento: "20/05/1990",
         contacto_telefonico: "(11) 99999-9999",
         data_registro: "2024-09-24",
@@ -166,7 +302,7 @@ export const MOCK_SCHEDULE_DATA: ScheduleType[] = [
       patiente: {
         id: "P12350",
         numero_identificacao: "123456789",
-        nome: "João",
+        nome: "Bill Paul",
         data_nascimento: "20/05/1990",
         contacto_telefonico: "(11) 99999-9999",
         data_registro: "2024-09-25",
@@ -197,7 +333,7 @@ export const MOCK_SCHEDULE_DATA: ScheduleType[] = [
       patiente: {
         id: "P12351",
         numero_identificacao: "123456789",
-        nome: "João",
+        nome: "Myrtie Flores",
         data_nascimento: "20/05/1990",
         contacto_telefonico: "(11) 99999-9999",
         data_registro: "2024-09-26",
@@ -228,7 +364,7 @@ export const MOCK_SCHEDULE_DATA: ScheduleType[] = [
       patiente: {
         id: "P12352",
         numero_identificacao: "123456789",
-        nome: "João",
+        nome: "Minerva Chapman",
         data_nascimento: "20/05/1990",
         contacto_telefonico: "(11) 99999-9999",
         data_registro: "2024-09-27",
@@ -259,7 +395,7 @@ export const MOCK_SCHEDULE_DATA: ScheduleType[] = [
       patiente: {
         id: "P12353",
         numero_identificacao: "123456789",
-        nome: "João",
+        nome: "Linnie Freeman",
         data_nascimento: "20/05/1990",
         contacto_telefonico: "(11) 99999-9999",
         data_registro: "2024-09-28",
@@ -290,7 +426,7 @@ export const MOCK_SCHEDULE_DATA: ScheduleType[] = [
       patiente: {
         id: "P12354",
         numero_identificacao: "123456789",
-        nome: "João",
+        nome: "Jerome Thornton",
         data_nascimento: "20/05/1990",
         contacto_telefonico: "(11) 99999-9999",
         data_registro: "2024-09-29",
