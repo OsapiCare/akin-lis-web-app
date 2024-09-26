@@ -1,5 +1,5 @@
 import { InputText } from "@/components/input/input-text";
-import CardRequestSchdule from "./components/CardRequestSchedule";
+import CardSchdule from "../CardRequestSchedule";
 import { MOCK_SCHEDULE_DATA } from "@/mocks/schedule";
 
 interface IRequest {}
@@ -15,7 +15,7 @@ export default function Request({}: IRequest) {
         
         {}
         {MOCK_SCHEDULE_DATA.map((data, index) => (
-          <CardRequestSchdule key={index} />
+          <CardSchdule key={index} data={data} />
         ))}
       </div>
     </div>

@@ -8,6 +8,17 @@ export const MOCK_SCHEDULE_DATA: ScheduleType[] = [
       status: "ATIVO",
       id_tecnico_alocado: 201,
       data_pagamento: "2024-09-18",
+      patiente: {
+        id: "P12345",
+        numero_identificacao: "123456789",
+        nome: "João",
+        data_nascimento: "20/05/1990",
+        contacto_telefonico: "(11) 99999-9999",
+        data_registro: "2024-09-20",
+        data_ultima_visita: "2024-09-20",
+        id_sexo: 1,
+        id_usuario: "U123456"
+      },
       Exame: [
         {
           id: 1,
@@ -28,6 +39,17 @@ export const MOCK_SCHEDULE_DATA: ScheduleType[] = [
       status: "ATIVO",
       id_tecnico_alocado: 202,
       data_pagamento: "2024-09-19",
+      patiente: {
+        id: "P12346",
+        numero_identificacao: "123456789",
+        nome: "João",
+        data_nascimento: "20/05/1990",
+        contacto_telefonico: "(11) 99999-9999",
+        data_registro: "2024-09-21",
+        data_ultima_visita: "2024-09-21",
+        id_sexo: 1,
+        id_usuario: "U123456"
+      },
       Exame: [
         {
           id: 2,
@@ -48,6 +70,17 @@ export const MOCK_SCHEDULE_DATA: ScheduleType[] = [
       status: "DESATIVO",
       id_tecnico_alocado: 203,
       data_pagamento: "2024-09-19",
+      patiente: {
+        id: "P12347",
+        numero_identificacao: "123456789",
+        nome: "João",
+        data_nascimento: "20/05/1990",
+        contacto_telefonico: "(11) 99999-9999",
+        data_registro: "2024-09-22",
+        data_ultima_visita: "2024-09-22",
+        id_sexo: 1,
+        id_usuario: "U123456"
+      },
       Exame: [
         {
           id: 3,
@@ -68,6 +101,17 @@ export const MOCK_SCHEDULE_DATA: ScheduleType[] = [
       status: "DESATIVO",
       id_tecnico_alocado: 204,
       data_pagamento: "2024-09-20",
+      patiente: {
+        id: "P12348",
+        numero_identificacao: "123456789",
+        nome: "João",
+        data_nascimento: "20/05/1990",
+        contacto_telefonico: "(11) 99999-9999",
+        data_registro: "2024-09-23",
+        data_ultima_visita: "2024-09-23",
+        id_sexo: 1,
+        id_usuario: "U123456"
+      },
       Exame: [
         {
           id: 4,
@@ -88,6 +132,17 @@ export const MOCK_SCHEDULE_DATA: ScheduleType[] = [
       status: "ATIVO",
       id_tecnico_alocado: 205,
       data_pagamento: "",
+      patiente: {
+        id: "P12349",
+        numero_identificacao: "123456789",
+        nome: "João",
+        data_nascimento: "20/05/1990",
+        contacto_telefonico: "(11) 99999-9999",
+        data_registro: "2024-09-24",
+        data_ultima_visita: "2024-09-24",
+        id_sexo: 1,
+        id_usuario: "U123456"
+      },
       Exame: [
         {
           id: 5,
@@ -108,6 +163,17 @@ export const MOCK_SCHEDULE_DATA: ScheduleType[] = [
       status: "ATIVO",
       id_tecnico_alocado: 206,
       data_pagamento: "2024-09-21",
+      patiente: {
+        id: "P12350",
+        numero_identificacao: "123456789",
+        nome: "João",
+        data_nascimento: "20/05/1990",
+        contacto_telefonico: "(11) 99999-9999",
+        data_registro: "2024-09-25",
+        data_ultima_visita: "2024-09-25",
+        id_sexo: 1,
+        id_usuario: "U123456"
+      },
       Exame: [
         {
           id: 6,
@@ -128,6 +194,17 @@ export const MOCK_SCHEDULE_DATA: ScheduleType[] = [
       status: "ATIVO",
       id_tecnico_alocado: 207,
       data_pagamento: "2024-09-22",
+      patiente: {
+        id: "P12351",
+        numero_identificacao: "123456789",
+        nome: "João",
+        data_nascimento: "20/05/1990",
+        contacto_telefonico: "(11) 99999-9999",
+        data_registro: "2024-09-26",
+        data_ultima_visita: "2024-09-26",
+        id_sexo: 1,
+        id_usuario: "U123456"
+      },
       Exame: [
         {
           id: 7,
@@ -148,6 +225,17 @@ export const MOCK_SCHEDULE_DATA: ScheduleType[] = [
       status: "ATIVO",
       id_tecnico_alocado: 208,
       data_pagamento: "",
+      patiente: {
+        id: "P12352",
+        numero_identificacao: "123456789",
+        nome: "João",
+        data_nascimento: "20/05/1990",
+        contacto_telefonico: "(11) 99999-9999",
+        data_registro: "2024-09-27",
+        data_ultima_visita: "2024-09-27",
+        id_sexo: 1,
+        id_usuario: "U123456"
+      },
       Exame: [
         {
           id: 8,
@@ -168,6 +256,17 @@ export const MOCK_SCHEDULE_DATA: ScheduleType[] = [
       status: "ATIVO",
       id_tecnico_alocado: 209,
       data_pagamento: "2024-09-24",
+      patiente: {
+        id: "P12353",
+        numero_identificacao: "123456789",
+        nome: "João",
+        data_nascimento: "20/05/1990",
+        contacto_telefonico: "(11) 99999-9999",
+        data_registro: "2024-09-28",
+        data_ultima_visita: "2024-09-28",
+        id_sexo: 1,
+        id_usuario: "U123456"
+      },
       Exame: [
         {
           id: 9,
@@ -188,6 +287,17 @@ export const MOCK_SCHEDULE_DATA: ScheduleType[] = [
       status: "ATIVO",
       id_tecnico_alocado: 210,
       data_pagamento: "",
+      patiente: {
+        id: "P12354",
+        numero_identificacao: "123456789",
+        nome: "João",
+        data_nascimento: "20/05/1990",
+        contacto_telefonico: "(11) 99999-9999",
+        data_registro: "2024-09-29",
+        data_ultima_visita: "2024-09-29",
+        id_sexo: 1,
+        id_usuario: "U123456"
+      },
       Exame: [
         {
           id: 10,
