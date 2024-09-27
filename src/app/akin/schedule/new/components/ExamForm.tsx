@@ -13,7 +13,7 @@ import { View } from "@/components/view";
 import { Button } from "@/components/button";
 import { DialogWindow } from "@/components/dialog";
 
-export default function ExameForm() {
+export default function ExamForm() {
   const [step, setStep] = useState(1);
   function handleClickNextStep() {
     setStep((state) => (state < 2 ? state + 1 : state - 1));
