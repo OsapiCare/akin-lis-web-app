@@ -2,16 +2,22 @@
 
 import { FormProvider, useForm } from "react-hook-form";
 // import PatientFormSave from "./components/PatientFormSave";
-import ExamForm from "./components/ExamForm";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import { DialogWindow } from "@/components/dialog";
 import { Button } from "@/components/button";
-import { AddPatientForm } from "./components/AddPatientForm";
 import { Input } from "@/components/input";
 import AutoComplete from "@/components/auto-complete";
 import { UserRoundPlus } from "lucide-react";
+import { Calendar } from "primereact/calendar";
+
+// import { AVALIABLE_EXAMES } from "../avaliablesExames";
+import { Checkbox } from "primereact/checkbox";
+import { View } from "@/components/view";
+import { AVALIABLE_EXAMES } from "./avaliablesExames";
+import { CheckBoxExam } from "./components/CheckBoxExam";
+// import CheckBoxExam from "./components/CheckBoxExam";
 
 interface INew {}
 
@@ -22,17 +28,25 @@ const schemaSchedule = z.object({
   phone_number: z.string(),
   identity: z.string(),
 });
-export type schemaScheduleType = z.infer<typeof schemaSchedule>;
+export type SchemaScheduleType = z.infer<typeof schemaSchedule>;
 
 export default function New({}: INew) {
-  const [messageDialog, setMessageDialog] = useState(false);
+  // const [messageDialog, setMessageDialog] = useState(false);
   const [windowDialog, setWindowDialog] = useState(false);
+  const [step, setStep] = useState(1);
+  const [messageDialog, setMessageDialog] = useState(false);
 
-  const form = useForm<schemaScheduleType>({
+  function handleClickNextStep() {
+    setStep((state) => (state < 2 ? state + 1 : state - 1));
+  }
+
+  const [date, setDate] = useState<Date | null>();
+
+  const form = useForm<SchemaScheduleType>({
     resolver: zodResolver(schemaSchedule),
   });
 
-  function handleSubmitFn(data: schemaScheduleType) {
+  function handleSubmitFn(data: SchemaScheduleType) {
     console.log("created", data);
   }
 
@@ -57,24 +71,16 @@ export default function New({}: INew) {
                     </div>
                   </div>
                   <div className=" *:flex-1">
-                    <Input.InputText type="number" placeholder="Data de Nascimento" {...form.register("birth_day")}/>
-                    <Input.Dropdown data={[]} {...form.register("gender")}/>
+                    <Input.InputText type="number" placeholder="Data de Nascimento" {...form.register("birth_day")} />
+                    <Input.Dropdown data={[]} {...form.register("gender")} />
                   </div>
 
                   <div className="">
-                    <Input.InputText className="flex-1" placeholder="Contacto telefónico" {...form.register("phone_number")}/>
+                    <Input.InputText className="flex-1" placeholder="Contacto telefónico" {...form.register("phone_number")} />
                   </div>
                   <div>
                     <Input.InputText className="" placeholder="Bilhete de Identidade" maxLength={14} {...form.register("identity")} />
                   </div>
-                </div>
-                <div className="space-x-2 flex justify-end mt-4">
-                  <Button.Primary onClick={() => setMessageDialog(true)} className="bg-green-700">
-                    Guardar
-                  </Button.Primary>
-                  <Button.Primary onClick={() => setWindowDialog(false)} className="bg-red-700">
-                    Cancelar
-                  </Button.Primary>
                 </div>
               </div>
 
@@ -82,10 +88,37 @@ export default function New({}: INew) {
               <DialogWindow.Message type="Sucesso" visible={messageDialog} setVisible={setMessageDialog} />
             </div>
 
-            <ExamForm />
+            {/* <ExamForm /> */}
+            <div className="  h-[29rem] w-[15rem] flex flex-col border-2 border-akin-yellow-light  rounded-lg bg-akin-yellow-light/20 ">
+              <div className="space-y-4 flex-1 p-2  ">
+                {step == 1 ? (
+                  <div className="space-y-2 model p-4  h-[24rem]">
+                    <h1 className="font-bold text-xl -mx-4">Exames Disponíveis</h1>
+                    <View.Scroll className="max-h-full overflow-y-auto space-y-2">
+                      {AVALIABLE_EXAMES.map((exame, index) => (
+                        <CheckBoxExam key={index} checked={false} description={exame.nome} value={String(exame.id)} onChangecheck={() => alert("")} />
+                      ))}
+                    </View.Scroll>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-4">
+                    {/* <div className="space-y-2 model p-4  h-[18.9rem] "> */}
+                    <h1 className="font-bold text-xl pt-4">Definir Data</h1>
+                    <Calendar value={date} onChange={(e) => setDate(e.value)} showIcon />
+                    <Calendar timeOnly value={date} onChange={(e) => setDate(e.value)} showIcon />
+                  </div>
+                )}
+              </div>
+
+              <button type="submit">OK</button>
+              {step == 2 && <Button.Primary className="m-2" type="submit" label="Agendar" />}
+              <Button.Primary className="m-2" onClick={handleClickNextStep} label={step == 1 ? "Próximo" : "Voltar"} />
+              <DialogWindow.Message type="Sucesso" visible={messageDialog} setVisible={setMessageDialog} />
+            </div>
           </form>
         </FormProvider>
       </div>
+
       <DialogWindow.Window modalTitle="Confirmação" visible={windowDialog} setVisible={setWindowDialog}>
         <div className="flex flex-col gap-y-4 *:flex *:gap-x-2">
           <div className="flex border-2 border-akin-yellow-light rounded-lg bg-akin-yellow-light/20 ring-0">
@@ -101,6 +134,14 @@ export default function New({}: INew) {
           </div>
           <div>
             <Input.InputText className="" placeholder="Bilhete de Identidade" maxLength={14} />
+          </div>
+          <div className="space-x-2 flex justify-end mt-4">
+            <Button.Primary onClick={() => setMessageDialog(true)} className="bg-green-700">
+              Guardar
+            </Button.Primary>
+            <Button.Primary onClick={() => setWindowDialog(false)} className="bg-red-700">
+              Cancelar
+            </Button.Primary>
           </div>
         </div>
       </DialogWindow.Window>
