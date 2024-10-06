@@ -1,35 +1,19 @@
 "use client";
 
-import { Dropdown as PrimeDropdown } from "primereact/dropdown";
+import { Dropdown as PrimeDropdown, DropdownProps } from "primereact/dropdown";
 import { useState } from "react";
 
-interface IDropdown {
-  data: any,
-
+interface IDropdown extends DropdownProps {
+  data: { id: number; value: string }[];
 }
 
-export default function Dropdown({}:IDropdown) {
+export default function Dropdown({ data, ...rest }: IDropdown) {
+  const [selectedGender, setSelectedGender] = useState<any>(null);
 
-  // { id: 1, name: "Masculino", code: "1" },
-    const genders = [
-        { id: 1, name: "Masculino", code: "1" },
-        { id: 2, name: "Femenino", code: "2" },
-      ];
-    
-      function onChangeGender(data: { value: any }) {
-        setSelectedseletGender(data.value);
-      }
-    
-      const [seletGender, setSelectedseletGender] = useState<any>(null);
-      
-    return (
-        <PrimeDropdown 
-        className="border-2 border-akin-yellow-light  rounded-lg bg-akin-yellow-light/20 ring-0" 
-        value={seletGender} 
-        options={genders} 
-        onChange={onChangeGender} 
-        optionLabel="name" 
-        placeholder="Selecione o sexo"
-        />
-    );
+  function onChangeGender(data: { value: string }) {
+    console.log(data.value);
+    // setSelectedGender(data.value);
+  }
+
+  return <PrimeDropdown className="border-2 border-akin-yellow-light  rounded-lg bg-akin-yellow-light/20 ring-0" value={selectedGender} options={data} onChange={onChangeGender} optionLabel="value"  {...rest } />;
 }

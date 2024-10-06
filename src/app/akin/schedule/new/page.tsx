@@ -21,14 +21,14 @@ import { CheckBoxExam } from "./components/CheckBoxExam";
 
 interface INew {}
 
-const schemaSchedule = z.object({
-  name: z.string({ required_error: "Campo obrigatorio" }).min(3, "nome invalido"),
-  gender: z.string(),
-  birth_day: z.string(),
-  phone_number: z.string(),
-  identity: z.string(),
-});
-export type SchemaScheduleType = z.infer<typeof schemaSchedule>;
+// const schemaSchedule = z.object({
+// name: z.string({ required_error: "Campo obrigatorio" }).min(3, "nome invalido"),
+// gender: z.string(),
+// birth_day: z.string(),
+// phone_number: z.string(),
+// identity: z.string(),
+// });
+// export type SchemaScheduleType = z.infer<typeof schemaSchedule>;
 
 export default function New({}: INew) {
   // const [messageDialog, setMessageDialog] = useState(false);
@@ -42,81 +42,98 @@ export default function New({}: INew) {
 
   const [date, setDate] = useState<Date | null>();
 
-  const form = useForm<SchemaScheduleType>({
-    resolver: zodResolver(schemaSchedule),
-  });
+  // const form = useForm<SchemaScheduleType>({
+  // resolver: zodResolver(schemaSchedule),
+  // });
+  //
+  // function handleSubmitFn(data: SchemaScheduleType) {
+  // console.log("created", data);
+  // }
 
-  function handleSubmitFn(data: SchemaScheduleType) {
-    console.log("created", data);
+  // const {
+  // register,
+  // handleSubmit,
+  // formState: { errors },
+  // } = useForm<SchemaScheduleType>({
+  // resolver: zodResolver(schemaSchedule),
+  // });
+
+  const genders = [
+    { id: 1, value: "Masculino" },
+    { id: 2, value: "Femenino" },
+  ];
+
+  async function onSubmitFn(data: FormData) {
+    console.log("Form data", data.get("dd"));
   }
 
   return (
     <div className=" h-screen px-4  ">
       <h1 className="font-light text-3xl my-6">Novo Agendamento</h1>
       <div className=" ">
-        <FormProvider {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmitFn)} className="flex w-full gap-x-3 ">
-            {/* <PatientFormSave  /> */}
+        {/* <FormProvider {}> */}
+        <form action={onSubmitFn} className="flex w-full gap-x-3 ">
+          {/* <PatientFormSave  /> */}
 
-            <div className="flex flex-col flex-1 gap-5 ">
-              {/* <AddPatientForm showAddPatientFormButton onClick={() => setWindowDialog(true)} /> */}
-              <div className="flex flex-col gap-3 ">
-                {/* <AddPatientForm /> */}
-                <div className="flex flex-col gap-y-4 *:flex *:gap-x-2">
-                  <div className="flex border-2 border-akin-yellow-light rounded-lg bg-akin-yellow-light/20 ring-0">
-                    <AutoComplete placeholder="Nome completo do paciente" {...form.register("name")} className="border-0 ring-0  flex-1" />
-
-                    <div className="text-gray-400 hover:bg-akin-yellow-light transition ease-out  cursor-pointer p-3 hover:text-gray-800 rounded-lg h-fit" onClick={() => setWindowDialog(true)}>
-                      <UserRoundPlus />
-                    </div>
-                  </div>
-                  <div className=" *:flex-1">
-                    <Input.InputText type="number" placeholder="Data de Nascimento" {...form.register("birth_day")} />
-                    <Input.Dropdown data={[]} {...form.register("gender")} />
-                  </div>
-
-                  <div className="">
-                    <Input.InputText className="flex-1" placeholder="Contacto telefónico" {...form.register("phone_number")} />
-                  </div>
-                  <div>
-                    <Input.InputText className="" placeholder="Bilhete de Identidade" maxLength={14} {...form.register("identity")} />
+          <div className="flex flex-col flex-1 gap-5 ">
+            {/* <AddPatientForm showAddPatientFormButton onClick={() => setWindowDialog(true)} /> */}
+            <div className="flex flex-col gap-3 ">
+              <div className="flex flex-col gap-y-4 *:flex *:gap-x-2">
+                {/* Nome Completo */}
+                <div className="flex border-2 border-akin-yellow-light rounded-lg bg-akin-yellow-light/20 ring-0">
+                  <AutoComplete placeholder="Nome completo do paciente" name="name" className="border-0 ring-0  flex-1" />
+                  <div className="text-gray-400 hover:bg-akin-yellow-light transition ease-out  cursor-pointer p-3 hover:text-gray-800 rounded-lg h-fit" onClick={() => setWindowDialog(true)}>
+                    <UserRoundPlus />
                   </div>
                 </div>
-              </div>
+                {/* Data Nascimento & Género */}
+                <div className=" *:flex-1">
+                  <Input.InputText type="number" placeholder="Data de Nascimento" name="birth_day" />
+                  <Input.Dropdown data={genders} name="gender" placeholder="Selecione o sexo" />
+                </div>
 
-              <div className="flex gap-2 mt-4"></div>
-              <DialogWindow.Message type="Sucesso" visible={messageDialog} setVisible={setMessageDialog} />
+                <Input.InputText className="flex-1" placeholder="Contacto telefónico" name="phone_number" />
+                <Input.InputText className="" placeholder="Bilhete de Identidade" maxLength={14} name="identity" />
+              </div>
+            </div>
+            <div className="flex gap-2 mt-4">
+              {/* <input type="text" name="dd" value="sss" /> */}
+              <Button.Primary className="m-2" label="Marcar Agendamento"  />
+              <button type="submit" className="bg-red-100 p-4 rounded-lg ">
+                Limpar
+              </button>
             </div>
 
-            {/* <ExamForm /> */}
-            <div className="  h-[29rem] w-[15rem] flex flex-col border-2 border-akin-yellow-light  rounded-lg bg-akin-yellow-light/20 ">
-              <div className="space-y-4 flex-1 p-2  ">
-                {step == 1 ? (
-                  <div className="space-y-2 model p-4  h-[24rem]">
-                    <h1 className="font-bold text-xl -mx-4">Exames Disponíveis</h1>
-                    <View.Scroll className="max-h-full overflow-y-auto space-y-2">
-                      {AVALIABLE_EXAMES.map((exame, index) => (
-                        <CheckBoxExam key={index} checked={false} description={exame.nome} value={String(exame.id)} onChangecheck={() => alert("")} />
-                      ))}
-                    </View.Scroll>
-                  </div>
-                ) : (
-                  <div className="flex flex-col gap-4">
-                    {/* <div className="space-y-2 model p-4  h-[18.9rem] "> */}
-                    <h1 className="font-bold text-xl pt-4">Definir Data</h1>
-                    <Calendar value={date} onChange={(e) => setDate(e.value)} showIcon />
-                    <Calendar timeOnly value={date} onChange={(e) => setDate(e.value)} showIcon />
-                  </div>
-                )}
-              </div>
+            <DialogWindow.Message type="Sucesso" visible={messageDialog} setVisible={setMessageDialog} />
+          </div>
 
-              <button type="submit">OK</button>
-              {step == 2 && <Button.Primary className="m-2" type="submit" label="Agendar" />}
-              <Button.Primary className="m-2" onClick={handleClickNextStep} label={step == 1 ? "Próximo" : "Voltar"} />
-              <DialogWindow.Message type="Sucesso" visible={messageDialog} setVisible={setMessageDialog} />
+          <div className="  h-[29rem] w-[15rem] flex flex-col border-2 border-akin-yellow-light  rounded-lg bg-akin-yellow-light/20 ">
+            <div className="space-y-4 flex-1 p-2  ">
+              {step == 1 ? (
+                <div className="space-y-2 model p-4  h-[24rem]">
+                  <h1 className="font-bold text-xl -mx-4">Exames Disponíveis</h1>
+                  <View.Scroll className="max-h-full overflow-y-auto space-y-2">
+                    {AVALIABLE_EXAMES.map((exame, index) => (
+                      <CheckBoxExam key={index} checked={false} description={exame.nome} value={String(exame.id)} onChangecheck={() => alert("")} />
+                    ))}
+                  </View.Scroll>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-4">
+                  {/* <div className="space-y-2 model p-4  h-[18.9rem] "> */}
+                  <h1 className="font-bold text-xl pt-4">Definir Data</h1>
+                  <Calendar value={date} onChange={(e) => setDate(e.value)} showIcon />
+                  <Calendar timeOnly value={date} onChange={(e) => setDate(e.value)} showIcon />
+                </div>
+              )}
             </div>
-          </form>
-        </FormProvider>
+
+            {step == 2 && <Button.Primary className="m-2" type="submit" label="Agendar" />}
+            <Button.Primary className="m-2" onClick={handleClickNextStep} label={step == 1 ? "Próximo" : "Voltar"} />
+            <DialogWindow.Message type="Sucesso" visible={messageDialog} setVisible={setMessageDialog} />
+          </div>
+        </form>
+        {/* </FormProvider> */}
       </div>
 
       <DialogWindow.Window modalTitle="Confirmação" visible={windowDialog} setVisible={setWindowDialog}>
