@@ -97,11 +97,10 @@ export default function New({}: INew) {
               </div>
             </div>
             <div className="flex gap-2 mt-4">
-              {/* <input type="text" name="dd" value="sss" /> */}
-              <Button.Primary className="m-2" label="Marcar Agendamento"  />
-              <button type="submit" className="bg-red-100 p-4 rounded-lg ">
-                Limpar
-              </button>
+              <h2>Data do Agendamento</h2>
+              <hr />
+              <Input.CalenderDate />
+              <Input.CalenderTime />
             </div>
 
             <DialogWindow.Message type="Sucesso" visible={messageDialog} setVisible={setMessageDialog} />
@@ -109,27 +108,18 @@ export default function New({}: INew) {
 
           <div className="  h-[29rem] w-[15rem] flex flex-col border-2 border-akin-yellow-light  rounded-lg bg-akin-yellow-light/20 ">
             <div className="space-y-4 flex-1 p-2  ">
-              {step == 1 ? (
-                <div className="space-y-2 model p-4  h-[24rem]">
-                  <h1 className="font-bold text-xl -mx-4">Exames Disponíveis</h1>
-                  <View.Scroll className="max-h-full overflow-y-auto space-y-2">
-                    {AVALIABLE_EXAMES.map((exame, index) => (
-                      <CheckBoxExam key={index} checked={false} description={exame.nome} value={String(exame.id)} onChangecheck={() => alert("")} />
-                    ))}
-                  </View.Scroll>
-                </div>
-              ) : (
-                <div className="flex flex-col gap-4">
-                  {/* <div className="space-y-2 model p-4  h-[18.9rem] "> */}
-                  <h1 className="font-bold text-xl pt-4">Definir Data</h1>
-                  <Calendar value={date} onChange={(e) => setDate(e.value)} showIcon />
-                  <Calendar timeOnly value={date} onChange={(e) => setDate(e.value)} showIcon />
-                </div>
-              )}
+              <div className="space-y-2 model p-4  h-[24rem]">
+                <h1 className="font-bold text-xl -mx-4">Exames Disponíveis</h1>
+                <View.Scroll className="max-h-full overflow-y-auto space-y-2">
+                  {AVALIABLE_EXAMES.map((exame, index) => (
+                    <CheckBoxExam key={index} checked={false} description={exame.nome} value={String(exame.id)} onChangecheck={() => alert("")} />
+                  ))}
+                </View.Scroll>
+              </div>
             </div>
 
-            {step == 2 && <Button.Primary className="m-2" type="submit" label="Agendar" />}
-            <Button.Primary className="m-2" onClick={handleClickNextStep} label={step == 1 ? "Próximo" : "Voltar"} />
+            <Button.Primary className="m-2" type="submit" label="Agendar" />
+            {/* <Button.Primary className="m-2" onClick={handleClickNextStep} label={step == 1 ? "Próximo" : "Voltar"} /> */}
             <DialogWindow.Message type="Sucesso" visible={messageDialog} setVisible={setMessageDialog} />
           </div>
         </form>

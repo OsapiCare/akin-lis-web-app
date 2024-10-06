@@ -1,0 +1,47 @@
+"use client";
+
+import { Calendar } from "primereact/calendar";
+import { useState } from "react";
+
+interface ICalenderTime {
+  // data: { id: number; value: string }[];
+}
+
+export default function CalenderTime() {
+  //   const [selectedGender, setSelectedGender] = useState<any>(null);
+  //   function onChangeGender(data: { value: string }) {
+  //     console.log(data.value);
+  //     // setSelectedGender(data.value);
+  //   }
+  //   return <PrimeDropdown className="border-2 border-akin-yellow-light  rounded-lg bg-akin-yellow-light/20 ring-0" value={selectedGender} options={data} onChange={onChangeGender} optionLabel="value"  {...rest } />;
+  // }
+  const [date, setDate] = useState<any>(null);
+  return (
+    <div className="card flex flex-wrap gap-3 p-fluid">
+      {/* <div className="flex-auto"> */}
+      <label htmlFor="buttondisplay" className="font-bold block mb-2">
+        Button Display
+      </label>
+      <Calendar id="buttondisplay" value={date} onChange={(e) => setDate(e.value)} showIcon />
+      {/* </div> */}
+    </div>
+  );
+}
+
+/**
+   * 
+   *  <div className="flex-auto">
+                <label htmlFor="buttondisplay" className="font-bold block mb-2">
+                    Icon Display
+                </label>
+
+                <Calendar value={date} onChange={(e) => setDate(e.value)} showIcon  />
+            </div> 
+
+          <div className="flex-auto">
+                <label htmlFor="buttondisplay" className="font-bold block mb-2">
+                    Icon Template
+                </label>
+
+                <Calendar value={date} onChange={(e) => setDate(e.value)} showIcon timeOnly  icon={() => <i className="pi pi-clock" />} />
+            </div> */

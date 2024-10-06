@@ -12,6 +12,7 @@ interface IPatientById {
   };
 }
 
+
 export default async function PatientById({ params }: IPatientById) {
   let patient: PatientType;
 
