@@ -5,9 +5,9 @@ import clsx from "clsx";
 import "./index.css";
 import { twMerge } from "tailwind-merge";
 
-interface ICountry {
-  name: string;
-  code: string;
+interface IPatients {
+  value: string;
+  id: string;
 }
 
 interface IAutoComplete {
@@ -23,20 +23,20 @@ interface IAutoComplete {
 interface IAutoComplete extends AutoCompleteProps {}
 
 export default function AutoComplete({ className, ...rest }: IAutoComplete) {
-  const [countries, setCountries] = useState<ICountry[]>([]);
-  const [selectedCountry, setSelectedCountry] = useState(null);
-  const [filteredCountries, setFilteredCountries] = useState<ICountry[]>([]);
+  const [patients, setPatients] = useState<IPatients[]>([]);
+  const [selectedPatients, setSelectedPatients] = useState(null);
+  const [filteredPatients, setFilteredPatients] = useState<IPatients[]>([]);
 
   const panelFooterTemplate = () => {
-    const isCountrySelected = (filteredCountries || []).some((country) => country["name"] === selectedCountry);
+    const isPatientsSelected = (filteredPatients || []).some((patient) => patient["value"] === selectedPatients);
     return (
       <div className="py-2 px-3">
-        {isCountrySelected ? (
+        {isPatientsSelected ? (
           <span>
-            <b>{selectedCountry}</b> selected.
+            <b>{selectedPatients}</b> Selecionado.
           </span>
         ) : (
-          "No country selected."
+          "Nenhum paciente selecionado."
         )}
       </div>
     );
@@ -48,37 +48,37 @@ export default function AutoComplete({ className, ...rest }: IAutoComplete) {
       let _filteredCountries;
 
       if (!event.query.trim().length) {
-        _filteredCountries = [...countries];
+        _filteredCountries = [...patients];
       } else {
-        _filteredCountries = countries.filter((country) => {
-          return country.name.toLowerCase().startsWith(event.query.toLowerCase());
+        _filteredCountries = patients.filter((patient) => {
+          return patient.value.toLowerCase().startsWith(event.query.toLowerCase());
         });
       }
 
-      setFilteredCountries(_filteredCountries);
+      setFilteredPatients(_filteredCountries);
     }, 250);
   };
 
-  const itemTemplate = (item: ICountry) => {
+  const itemTemplate = (item: IPatients) => {
     return (
       <div className="flex align-items-center">
-        <img alt={item.name} src="https://primefaces.org/cdn/primereact/images/flag/flag_placeholder.png" className={`flag flag-${item.code.toLowerCase()} mr-2`} style={{ width: "18px" }} />
-        <div>{item.name}</div>
+        <img alt={item.value} src="https://primefaces.org/cdn/primereact/images/flag/flag_placeholder.png" className={`flag flag-${item.id.toLowerCase()} mr-2`} style={{ width: "18px" }} />
+        <div>{item.value}</div>
       </div>
     );
   };
 
   useEffect(() => {
-    FakeService.getCountries().then((data) => setCountries(data));
+    FakeService.getCountries().then((data) => setPatients(data));
   }, []);
 
   return (
     <PrimeAutoComplete
-      field="name"
-      value={selectedCountry}
-      suggestions={filteredCountries}
+      field="value"
+      value={selectedPatients}
+      suggestions={filteredPatients}
       completeMethod={search}
-      onChange={(e) => setSelectedCountry(e.value)}
+      onChange={(e) => setSelectedPatients(e.value)}
       itemTemplate={itemTemplate}
       panelFooterTemplate={panelFooterTemplate}
       className={twMerge("border-2 border-akin-yellow-light rounded-lg bg-akin-yellow-light/20 ring-0 ", className)}

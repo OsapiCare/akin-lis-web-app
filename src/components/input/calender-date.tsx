@@ -1,13 +1,16 @@
 "use client";
 
-import { Calendar } from "primereact/calendar";
+import { Calendar, CalendarProps, CalendarBaseProps } from "primereact/calendar";
+import { Nullable } from "primereact/ts-helpers";
 import { useState } from "react";
 
-interface ICalenderTime {
+interface ICalenderDate extends CalendarBaseProps {
   // data: { id: number; value: string }[];
+  minDateToBeToday?: boolean;
+  noUseLabel?: boolean;
 }
 
-export default function CalenderDate() {
+export default function CalenderDate({ minDateToBeToday, noUseLabel, ...rest }: ICalenderDate) {
   //   const [selectedGender, setSelectedGender] = useState<any>(null);
   //   function onChangeGender(data: { value: string }) {
   //     console.log(data.value);
@@ -15,15 +18,18 @@ export default function CalenderDate() {
   //   }
   //   return <PrimeDropdown className="border-2 border-akin-yellow-light  rounded-lg bg-akin-yellow-light/20 ring-0" value={selectedGender} options={data} onChange={onChangeGender} optionLabel="value"  {...rest } />;
   // }
-  const [date, setDate] = useState<any>(null);
+  const [date, setDate] = useState<Nullable<Date>>(minDateToBeToday ? new Date() : null);
   return (
     // <div className="card gap-3 p-fluid">
     <div className="card gap-3 ">
       {/* <div className="flex-auto"> */}
-      <label htmlFor="buttondisplay" className="font-bold block mb-2">
-        Data
-      </label>
-      <Calendar id="buttondisplay" className="border-2 border-akin-yellow-light rounded-lg bg-akin-yellow-light/20 ring-0 w-full" value={date} onChange={(e) => setDate(e.value)} showIcon touchUI />
+      {!noUseLabel && (
+        <label htmlFor="buttondisplay" className="font-bold block mb-2">
+          Data
+        </label>
+      )}
+
+      <Calendar id="buttondisplay" className="border-2 border-akin-yellow-light rounded-lg bg-akin-yellow-light/20 ring-0 w-full" value={date} onChange={(e) => setDate(e.value)} showIcon  {...rest}/>
       {/* </div> */}
     </div>
   );

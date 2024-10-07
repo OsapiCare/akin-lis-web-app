@@ -64,7 +64,45 @@ export default function New({}: INew) {
   ];
 
   async function onSubmitFn(data: FormData) {
-    console.log("Form data", data.get("dd"));
+    const patient_id = data.get("identity") as string;
+    const patient_phone = data.get("phone_number") as string;
+    const patient_birth_day = data.get("birth_day") as string;
+    const patient_name = data.get("name") as string;
+    const patient_gender = data.get("gender") as string;
+    const patient_schedule_time = data.get("schedule_time") as string;
+    const patient_schedule_date = data.get("schedule_date") as string;
+
+    const patient_checkboxes = document.querySelectorAll('input[name="opc_checkbox"]:checked');
+    const patient_selectedValue = Array.from(patient_checkboxes).map((checkbox) => (checkbox as HTMLInputElement).value);
+    const patient_newSelectedValue = patient_selectedValue.map((value) => {
+      const id = value.split("_")[0];
+      const exame = value.split("_")[1];
+      return {
+        id,
+        exame,
+      };
+    });
+
+    //data de amanha invalido, ou de hoje com hora superior ao agora é invalido
+
+    //Exames de data de ontem são invalido
+    //Validar se a data for de hoje então o exame deve ser de pelo menos 1H a frente
+    
+    //Horas permitidas de exames?
+    // Validar nome, bi, numero tel
+
+
+    const patient_data = {
+      patient_id,
+      patient_phone,
+      patient_birth_day,
+      patient_name,
+      patient_gender,
+      patient_schedule_time,
+      patient_schedule_date,
+      patient_newSelectedValue,
+    };
+    console.log("🚀 ~ onSubmitFn ~ patient_data:", patient_data)
   }
 
   return (
@@ -88,20 +126,21 @@ export default function New({}: INew) {
                 </div>
                 {/* Data Nascimento & Género */}
                 <div className=" *:flex-1">
-                  <Input.InputText type="number" placeholder="Data de Nascimento" name="birth_day" />
+                  {/* <Input.InputText type="number" placeholder="Data de Nascimento" name="birth_day" /> */}
+                  <Input.CalenderDate noUseLabel placeholder="Data de Nascimento" maxDate={new Date()} name="birth_day" />
                   <Input.Dropdown data={genders} name="gender" placeholder="Selecione o sexo" />
                 </div>
 
-                <Input.InputText className="flex-1" placeholder="Contacto telefónico" name="phone_number" />
-                <Input.InputText className="" placeholder="Bilhete de Identidade" maxLength={14} name="identity" />
+                <Input.InputText placeholder="Contacto telefónico" name="phone_number" type="number" />
+                <Input.InputText placeholder="Bilhete de Identidade" maxLength={14} name="identity" />
               </div>
             </div>
             <div className="">
               <h2 className="font-bold">Data do Agendamento</h2>
               <hr />
               <div className="flex gap-2 mt-4 *:flex-1">
-                <Input.CalenderDate />
-                <Input.CalenderTime />
+                <Input.CalenderDate minDateToBeToday minDate={new Date()} name="schedule_date" />
+                <Input.CalenderTime name="schedule_time" />
               </div>
             </div>
 
@@ -114,7 +153,11 @@ export default function New({}: INew) {
                 <h1 className="font-bold text-xl -mx-4">Exames Disponíveis</h1>
                 <View.Scroll className="max-h-full overflow-y-auto space-y-2">
                   {AVALIABLE_EXAMES.map((exame, index) => (
-                    <CheckBoxExam key={index} checked={false} description={exame.nome} value={String(exame.id)} onChangecheck={() => alert("")} />
+                    // <CheckBoxExam key={index} checked={false} description={exame.nome} value={String(exame.id)} onChangecheck={() => alert("")} />
+
+                    <>
+                      <CheckBoxExam key={index} description={exame.nome} value={String(exame.id)} />
+                    </>
                   ))}
                 </View.Scroll>
               </div>
