@@ -17,12 +17,13 @@ export default function CalenderTime() {
   // }
   const [date, setDate] = useState<any>(null);
   return (
-    <div className="card flex flex-wrap gap-3 p-fluid">
+    // <div className="card gap-3 p-fluid">
+    <div className="card gap-3 ">
       {/* <div className="flex-auto"> */}
       <label htmlFor="buttondisplay" className="font-bold block mb-2">
-        Button Display
+        Hora
       </label>
-      <Calendar id="buttondisplay" value={date} onChange={(e) => setDate(e.value)} showIcon />
+      <Calendar id="buttondisplay" className="border-2 border-akin-yellow-light rounded-lg bg-akin-yellow-light/20 ring-0 w-full" value={date} onChange={(e) => setDate(e.value)} showIcon touchUI />
       {/* </div> */}
     </div>
   );

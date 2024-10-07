@@ -96,11 +96,13 @@ export default function New({}: INew) {
                 <Input.InputText className="" placeholder="Bilhete de Identidade" maxLength={14} name="identity" />
               </div>
             </div>
-            <div className="flex gap-2 mt-4">
-              <h2>Data do Agendamento</h2>
+            <div className="">
+              <h2 className="font-bold">Data do Agendamento</h2>
               <hr />
-              <Input.CalenderDate />
-              <Input.CalenderTime />
+              <div className="flex gap-2 mt-4 *:flex-1">
+                <Input.CalenderDate />
+                <Input.CalenderTime />
+              </div>
             </div>
 
             <DialogWindow.Message type="Sucesso" visible={messageDialog} setVisible={setMessageDialog} />
