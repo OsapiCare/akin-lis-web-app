@@ -23,11 +23,11 @@ interface INew {}
 
 const genders = [
   { id: 1, value: "Masculino" },
-  { id: 2, value: "Femenino" },
+  { id: 2, value: "Feminino" },
 ];
 
 const schemaSchedule = z.object({
-  patient_id: z.string().regex(/^\d{9}LA\d{3}$/, {
+  patient_id: z.string().regex(/^\d{9}[A-Z]{2}\d{3}$/, {
     message: "Número de Bilhete de Identidade inválido",
   }),
 
@@ -41,7 +41,12 @@ const schemaSchedule = z.object({
     .regex(/^[0-9]*$/, "Só é permitido números para o campo de Nº de Telemóvel")
     .length(9, "Você precisa ter nove (9) digitos no Nº de Telemóvel"),
 
-  patient_birth_day: z.date().max(new Date(), "A data nascimento não pode ser superior ao dia de hoje."),
+  patient_birth_day: z
+    .date({
+      required_error: "Data de nascimento é obrigatório",
+      invalid_type_error: "Data de nascimento é obrigatório",
+    })
+    .max(new Date(), "A data nascimento não pode ser superior ao dia de hoje."),
   patient_gender: z.enum(["Masculino", "Feminino"], {
     errorMap: () => ({ message: "Apenas é permitido Masculino ou Feminino" }),
   }),
@@ -56,7 +61,7 @@ export default function New({}: INew) {
   async function onSubmitFn(data: FormData) {
     const patient_id = data.get("identity") as string;
     const patient_phone = data.get("phone_number") as string;
-    const patient_birth_day = data.get("birth_day") as string;
+    const patient_birth_day = new Date(data.get("birth_day") as string);
     const patient_name = data.get("name") as string;
     const patient_gender = data.get("gender") as string;
 
@@ -74,6 +79,8 @@ export default function New({}: INew) {
       };
     });
 
+    const isToCreateSchedule = patient_schedule_date && patient_schedule_time;
+
     const validatedData = schemaSchedule.safeParse({
       patient_id,
       patient_phone,
@@ -81,14 +88,48 @@ export default function New({}: INew) {
       patient_name,
       patient_gender,
     });
-
     if (!validatedData.success) {
-      console.log("Error:", validatedData.error);
-      return;
+      console.log(patient_birth_day);
+
+      const errorMessages = validatedData.error.errors.map((error) => error.message);
+      //TODO
+      // toast.error(errorMessages.join('\n'), {
+      //   position: "top-right",
+      //   autoClose: 5000,
+      //   hideProgressBar: false,
+      //   closeOnClick: true,
+      //   pauseOnHover: true,
+      //   draggable: true,
+      //   progress: undefined,
+      // });
+
+      // console.log("Errors:", errorMessages);
+      // return;
     }
 
-    console.log(validatedData);
-    
+    if (isToCreateSchedule) {
+      const errorsErrors: string[] = [];
+
+      patient_newSelectedValue.length == 0 && errorsErrors.push("Selecione pelo menos um exame");
+
+      const todayDate = new Date().toLocaleDateString();
+      const todayTime = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
+
+      const patient_date_to_local_date = new Date(patient_schedule_date).toLocaleDateString();
+      const patient_date_to_local_time = new Date("2000-01-01 " + patient_schedule_time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
+
+      const patientScheduleDateIsBellowOfTodayData = patient_date_to_local_date < todayDate;
+      const patientScheduleTimeIsBellowOfTodayData = patient_date_to_local_date == todayDate && patient_date_to_local_time < todayTime;
+
+      patientScheduleDateIsBellowOfTodayData && errorsErrors.push("A data de agendamento não pode ser inferior a data de hoje");
+      patientScheduleTimeIsBellowOfTodayData && errorsErrors.push("Agendamentos do dia presente não podem ter hora e minuto inferior ao momento presente. No momento são " + todayTime + ", e a data selecionada é " + patient_date_to_local_time);
+
+      console.log("Errors:", errorsErrors);
+      
+      return
+    }
+
+    // console.log(validatedData);
 
     // try {
     //   console.log("Validation successful:", validatedData);
@@ -99,20 +140,18 @@ export default function New({}: INew) {
     // }
 
     // if(patient_schedule_date < new Date().toISOString().split("T")[0]) {
-      // alert("A data de agendamento não pode ser inferior a data de hoje");
-      // return;
+    // alert("A data de agendamento não pode ser inferior a data de hoje");
+    // return;
     // }
     // if(patient_schedule_date === new Date().toISOString().split("T")[0] && patient_schedule_time < new Date().toISOString().split("T")[1]) {
-      // alert("A data de agendamento não pode ser inferior a data de hoje");
-      // return;
+    // alert("A data de agendamento não pode ser inferior a data de hoje");
+    // return;
     // }
     // if(patient_schedule_date === new Date().toISOString().split("T")[0] && patient_schedule_time === new Date().toISOString().split("T")[1]) {
-      // alert("A data de agendamento não pode ser inferior a data de hoje");
-      // return;
+    // alert("A data de agendamento não pode ser inferior a data de hoje");
+    // return;
     // }
-    // 
-
-
+    //
 
     //Exames de data de ontem são invalido
     //Validar se a data for de hoje então o exame deve ser de pelo menos 1H a frente
@@ -128,8 +167,9 @@ export default function New({}: INew) {
       patient_newSelectedValue,
     };
 
-    setMessageDialog(true);
-    console.log("🚀 ~ onSubmitFn ~ patient_data:", patient_data);
+    // setMessageDialog(true);
+    // console.log("🚀 ~ onSubmitFn ~ patient_data:", patient_data);
+    console.log("🚀");
   }
 
   return (

@@ -29,7 +29,7 @@ export default function CalenderDate({ minDateToBeToday, noUseLabel, ...rest }: 
         </label>
       )}
 
-      <Calendar id="buttondisplay" className="border-2 border-akin-yellow-light rounded-lg bg-akin-yellow-light/20 ring-0 w-full" value={date} onChange={(e) => setDate(e.value)} showIcon  {...rest}/>
+      <Calendar id="buttondisplay" className="border-2 border-akin-yellow-light rounded-lg bg-akin-yellow-light/20 ring-0 w-full" value={date} onChange={(e) => setDate(e.value)} showIcon  {...rest} dateFormat="yy/m/d"/>
       {/* </div> */}
     </div>
   );
