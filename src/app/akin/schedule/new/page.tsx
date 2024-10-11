@@ -17,6 +17,8 @@ import { Checkbox } from "primereact/checkbox";
 import { View } from "@/components/view";
 import { AVALIABLE_EXAMES } from "./avaliablesExames";
 import { CheckBoxExam } from "./components/CheckBoxExam";
+import { toast } from "sonner";
+import { showErrorToastFn } from "@/lib/sonner";
 // import CheckBoxExam from "./components/CheckBoxExam";
 
 interface INew {}
@@ -88,25 +90,19 @@ export default function New({}: INew) {
       patient_name,
       patient_gender,
     });
+
     if (!validatedData.success) {
-      console.log(patient_birth_day);
-
-      const errorMessages = validatedData.error.errors.map((error) => error.message);
-      //TODO
-      // toast.error(errorMessages.join('\n'), {
-      //   position: "top-right",
-      //   autoClose: 5000,
-      //   hideProgressBar: false,
-      //   closeOnClick: true,
-      //   pauseOnHover: true,
-      //   draggable: true,
-      //   progress: undefined,
-      // });
-
-      // console.log("Errors:", errorMessages);
-      // return;
+      const errosMessages = validatedData.error.errors.map((error) => error.message);
+      showErrorToastFn({ messages: errosMessages });
+      return;
     }
 
+    /**
+     * Valida a data e hora do agendamento do paciente para garantir que não sejam anteriores à data e hora atuais.
+     * Se a data ou hora do agendamento for anterior à data e hora atuais, uma mensagem de erro é adicionada ao array `errorsErrors`.
+     * Se o array `errorsErrors` não estiver vazio, as mensagens de erro são exibidas usando a função `showErrorToastFn`.
+     * A função retorna se houver algum erro, impedindo que o agendamento seja criado.
+     */
     if (isToCreateSchedule) {
       const errorsErrors: string[] = [];
 
@@ -124,38 +120,10 @@ export default function New({}: INew) {
       patientScheduleDateIsBellowOfTodayData && errorsErrors.push("A data de agendamento não pode ser inferior a data de hoje");
       patientScheduleTimeIsBellowOfTodayData && errorsErrors.push("Agendamentos do dia presente não podem ter hora e minuto inferior ao momento presente. No momento são " + todayTime + ", e a data selecionada é " + patient_date_to_local_time);
 
-      console.log("Errors:", errorsErrors);
-      
-      return
+      showErrorToastFn({ messages: errorsErrors });
+      return;
     }
-
-    // console.log(validatedData);
-
-    // try {
-    //   console.log("Validation successful:", validatedData);
-    // } catch (error) {
-    //   if (error instanceof z.ZodError) {
-    //     console.error("Validation failed:", error.errors);
-    //   }
-    // }
-
-    // if(patient_schedule_date < new Date().toISOString().split("T")[0]) {
-    // alert("A data de agendamento não pode ser inferior a data de hoje");
-    // return;
-    // }
-    // if(patient_schedule_date === new Date().toISOString().split("T")[0] && patient_schedule_time < new Date().toISOString().split("T")[1]) {
-    // alert("A data de agendamento não pode ser inferior a data de hoje");
-    // return;
-    // }
-    // if(patient_schedule_date === new Date().toISOString().split("T")[0] && patient_schedule_time === new Date().toISOString().split("T")[1]) {
-    // alert("A data de agendamento não pode ser inferior a data de hoje");
-    // return;
-    // }
-    //
-
-    //Exames de data de ontem são invalido
-    //Validar se a data for de hoje então o exame deve ser de pelo menos 1H a frente
-
+    
     const patient_data = {
       patient_id,
       patient_phone,

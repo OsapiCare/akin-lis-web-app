@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import { Toaster, toast } from "sonner";
 import { PrimeReactProvider, PrimeReactContext } from "primereact/api";
 import "primereact/resources/themes/lara-light-cyan/theme.css";
 
@@ -20,10 +21,23 @@ export default function RootLayout({
   return (
     <html lang="pt">
       <PrimeReactProvider>
-        <body className={inter.className + " bg-akin-cosmic-latte text-gray-700"}>
-          {children}
-        </body>
+        <body className={inter.className + " bg-akin-cosmic-latte text-gray-700"}>{children}</body>
       </PrimeReactProvider>
+      <Toaster
+        // position="top-right"
+        richColors={true}
+
+        
+        // toastOptions={{
+        //   unstyled: true,
+        //   classNames: {
+        //     error: "bg-red-400",
+        //     success: "text-green-400",
+        //     warning: "text-yellow-400",
+        //     info: "bg-blue-400",
+        //   },
+        // }}
+      />
     </html>
   );
 }
