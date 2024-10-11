@@ -15,9 +15,17 @@ export const showWarningToastFn = (message: string) => {
 export const showErrorToastFn = ({ message, messages }: { message?: string; messages?: string[] }) => {
   if (messages) {
     messages.map((message) => {
-      toast.error(message);
+      toast.error(message, {
+        duration: 5000,
+        position: "top-right",
+        
+      });
     });
   } else {
-    toast.error(message);
+    toast.error(message, {
+        duration: 5000,
+        position: "top-right",
+        
+    });
   }
 };
