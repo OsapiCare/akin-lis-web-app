@@ -19,7 +19,7 @@ export default async function PatientById({ params }: IPatientById) {
   try {
     patient = await api.get(`/pacients/${params.id}`).then((response) => response.data);
   } catch (error) {
-    throw new Error(`Buscando Paciente com iD ${params.id}:${error}`);
+    throw new Error(`Buscando Paciente com ID ${params.id}:${error}`);
   }
 
   const thereIsNoPatient = patient.id === undefined;

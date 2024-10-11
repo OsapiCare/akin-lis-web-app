@@ -24,18 +24,12 @@ export default function RootLayout({
         <body className={inter.className + " bg-akin-cosmic-latte text-gray-700"}>{children}</body>
       </PrimeReactProvider>
       <Toaster
-        // position="top-right"
+        position="top-right"
         richColors={true}
-
-        
+        duration={5000}
         // toastOptions={{
-        //   unstyled: true,
-        //   classNames: {
-        //     error: "bg-red-400",
-        //     success: "text-green-400",
-        //     warning: "text-yellow-400",
-        //     info: "bg-blue-400",
-        //   },
+          // unstyled: true,
+          // className:"p-4 rounded-lg ",
         // }}
       />
     </html>
