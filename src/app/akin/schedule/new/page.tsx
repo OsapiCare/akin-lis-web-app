@@ -83,9 +83,12 @@ export default function New({}: INew) {
     });
 
     if (!validatedData.success) {
-      console.log("Validation failed:", validatedData.error);
+      console.log("Error:", validatedData.error);
       return;
     }
+
+    console.log(validatedData);
+    
 
     // try {
     //   console.log("Validation successful:", validatedData);
