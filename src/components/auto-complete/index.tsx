@@ -5,38 +5,31 @@ import clsx from "clsx";
 import "./index.css";
 import { twMerge } from "tailwind-merge";
 
-interface IPatients {
+interface IInputData {
   value: string;
   id: string;
 }
 
-interface IAutoComplete {
-  //   field: string;
-  //   value: string;
-  //   suggestions: ICountry[];
-  //   completeMethod: (event: any) => void;
-  //   onChange: (event: any) => void;
-  //   itemTemplate: (item: ICountry) => React.ReactNode;
-  //   panelFooterTemplate: () => React.ReactNode;
+interface IAutoComplete extends AutoCompleteProps {
+  dataFromServer: IInputData[];
+  lookingFor: string;
 }
 
-interface IAutoComplete extends AutoCompleteProps {}
-
-export default function AutoComplete({ className, ...rest }: IAutoComplete) {
-  const [patients, setPatients] = useState<IPatients[]>([]);
-  const [selectedPatients, setSelectedPatients] = useState(null);
-  const [filteredPatients, setFilteredPatients] = useState<IPatients[]>([]);
+export default function AutoComplete({ className, dataFromServer, lookingFor, ...rest }: IAutoComplete) {
+  const [datas, setDatas] = useState<IInputData[]>([]);
+  const [selectedDatas, setSelectedDatas] = useState(null);
+  const [filteredDatas, setFilteredDatas] = useState<IInputData[]>([]);
 
   const panelFooterTemplate = () => {
-    const isPatientsSelected = (filteredPatients || []).some((patient) => patient["value"] === selectedPatients);
+    const isDatasSelected = (filteredDatas || []).some((patient) => patient["value"] === selectedDatas);
     return (
       <div className="py-2 px-3">
-        {isPatientsSelected ? (
+        {isDatasSelected ? (
           <span>
-            <b>{selectedPatients}</b> Selecionado.
+            <b>{selectedDatas}</b> Selecionado.
           </span>
         ) : (
-          "Nenhum paciente selecionado."
+          `Nenhum ${lookingFor} selecionado.`
         )}
       </div>
     );
@@ -44,22 +37,22 @@ export default function AutoComplete({ className, ...rest }: IAutoComplete) {
 
   const search = (event: any) => {
     // Timeout to emulate a network connection
-    setTimeout(() => {
-      let _filteredCountries;
+    // setTimeout(() => {
+    let _filteredData;
 
-      if (!event.query.trim().length) {
-        _filteredCountries = [...patients];
-      } else {
-        _filteredCountries = patients.filter((patient) => {
-          return patient.value.toLowerCase().startsWith(event.query.toLowerCase());
-        });
-      }
+    if (!event.query.trim().length) {
+      _filteredData = [...datas];
+    } else {
+      _filteredData = datas.filter((patient) => {
+        return patient.value.toLowerCase().startsWith(event.query.toLowerCase());
+      });
+    }
 
-      setFilteredPatients(_filteredCountries);
-    }, 250);
+    setFilteredDatas(_filteredData);
+    // }, 250);
   };
 
-  const itemTemplate = (item: IPatients) => {
+  const itemTemplate = (item: IInputData) => {
     return (
       <div className="flex align-items-center">
         <img alt={item.value} src="https://primefaces.org/cdn/primereact/images/flag/flag_placeholder.png" className={`flag flag-${item.id.toLowerCase()} mr-2`} style={{ width: "18px" }} />
@@ -69,16 +62,18 @@ export default function AutoComplete({ className, ...rest }: IAutoComplete) {
   };
 
   useEffect(() => {
-    FakeService.getCountries().then((data) => setPatients(data));
+    console.log(dataFromServer);
+    
+    setDatas(dataFromServer);
   }, []);
 
   return (
     <PrimeAutoComplete
       field="value"
-      value={selectedPatients}
-      suggestions={filteredPatients}
+      value={selectedDatas}
+      suggestions={filteredDatas}
       completeMethod={search}
-      onChange={(e) => setSelectedPatients(e.value)}
+      onChange={(e) => setSelectedDatas(e.value)}
       itemTemplate={itemTemplate}
       panelFooterTemplate={panelFooterTemplate}
       className={twMerge("border-2 border-akin-yellow-light rounded-lg bg-akin-yellow-light/20 ring-0 ", className)}

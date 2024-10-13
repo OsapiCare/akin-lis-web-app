@@ -10,9 +10,9 @@ export default function Request() {
 
   const [requestSchedule, setRequestSchedule] = useState<ScheduleType[]>(() => {
     
-    ___api.get("/schedule").then((res) => {
-      setRequestSchedule(res.data);
-    });
+    // ___api.get("/schedule").then((res) => {
+    //   setRequestSchedule(res.data);
+    // });
     
     const data = MOCK_SCHEDULE_DATA.filter((data) => data.status == "ATIVO");
     return data ? data : [];

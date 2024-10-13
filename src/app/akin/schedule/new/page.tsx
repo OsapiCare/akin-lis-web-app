@@ -9,7 +9,7 @@ import { DialogWindow } from "@/components/dialog";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
 import AutoComplete from "@/components/auto-complete";
-import { CircleX, Save, UserRoundPlus } from "lucide-react";
+import { CircleX, LoaderCircle, Save, UserRoundPlus } from "lucide-react";
 import { Calendar } from "primereact/calendar";
 
 import { Checkbox } from "primereact/checkbox";
@@ -61,10 +61,21 @@ export default function New({}: INew) {
   const [messageDialog, setMessageDialog] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [avaliableExams, setAvaliableExams] = useState<AvaliableExamsType[]>([]);
+  const [availablePatients, setAvailablePatients] = useState<{ value: string; id: string }[]>([]);
   //TODO Get user on localSorage
   const [loggedUser, setLoggedUser] = useState({ id: "cm27g9oa00001lg20jnnzb0wr", name: "João Silva" });
 
   useEffect(() => {
+    ___api.get("pacients").then((res) => {
+      const pacients = res.data.map((pacient: PatientType) => {
+        return {
+          value: pacient.nome,
+          id: pacient.id,
+        };
+      });
+      setAvailablePatients(pacients);
+    });
+
     ___api.get("/exam-types").then((res) => {
       setAvaliableExams(res.data);
       setIsLoading(false);
@@ -223,12 +234,17 @@ export default function New({}: INew) {
           <div className="flex flex-col flex-1 gap-5 ">
             <div className="flex flex-col gap-3 ">
               <div className="flex flex-col gap-y-4 *:flex *:gap-x-2">
-                <div className="flex border-2 border-akin-yellow-light rounded-lg bg-akin-yellow-light/20 ring-0">
-                  <AutoComplete placeholder="Nome completo do paciente" name="name" className="border-0 ring-0  flex-1" />
-                  <div className="text-gray-400 hover:bg-akin-yellow-light transition ease-out  cursor-pointer p-3 hover:text-gray-800 rounded-lg h-fit" onClick={() => setWindowDialog(true)}>
-                    <UserRoundPlus />
+                {isLoading ? (
+                  <p><LoaderCircle className="animate-spin" /> Carregando lista de pacientes...</p>
+                ) : (
+                  <div className="flex border-2 border-akin-yellow-light rounded-lg bg-akin-yellow-light/20 ring-0">
+                    <AutoComplete placeholder="Nome completo do paciente" name="name" className="border-0 ring-0  flex-1" lookingFor="paciente" dataFromServer={availablePatients} />
+
+                    <div className="text-gray-400 hover:bg-akin-yellow-light transition ease-out  cursor-pointer p-3 hover:text-gray-800 rounded-lg h-fit" onClick={() => setWindowDialog(true)}>
+                      <UserRoundPlus />
+                    </div>
                   </div>
-                </div>
+                )}
                 <div className=" *:flex-1">
                   <Input.CalenderDate noUseLabel placeholder="Data de Nascimento" maxDate={new Date()} name="birth_day" />
                   <Input.Dropdown data={genders} name="gender" placeholder="Selecione o sexo" />
