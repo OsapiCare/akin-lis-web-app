@@ -18,7 +18,7 @@ import { View } from "@/components/view";
 import { AVALIABLE_EXAMES } from "./avaliablesExames";
 import { CheckBoxExam } from "./components/CheckBoxExam";
 import { toast } from "sonner";
-import { showErrorToastFn } from "@/lib/sonner";
+import { ___showErrorToastFn } from "@/lib/sonner";
 // import CheckBoxExam from "./components/CheckBoxExam";
 
 interface INew {}
@@ -93,7 +93,7 @@ export default function New({}: INew) {
 
     if (!validatedData.success) {
       const errosMessages = validatedData.error.errors.map((error) => error.message);
-      showErrorToastFn({ messages: errosMessages });
+      ___showErrorToastFn({ messages: errosMessages });
       return;
     }
 
@@ -120,7 +120,7 @@ export default function New({}: INew) {
       patientScheduleDateIsBellowOfTodayData && errorsErrors.push("A data de agendamento não pode ser inferior a data de hoje");
       patientScheduleTimeIsBellowOfTodayData && errorsErrors.push("Agendamentos do dia presente não podem ter hora e minuto inferior ao momento presente. No momento são " + todayTime + ", e a data selecionada é " + patient_date_to_local_time);
 
-      showErrorToastFn({ messages: errorsErrors });
+      ___showErrorToastFn({ messages: errorsErrors });
       return;
     }
     

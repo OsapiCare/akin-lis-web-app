@@ -1,4 +1,4 @@
-import { api } from "@/lib/axios";
+import { ___api } from "@/lib/axios";
 import { _formatPrice } from "@/utils/mask/currency";
 
 interface IExamsHistory {
@@ -8,7 +8,7 @@ interface IExamsHistory {
 export default async function ExamsHistory({ patientId }: IExamsHistory) {
   let exames: ExamsType[] = [];
   try {
-    exames = await api.get(`exams/pacient/${patientId}`).then((response) => response.data);
+    exames = await ___api.get(`exams/pacient/${patientId}`).then((response) => response.data);
   } catch (error) {
     throw new Error(`Buscando Exames ${patientId}:${error}`);
   }

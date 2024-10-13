@@ -3,12 +3,12 @@ import { APP_CONFIG } from "@/config/app";
 import { Search } from "lucide-react";
 import Link from "next/link";
 import { View } from "@/components/view";
-import { api } from "@/lib/axios";
+import { ___api } from "@/lib/axios";
 
 export default async function Patient() {
   let patients: PatientType[] = [];
   try {
-    patients = await api.get("/pacients").then((response) => response.data);
+    patients = await ___api.get("/pacients").then((response) => response.data);
   } catch (error) {
     throw new Error(`Buscando Pacientes:${error}`);
   }

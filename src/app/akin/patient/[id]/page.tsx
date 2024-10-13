@@ -3,7 +3,7 @@ import { AppLayout } from "@/components/layout";
 import { View } from "@/components/view";
 import { PackageOpen } from "lucide-react";
 import ImageAvatat from "@/assets/images/avatar.png";
-import { api } from "@/lib/axios";
+import { ___api } from "@/lib/axios";
 import Avatar from "@/components/avatar";
 
 interface IPatientById {
@@ -17,7 +17,7 @@ export default async function PatientById({ params }: IPatientById) {
   let patient: PatientType;
 
   try {
-    patient = await api.get(`/pacients/${params.id}`).then((response) => response.data);
+    patient = await ___api.get(`/pacients/${params.id}`).then((response) => response.data);
   } catch (error) {
     throw new Error(`Buscando Paciente com ID ${params.id}:${error}`);
   }

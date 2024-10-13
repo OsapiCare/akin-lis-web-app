@@ -12,7 +12,7 @@ export const showWarningToastFn = (message: string) => {
   toast.warning(message);
 };
 
-export const showErrorToastFn = ({ message, messages }: { message?: string; messages?: string[] }) => {
+export const ___showErrorToastFn = ({ message, messages }: { message?: string; messages?: string[] }) => {
   if (messages) {
     messages.map((message) => {
       toast.error(message);

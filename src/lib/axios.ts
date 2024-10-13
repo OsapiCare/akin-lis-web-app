@@ -1,6 +1,8 @@
 import axios from "axios";
+
 export const API_BASE_URL = "https://magnetic-buzzard-osapicare-a83d5229.koyeb.app";
-export const api = axios.create({
+
+export const ___api = axios.create({
   baseURL: API_BASE_URL,
 });
 
