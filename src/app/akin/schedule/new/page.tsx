@@ -1,10 +1,10 @@
 "use client";
 
-import { FormProvider, useForm } from "react-hook-form";
+import { FormProvider, set, useForm } from "react-hook-form";
 // import PatientFormSave from "./components/PatientFormSave";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { DialogWindow } from "@/components/dialog";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
@@ -12,17 +12,17 @@ import AutoComplete from "@/components/auto-complete";
 import { CircleX, Save, UserRoundPlus } from "lucide-react";
 import { Calendar } from "primereact/calendar";
 
-// import { AVALIABLE_EXAMES } from "../avaliablesExames";
 import { Checkbox } from "primereact/checkbox";
 import { View } from "@/components/view";
-import { AVALIABLE_EXAMES } from "./avaliablesExames";
 import { CheckBoxExam } from "./components/CheckBoxExam";
-import { toast } from "sonner";
-import { ___showErrorToastFn } from "@/lib/sonner";
+import { ___showErrorToastNotification, ___showSuccessToastNotification } from "@/lib/sonner";
+import { ___api } from "@/lib/axios";
+import { ProgressSpinner } from "primereact/progressspinner";
 // import CheckBoxExam from "./components/CheckBoxExam";
 
 interface INew {}
 
+//TODO generos precisam vir do back-end e depois listados no campo de genero
 const genders = [
   { id: 1, value: "Masculino" },
   { id: 2, value: "Feminino" },
@@ -59,11 +59,22 @@ export type SchemaScheduleType = z.infer<typeof schemaSchedule>;
 export default function New({}: INew) {
   const [windowDialog, setWindowDialog] = useState(false);
   const [messageDialog, setMessageDialog] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [avaliableExams, setAvaliableExams] = useState<AvaliableExamsType[]>([]);
+  //TODO Get user on localSorage
+  const [loggedUser, setLoggedUser] = useState({ id: "cm27g9oa00001lg20jnnzb0wr", name: "João Silva" });
+
+  useEffect(() => {
+    ___api.get("/exam-types").then((res) => {
+      setAvaliableExams(res.data);
+      setIsLoading(false);
+    });
+  }, []);
 
   async function onSubmitFn(data: FormData) {
     const patient_id = data.get("identity") as string;
     const patient_phone = data.get("phone_number") as string;
-    const patient_birth_day = new Date(data.get("birth_day") as string);
+    const patient_birth_day = new Date(data.get("birth_day") as string).toLocaleDateString("en-CA");
     const patient_name = data.get("name") as string;
     const patient_gender = data.get("gender") as string;
 
@@ -86,16 +97,18 @@ export default function New({}: INew) {
     const validatedData = schemaSchedule.safeParse({
       patient_id,
       patient_phone,
-      patient_birth_day,
+      patient_birth_day: new Date(patient_birth_day),
       patient_name,
       patient_gender,
     });
 
     if (!validatedData.success) {
       const errosMessages = validatedData.error.errors.map((error) => error.message);
-      ___showErrorToastFn({ messages: errosMessages });
+      ___showErrorToastNotification({ messages: errosMessages });
       return;
     }
+
+    const patient_gender_id = genders.find((gender) => gender.value === (data.get("gender") as string))!.id;
 
     /**
      * Valida a data e hora do agendamento do paciente para garantir que não sejam anteriores à data e hora atuais.
@@ -120,24 +133,86 @@ export default function New({}: INew) {
       patientScheduleDateIsBellowOfTodayData && errorsErrors.push("A data de agendamento não pode ser inferior a data de hoje");
       patientScheduleTimeIsBellowOfTodayData && errorsErrors.push("Agendamentos do dia presente não podem ter hora e minuto inferior ao momento presente. No momento são " + todayTime + ", e a data selecionada é " + patient_date_to_local_time);
 
-      ___showErrorToastFn({ messages: errorsErrors });
+      ___showErrorToastNotification({ messages: errorsErrors });
+
+      // if (errorsErrors.length > 0) return;
+
+      //POST set schedule
+      /**
+       * 
+       * {
+  "patient_birth_day":"09-10-2004",
+  "patient_gender":"Feminino",
+  "patient_id":"00072510LA045",
+  "patient_name":"Catia Mayeye",
+  "patient_phone":"999666808",
+  "patient_schedule_date":"09-10-2024",
+  "patient_schedule_time":"10:30",
+  "patient_exams":[
+    {
+      "id":2
+    },
+    {
+      "id":5
+    }
+  ]
+}
+       */
+
+      // console.log({
+      //   numero_identificacao: patient_id,
+      //   nome: patient_name,
+      //   data_nascimento: patient_birth_day,
+      //   contacto_telefonico: patient_phone,
+      //   id_sexo: patient_gender_id,
+
+      //   patient_schedule_date: patient_schedule_date,
+      //   patient_schedule_time: patient_schedule_time,
+      //   patient_exams: patient_newSelectedValue,
+      // });
+
+      // ___api
+      //   .post("/schedule", )
+      //   .then((res) => {
+      //     console.log("🚀 ~ file: page.tsx:207 ~ .then ~ res:", res);
+      //   })
+      //   .catch((err) => {
+      //     console.log("🚀 ~ file: page.tsx:207 ~ .then ~ err:", err);
+      //   });
+
+      // console.log("🚀 ~ :", patient_data);
+
       return;
     }
-    
+
     const patient_data = {
-      patient_id,
-      patient_phone,
-      patient_birth_day,
-      patient_name,
-      patient_gender,
-      patient_schedule_time,
-      patient_schedule_date,
-      patient_newSelectedValue,
+      numero_identificacao: patient_id,
+      nome: patient_name,
+      data_nascimento: patient_birth_day,
+      contacto_telefonico: patient_phone,
+      id_sexo: patient_gender_id,
+      id_usuario: loggedUser.id,
     };
 
-    // setMessageDialog(true);
-    // console.log("🚀 ~ onSubmitFn ~ patient_data:", patient_data);
-    console.log("🚀");
+    console.log(patient_data);
+
+    ___api
+      .post("/pacients", patient_data)
+      .then((res) => {
+        console.log("🚀 ~ file: page.tsx:207 ~ .then ~ res:", res.data);
+        console.log("🚀 ~ file: page.tsx:207 ~ .then ~ res:", res.status);
+        if (res.status == 201) {
+          ___showSuccessToastNotification({ message: "Paciente cadastrado com sucesso" });
+          setWindowDialog(false);
+        } else {
+          ___showErrorToastNotification({ message: "Erro ao cadastrar paciente.\nTente novamente, mas se o erro persistir, entre em contato com o suporte." });
+        }
+      })
+      .catch((err) => {
+        ___showErrorToastNotification({ message: "Erro ao cadastrar paciente... Tente novamente, mas se o erro persistir, entre em contato com o suporte." });
+
+        console.log("🚀 ~ file: page.tsx:207 ~ .then ~ err:", err);
+      });
   }
 
   return (
@@ -177,10 +252,26 @@ export default function New({}: INew) {
             <div className="space-y-4 flex-1 p-2  ">
               <div className="space-y-2 model p-4  h-[24rem]">
                 <h1 className="font-bold text-xl -mx-4">Exames Disponíveis</h1>
-                <View.Scroll className="max-h-full overflow-y-auto space-y-2">
-                  {AVALIABLE_EXAMES.map((exame, index) => (
-                    <CheckBoxExam key={index} description={exame.nome} value={String(exame.id)} />
-                  ))}
+                <View.Scroll className="max-h-full overflow-y-auto space-y-2 h-full">
+                  {isLoading ? (
+                    <div className="flex items-center justify-center h-full">
+                      <ProgressSpinner style={{ width: "25px", height: "25px" }} strokeWidth="8" fill="var(--surface-ground)" animationDuration=".5s" />
+                    </div>
+                  ) : (
+                    <>
+                      {avaliableExams.length == 0 ? (
+                        <div className="flex items-center justify-center h-full">
+                          <p className="text-gray-400">Não há exames disponíveis</p>
+                        </div>
+                      ) : (
+                        <>
+                          {avaliableExams.map((exame, index) => (
+                            <CheckBoxExam key={index} description={exame.nome} value={String(exame.id)} />
+                          ))}
+                        </>
+                      )}
+                    </>
+                  )}
                 </View.Scroll>
               </div>
             </div>

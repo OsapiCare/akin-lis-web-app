@@ -12,3 +12,10 @@ interface Exame {
   nome: string;
   descricao: string;
 }
+
+interface AvaliableExamsType {
+  id: number;
+  nome: string;
+  descricao: string;
+  preco: number;
+}
