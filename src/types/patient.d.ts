@@ -8,5 +8,6 @@
     data_ultima_visita: string;
     id_sexo: number;
     id_usuario: string;
+    genero?: string;
   }
   

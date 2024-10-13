@@ -13,9 +13,10 @@ interface IInputData {
 interface IAutoComplete extends AutoCompleteProps {
   dataFromServer: IInputData[];
   lookingFor: string;
+  setSelectedItemId: (value: string) => void;
 }
 
-export default function AutoComplete({ className, dataFromServer, lookingFor, ...rest }: IAutoComplete) {
+export default function AutoComplete({ className, setSelectedItemId, dataFromServer, lookingFor, ...rest }: IAutoComplete) {
   const [datas, setDatas] = useState<IInputData[]>([]);
   const [selectedDatas, setSelectedDatas] = useState(null);
   const [filteredDatas, setFilteredDatas] = useState<IInputData[]>([]);
@@ -62,10 +63,21 @@ export default function AutoComplete({ className, dataFromServer, lookingFor, ..
   };
 
   useEffect(() => {
-    console.log(dataFromServer);
-    
+    // console.log(dataFromServer);
+
     setDatas(dataFromServer);
   }, []);
+
+  function onChangeValueFn(e: any) {
+    // console.log(e);
+    const patiendId = e.value.id;
+    if (patiendId) {
+      // const patient = dataFromServer.find((item) => item.id === patiendId)
+      setSelectedItemId(patiendId);
+    }
+
+    setSelectedDatas(e.value);
+  }
 
   return (
     <PrimeAutoComplete
@@ -73,7 +85,7 @@ export default function AutoComplete({ className, dataFromServer, lookingFor, ..
       value={selectedDatas}
       suggestions={filteredDatas}
       completeMethod={search}
-      onChange={(e) => setSelectedDatas(e.value)}
+      onChange={(e) => onChangeValueFn(e)}
       itemTemplate={itemTemplate}
       panelFooterTemplate={panelFooterTemplate}
       className={twMerge("border-2 border-akin-yellow-light rounded-lg bg-akin-yellow-light/20 ring-0 ", className)}

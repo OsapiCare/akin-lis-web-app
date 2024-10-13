@@ -61,7 +61,10 @@ export default function New({}: INew) {
   const [messageDialog, setMessageDialog] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [avaliableExams, setAvaliableExams] = useState<AvaliableExamsType[]>([]);
-  const [availablePatients, setAvailablePatients] = useState<{ value: string; id: string }[]>([]);
+  const [availablePatients, setAvailablePatients] = useState<PatientType[]>([]);
+  const [availablePatientsAutoComplete, setAvailablePatientsAutoComplete] = useState<{ value: string; id: string }[]>([]);
+  const [selectedItemId, setSelectedItemId] = useState<string>("");
+  const [selectedPatient, setSelectedPatient] = useState<PatientType>();
   //TODO Get user on localSorage
   const [loggedUser, setLoggedUser] = useState({ id: "cm27g9oa00001lg20jnnzb0wr", name: "João Silva" });
 
@@ -73,7 +76,8 @@ export default function New({}: INew) {
           id: pacient.id,
         };
       });
-      setAvailablePatients(pacients);
+      setAvailablePatientsAutoComplete(pacients);
+      setAvailablePatients(res.data);
     });
 
     ___api.get("/exam-types").then((res) => {
@@ -81,6 +85,15 @@ export default function New({}: INew) {
       setIsLoading(false);
     });
   }, []);
+
+  useEffect(() => {
+    if (selectedItemId) {
+      const patientFinded = availablePatients.find((patient) => patient.id === selectedItemId);
+
+      // console.log("BOMMM ", patientFinded);
+      setSelectedPatient(patientFinded);
+    }
+  }, [selectedItemId]);
 
   async function onSubmitFn(data: FormData) {
     const patient_id = data.get("identity") as string;
@@ -235,10 +248,12 @@ export default function New({}: INew) {
             <div className="flex flex-col gap-3 ">
               <div className="flex flex-col gap-y-4 *:flex *:gap-x-2">
                 {isLoading ? (
-                  <p><LoaderCircle className="animate-spin" /> Carregando lista de pacientes...</p>
+                  <p>
+                    <LoaderCircle className="animate-spin" /> Carregando lista de pacientes...
+                  </p>
                 ) : (
                   <div className="flex border-2 border-akin-yellow-light rounded-lg bg-akin-yellow-light/20 ring-0">
-                    <AutoComplete placeholder="Nome completo do paciente" name="name" className="border-0 ring-0  flex-1" lookingFor="paciente" dataFromServer={availablePatients} />
+                    <AutoComplete placeholder="Nome completo do paciente" name="name" className="border-0 ring-0  flex-1" lookingFor="paciente" dataFromServer={availablePatientsAutoComplete} setSelectedItemId={setSelectedItemId} />
 
                     <div className="text-gray-400 hover:bg-akin-yellow-light transition ease-out  cursor-pointer p-3 hover:text-gray-800 rounded-lg h-fit" onClick={() => setWindowDialog(true)}>
                       <UserRoundPlus />
@@ -247,18 +262,21 @@ export default function New({}: INew) {
                 )}
                 <div className=" *:flex-1">
                   <Input.CalenderDate noUseLabel placeholder="Data de Nascimento" maxDate={new Date()} name="birth_day" />
-                  <Input.Dropdown data={genders} name="gender" placeholder="Selecione o sexo" />
+                  {/* <Input.CalenderDate noUseLabel placeholder="Data de Nascimento" maxDate={new Date()} name="birth_day" value={selectedPatient?.data_nascimento ? new Date(selectedPatient?.data_nascimento) : null} /> */}
+                  //TODO fixxxxxxxxxxxx
+                  <Input.Dropdown data={genders} name="gender" placeholder="Selecione o sexo" 
+                  valueData={genders.find((gender) => gender.id == selectedPatient?.id_sexo)!.value} />
                 </div>
 
-                <Input.InputText placeholder="Contacto telefónico" name="phone_number" type="number" />
-                <Input.InputText placeholder="Bilhete de Identidade" maxLength={14} name="identity" />
+                <Input.InputText placeholder="Contacto telefónico" name="phone_number" type="number" value={selectedPatient?.contacto_telefonico} />
+                <Input.InputText placeholder="Bilhete de Identidade" maxLength={14} name="identity" value={selectedPatient?.numero_identificacao} />
               </div>
             </div>
             <div className="">
               <h2 className="font-bold">Data do Agendamento</h2>
               <hr />
               <div className="flex gap-2 mt-4 *:flex-1">
-                <Input.CalenderDate minDateToBeToday minDate={new Date()} name="schedule_date" />
+                <Input.CalenderDate value={new Date()} minDate={new Date()} name="schedule_date" />
                 <Input.CalenderTime name="schedule_time" />
               </div>
             </div>
@@ -312,9 +330,9 @@ export default function New({}: INew) {
             <Button.Primary icon={<Save />} type="submit" className="bg-green-700">
               Registar
             </Button.Primary>
-            <Button.Primary icon={<CircleX />} onClick={() => setWindowDialog(false)} className="bg-red-700">
+            {/* <Button.Primary icon={<CircleX />} onClick={() => setWindowDialog(false)} className="bg-red-700">
               Cancelar
-            </Button.Primary>
+            </Button.Primary> */}
           </div>
         </form>
       </DialogWindow.Window>
