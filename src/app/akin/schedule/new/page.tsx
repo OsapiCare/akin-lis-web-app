@@ -82,10 +82,16 @@ export default function New({}: INew) {
         setAvailablePatients(res.data);
       })
       .finally(() => {
-        ___api.get("/exam-types").then((res) => {
-          setAvaliableExams(res.data);
-          setIsLoading(false);
-        });
+        ___api
+          .get("/exam-types")
+          .then((res) => {
+            setAvaliableExams(res.data);
+            setIsLoading(false);
+            ___showSuccessToastNotification({ message: "Dados obtidos com sucesso!" });
+          })
+          .catch((e) => {
+            ___showErrorToastNotification({ message: "Erro inesperado ocorreu ao buscar os dados" });
+          });
       });
   }, []);
 
@@ -264,7 +270,8 @@ export default function New({}: INew) {
                   </div>
                 )}
                 <div className=" *:flex-1">
-                  <Input.CalenderDate noUseLabel placeholder="Data de Nascimento" maxDate={new Date()} name="birth_day" valueDate={null} />
+                  <Input.CalenderDate noUseLabel placeholder="Data de Nascimento" maxDate={new Date()} name="birth_day" valueDate={selectedPatient?.data_nascimento ? new Date(selectedPatient.data_nascimento) : null} />
+
                   {/* <Input.CalenderDate noUseLabel placeholder="Data de Nascimento" maxDate={new Date()} name="birth_day" value={selectedPatient?.data_nascimento ? new Date(selectedPatient?.data_nascimento) : null} /> */}
 
                   <Input.Dropdown data={genders} name="gender" placeholder="Selecione o sexo" valueData={selectedPatient?.sexo.nome} />

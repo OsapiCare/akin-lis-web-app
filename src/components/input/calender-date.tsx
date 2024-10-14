@@ -2,15 +2,19 @@
 
 import { Calendar, CalendarProps, CalendarBaseProps } from "primereact/calendar";
 import { Nullable } from "primereact/ts-helpers";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 interface ICalenderDate extends CalendarBaseProps {
   noUseLabel?: boolean;
-  valueDate: Date|null;
+  valueDate: Date | null;
 }
 
 export default function CalenderDate({ noUseLabel, valueDate, ...rest }: ICalenderDate) {
   const [date, setDate] = useState<Nullable<Date>>(valueDate ? valueDate : null);
+
+  useEffect(() => {
+    setDate(valueDate ? valueDate : null);
+  }, [valueDate]);
   return (
     <div className="card gap-3 ">
       {!noUseLabel && (
