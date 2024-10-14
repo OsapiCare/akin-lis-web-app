@@ -1,34 +1,34 @@
 "use client";
 
 import { MOCK_SCHEDULE_DATA } from "@/mocks/schedule";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import CardScheduleContainer from "../CardScheduleContainer";
 import { ___api } from "@/lib/axios";
+import { ___showErrorToastNotification } from "@/lib/sonner";
 
 export default function Request() {
   // const [schedule, setSchedule] = useState<ScheduleType[]>([]);
 
-  const [requestSchedule, setRequestSchedule] = useState<ScheduleType[]>(() => {
-    
-    // ___api.get("/schedule").then((res) => {
-    //   setRequestSchedule(res.data);
-    // });
-    
-    const data = MOCK_SCHEDULE_DATA.filter((data) => data.status == "ATIVO");
-    return data ? data : [];
-  });
+  const [requestSchedule, setRequestSchedule] = useState<ScheduleType[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // const filteredSchedule = requestSchedule.filter((schedule) => schedule.status == "ATIVO");
+  useEffect(() => {
+    ___api
+      .get("/schedulings/pending")
+      .then((res) => {
+        // console.log("----",res.data[0]);
+        setRequestSchedule(res.data);
+        setIsLoading(false);
+      })
+      .catch((e) => {
+        ___showErrorToastNotification({ message: "Erro inesperado ocorreu ao buscar os dados. Atualiza a página ou contecte o suporte" });
+      });
+  }, []);
 
-  // useEffect(() => {
-  // const data = MOCK_SCHEDULE_DATA.find((data) => data.status == "ATIVO");
-  // console.log(data);
-  // setSchedule(data);
-  // }, []);
 
   return (
     <div className=" h-screen px-6 mx-auto">
-      <CardScheduleContainer title="Agendamentos em Andamento" schedule={requestSchedule} />
+      <CardScheduleContainer isLoading={isLoading} title="Agendamentos em Andamento" schedule={requestSchedule} />
     </div>
   );
 }
