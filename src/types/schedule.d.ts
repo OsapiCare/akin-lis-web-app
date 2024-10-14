@@ -5,12 +5,12 @@ interface ScheduleType {
   data_agendamento: string;
   hora_agendamento: string;
   status: string;
-  id_tecnico_alocado: number;
-  data_pagamento: string;
-  patiente: PatientType;
+  id_tecnico_alocado: number|null;//after remove null
+  data_pagamento: string|null //after remove null;
+  // patiente: PatientType;
   Exame: ExamsType[];
+  Paciente:PatientType
 }
-
 
 
 

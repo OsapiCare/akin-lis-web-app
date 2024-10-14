@@ -20,7 +20,7 @@ export default function CardScheduleContainer({ schedule, title, isLoading }: IC
     // const serachText = event.target.value;
     serachText.length > 0 ? setIsSearching(true) : setIsSearching(false);
 
-    const findedSchedule = schedule.filter((schedule) => schedule.patiente?.nome.toLowerCase().includes(serachText.toLowerCase()));
+    const findedSchedule = schedule.filter((schedule) => schedule.Paciente?.nome.toLowerCase().includes(serachText.toLowerCase()));
     setFilteredSchedule(findedSchedule);
     console.log("-_-", findedSchedule);
   }

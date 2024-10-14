@@ -13,8 +13,11 @@ interface ICardSchdule {
 export default function CardSchdule({ data }: ICardSchdule) {
   const [showExames, setShowExames] = useState(false);
 
+  
+
   const thisYear = new Date().getFullYear();
-  const birthYear = Number(data.patiente.data_nascimento.split("/")[2]);
+  // const birthYear = Number(.split("/")[2]);
+  const birthYear = data.Paciente?.data_nascimento ? new Date(data.Paciente.data_nascimento).getFullYear():0
   const age = thisYear - birthYear;
 
   {
@@ -41,11 +44,11 @@ export default function CardSchdule({ data }: ICardSchdule) {
             <Image className="bg-center overflow-hidden rounded-t-lg" src="/images/exam/Plasmodium.png" fill alt="" />
           </div>
           <div className="w-full px-4 py-1 space-y-1.5 flex flex-col mt-1 text-cyan-800 ">
-            <h1 className="text-xl font-bold ">{data.patiente.nome}</h1>
-            <span>BI: {data.patiente.numero_identificacao}</span>
-            <span>Sexo: {data.patiente.id_sexo === 1 ? "Masculino" : "Feminino"}</span>
+            <h1 className="text-xl font-bold ">{data.Paciente?.nome}</h1>
+            <span>BI: {data.Paciente?.numero_identificacao}</span>
+            <span>Sexo: {data.Paciente?.id_sexo === 1 ? "Masculino" : "Feminino"}</span>
             <span>Idade: {age}</span>
-            <p>Marcado em: {new Date(data.data_agendamento).toLocaleString()}</p>
+            <p>Marcado em: {new Date(data?.data_agendamento).toLocaleString()}</p>
           </div>
         </>
       )}
@@ -57,13 +60,4 @@ export default function CardSchdule({ data }: ICardSchdule) {
   );
 }
 
-{
-  /* 
-        <span>
-            Data: {data.patiente.data_nascimento.split("/")[2]}/{data.patiente.data_nascimento.split("/")[1]}/{data.patiente.data_nascimento.split("/")[0]}
-        </span>
-        <span>
-            Hora: {data.hora_agendamento}</span>
-        </div> 
-      */
-}
+
