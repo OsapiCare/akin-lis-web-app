@@ -69,21 +69,24 @@ export default function New({}: INew) {
   const [loggedUser, setLoggedUser] = useState({ id: "cm27g9oa00001lg20jnnzb0wr", name: "João Silva" });
 
   useEffect(() => {
-    ___api.get("pacients").then((res) => {
-      const pacients = res.data.map((pacient: PatientType) => {
-        return {
-          value: pacient.nome,
-          id: pacient.id,
-        };
+    ___api
+      .get("pacients")
+      .then((res) => {
+        const pacients = res.data.map((pacient: PatientType) => {
+          return {
+            value: pacient.nome,
+            id: pacient.id,
+          };
+        });
+        setAvailablePatientsAutoComplete(pacients);
+        setAvailablePatients(res.data);
+      })
+      .finally(() => {
+        ___api.get("/exam-types").then((res) => {
+          setAvaliableExams(res.data);
+          setIsLoading(false);
+        });
       });
-      setAvailablePatientsAutoComplete(pacients);
-      setAvailablePatients(res.data);
-    });
-
-    ___api.get("/exam-types").then((res) => {
-      setAvaliableExams(res.data);
-      setIsLoading(false);
-    });
   }, []);
 
   useEffect(() => {
@@ -261,11 +264,10 @@ export default function New({}: INew) {
                   </div>
                 )}
                 <div className=" *:flex-1">
-                  <Input.CalenderDate noUseLabel placeholder="Data de Nascimento" maxDate={new Date()} name="birth_day" />
+                  <Input.CalenderDate noUseLabel placeholder="Data de Nascimento" maxDate={new Date()} name="birth_day" valueDate={null} />
                   {/* <Input.CalenderDate noUseLabel placeholder="Data de Nascimento" maxDate={new Date()} name="birth_day" value={selectedPatient?.data_nascimento ? new Date(selectedPatient?.data_nascimento) : null} /> */}
-                  //TODO fixxxxxxxxxxxx
-                  <Input.Dropdown data={genders} name="gender" placeholder="Selecione o sexo" 
-                  valueData={genders.find((gender) => gender.id == selectedPatient?.id_sexo)!.value} />
+
+                  <Input.Dropdown data={genders} name="gender" placeholder="Selecione o sexo" valueData={selectedPatient?.sexo.nome} />
                 </div>
 
                 <Input.InputText placeholder="Contacto telefónico" name="phone_number" type="number" value={selectedPatient?.contacto_telefonico} />
@@ -276,7 +278,7 @@ export default function New({}: INew) {
               <h2 className="font-bold">Data do Agendamento</h2>
               <hr />
               <div className="flex gap-2 mt-4 *:flex-1">
-                <Input.CalenderDate value={new Date()} minDate={new Date()} name="schedule_date" />
+                <Input.CalenderDate valueDate={new Date()} minDate={new Date()} name="schedule_date" />
                 <Input.CalenderTime name="schedule_time" />
               </div>
             </div>
@@ -319,7 +321,7 @@ export default function New({}: INew) {
         <form action={onSubmitFn} className="flex flex-col gap-y-4 *:flex *:gap-x-2">
           <Input.InputText placeholder="Nome do Paciente" name="name" />
           <div className=" *:flex-1">
-            <Input.CalenderDate noUseLabel placeholder="Data de Nascimento" maxDate={new Date()} name="birth_day" />
+            <Input.CalenderDate noUseLabel placeholder="Data de Nascimento" maxDate={new Date()} name="birth_day" valueDate={null} />
             <Input.Dropdown data={genders} name="gender" placeholder="Selecione o sexo" />
           </div>
 

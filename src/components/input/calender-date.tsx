@@ -6,11 +6,11 @@ import { useState } from "react";
 
 interface ICalenderDate extends CalendarBaseProps {
   noUseLabel?: boolean;
-  value?: Date|null;
+  valueDate: Date|null;
 }
 
-export default function CalenderDate({ noUseLabel, value, ...rest }: ICalenderDate) {
-  const [date, setDate] = useState<Nullable<Date>>(value ? value : null);
+export default function CalenderDate({ noUseLabel, valueDate, ...rest }: ICalenderDate) {
+  const [date, setDate] = useState<Nullable<Date>>(valueDate ? valueDate : null);
   return (
     <div className="card gap-3 ">
       {!noUseLabel && (
