@@ -22,7 +22,7 @@ export default function CardScheduleContainer({ schedule, title, isLoading }: IC
 
     const findedSchedule = schedule.filter((schedule) => schedule.Paciente?.nome.toLowerCase().includes(serachText.toLowerCase()));
     setFilteredSchedule(findedSchedule);
-    console.log("-_-", findedSchedule);
+    // console.log("-_-", findedSchedule);
   }
 
   useEffect(() => {

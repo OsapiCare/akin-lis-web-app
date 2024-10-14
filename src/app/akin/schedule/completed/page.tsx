@@ -8,8 +8,6 @@ import { useEffect, useState } from "react";
 import { ___api } from "@/lib/axios";
 import { ___showErrorToastNotification } from "@/lib/sonner";
 
-
-
 export default function Completed() {
   const [Complitedschedule, setComplitedschedule] = useState<ScheduleType[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -18,9 +16,6 @@ export default function Completed() {
     ___api
       .get("/schedulings/concluded")
       .then((res) => {
-
-       
-        
         setComplitedschedule(res.data);
         setIsLoading(false);
       })

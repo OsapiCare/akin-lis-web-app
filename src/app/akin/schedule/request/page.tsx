@@ -25,7 +25,6 @@ export default function Request() {
       });
   }, []);
 
-
   return (
     <div className=" h-screen px-6 mx-auto">
       <CardScheduleContainer isLoading={isLoading} title="Agendamentos em Andamento" schedule={requestSchedule} />
