@@ -60,13 +60,14 @@ export default function New({}: INew) {
   const [windowDialog, setWindowDialog] = useState(false);
   const [messageDialog, setMessageDialog] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const [avaliableExams, setAvaliableExams] = useState<AvaliableExamsType[]>([]);
   const [availablePatients, setAvailablePatients] = useState<PatientType[]>([]);
   const [availablePatientsAutoComplete, setAvailablePatientsAutoComplete] = useState<{ value: string; id: string }[]>([]);
   const [selectedItemId, setSelectedItemId] = useState<string>("");
   const [selectedPatient, setSelectedPatient] = useState<PatientType>();
   //TODO Get user on localSorage
-  const [loggedUser, setLoggedUser] = useState({ id: "cm27g9oa00001lg20jnnzb0wr", name: "João Silva" });
+  const [loggedUser, setLoggedUser] = useState({ id: "cm27g9oa00001lg20jnnzb0wr", name: "João Silva", id_unidade_de_saude: 1 });
 
   useEffect(() => {
     ___api
@@ -85,7 +86,7 @@ export default function New({}: INew) {
         ___api
           .get("/exam-types")
           .then((res) => {
-            setAvaliableExams(res.data);
+            setAvaliableExams(res.data.data);
             setIsLoading(false);
             ___showSuccessToastNotification({ message: "Dados obtidos com sucesso!" });
           })
@@ -116,12 +117,13 @@ export default function New({}: INew) {
 
     const patient_checkboxes = document.querySelectorAll('input[name="opc_checkbox"]:checked');
     const patient_selectedValue = Array.from(patient_checkboxes).map((checkbox) => (checkbox as HTMLInputElement).value);
+
     const patient_newSelectedValue = patient_selectedValue.map((value) => {
       const id = value.split("_")[0];
       const exame = value.split("_")[1];
       return {
-        id,
-        exame,
+        id: Number(id),
+        // exame,
       };
     });
 
@@ -143,12 +145,6 @@ export default function New({}: INew) {
 
     const patient_gender_id = genders.find((gender) => gender.value === (data.get("gender") as string))!.id;
 
-    /**
-     * Valida a data e hora do agendamento do paciente para garantir que não sejam anteriores à data e hora atuais.
-     * Se a data ou hora do agendamento for anterior à data e hora atuais, uma mensagem de erro é adicionada ao array `errorsErrors`.
-     * Se o array `errorsErrors` não estiver vazio, as mensagens de erro são exibidas usando a função `showErrorToastFn`.
-     * A função retorna se houver algum erro, impedindo que o agendamento seja criado.
-     */
     if (isToCreateSchedule) {
       const errorsErrors: string[] = [];
 
@@ -166,55 +162,40 @@ export default function New({}: INew) {
       patientScheduleDateIsBellowOfTodayData && errorsErrors.push("A data de agendamento não pode ser inferior a data de hoje");
       patientScheduleTimeIsBellowOfTodayData && errorsErrors.push("Agendamentos do dia presente não podem ter hora e minuto inferior ao momento presente. No momento são " + todayTime + ", e a data selecionada é " + patient_date_to_local_time);
 
-      ___showErrorToastNotification({ messages: errorsErrors });
+      if (errorsErrors.length > 0) {
+        ___showErrorToastNotification({ messages: errorsErrors });
+        return;
+      }
 
-      // if (errorsErrors.length > 0) return;
+      const patient_data = {
+        id_paciente: selectedPatient!.id,
+        id_unidade_de_saude: loggedUser.id_unidade_de_saude,
+        data_agendamento: patient_schedule_date.replace(/\//g, "-"),
+        hora_agendamento: patient_schedule_time,
+        exames_paciente: patient_newSelectedValue,
+      };
 
-      //POST set schedule
-      /**
-       * 
-       * {
-  "patient_birth_day":"09-10-2004",
-  "patient_gender":"Feminino",
-  "patient_id":"00072510LA045",
-  "patient_name":"Catia Mayeye",
-  "patient_phone":"999666808",
-  "patient_schedule_date":"09-10-2024",
-  "patient_schedule_time":"10:30",
-  "patient_exams":[
-    {
-      "id":2
-    },
-    {
-      "id":5
-    }
-  ]
-}
-       */
+      // console.log(patient_data);
+      // return;
 
-      // console.log({
-      //   numero_identificacao: patient_id,
-      //   nome: patient_name,
-      //   data_nascimento: patient_birth_day,
-      //   contacto_telefonico: patient_phone,
-      //   id_sexo: patient_gender_id,
+      setIsSaving(true);
+      ___api
+        .post("/schedulings/set-schedule", patient_data)
+        .then((res) => {
+          if (res.status == 201) {
+            ___showSuccessToastNotification({ message: "Agendamento marcado com sucesso" });
+            setSelectedPatient(undefined);
+            setWindowDialog(false);
+          } else {
+            ___showErrorToastNotification({ message: "Erro ao marcar Agendamento.\nTente novamente, mas se o erro persistir, entre em contato com o suporte." });
+          }
+        })
+        .catch((err) => {
+          ___showErrorToastNotification({ message: "Erro ao marcar Agendamento... Tente novamente, mas se o erro persistir, entre em contato com o suporte." });
 
-      //   patient_schedule_date: patient_schedule_date,
-      //   patient_schedule_time: patient_schedule_time,
-      //   patient_exams: patient_newSelectedValue,
-      // });
-
-      // ___api
-      //   .post("/schedule", )
-      //   .then((res) => {
-      //     console.log("🚀 ~ file: page.tsx:207 ~ .then ~ res:", res);
-      //   })
-      //   .catch((err) => {
-      //     console.log("🚀 ~ file: page.tsx:207 ~ .then ~ err:", err);
-      //   });
-
-      // console.log("🚀 ~ :", patient_data);
-
+          console.log("🚀 ~ file: page.tsx:207 ~ .then ~ err:", err);
+        })
+        .finally(() => setIsSaving(false));
       return;
     }
 
@@ -227,16 +208,16 @@ export default function New({}: INew) {
       id_usuario: loggedUser.id,
     };
 
-    console.log(patient_data);
+    // console.log(patient_data);
 
+    setIsSaving(true);
     ___api
-      .post("/pacients", patient_data)
-      .then((res) => {
-        console.log("🚀 ~ file: page.tsx:207 ~ .then ~ res:", res.data);
-        console.log("🚀 ~ file: page.tsx:207 ~ .then ~ res:", res.status);
-        if (res.status == 201) {
-          ___showSuccessToastNotification({ message: "Paciente cadastrado com sucesso" });
-          setWindowDialog(false);
+    .post("/pacients", patient_data)
+    .then((res) => {
+      if (res.status == 201) {
+          setMessageDialog(true)
+          // ___showSuccessToastNotification({ message: "Paciente cadastrado com sucesso" });
+          
         } else {
           ___showErrorToastNotification({ message: "Erro ao cadastrar paciente.\nTente novamente, mas se o erro persistir, entre em contato com o suporte." });
         }
@@ -245,7 +226,8 @@ export default function New({}: INew) {
         ___showErrorToastNotification({ message: "Erro ao cadastrar paciente... Tente novamente, mas se o erro persistir, entre em contato com o suporte." });
 
         console.log("🚀 ~ file: page.tsx:207 ~ .then ~ err:", err);
-      });
+      })
+      .finally(() => setIsSaving(false));
   }
 
   return (
@@ -270,15 +252,15 @@ export default function New({}: INew) {
                   </div>
                 )}
                 <div className=" *:flex-1">
-                  <Input.CalenderDate noUseLabel placeholder="Data de Nascimento" maxDate={new Date()} name="birth_day" valueDate={selectedPatient?.data_nascimento ? new Date(selectedPatient.data_nascimento) : null} />
+                  <Input.CalenderDate disabled noUseLabel placeholder="Data de Nascimento" maxDate={new Date()} name="birth_day" valueDate={selectedPatient?.data_nascimento ? new Date(selectedPatient.data_nascimento) : null} />
 
                   {/* <Input.CalenderDate noUseLabel placeholder="Data de Nascimento" maxDate={new Date()} name="birth_day" value={selectedPatient?.data_nascimento ? new Date(selectedPatient?.data_nascimento) : null} /> */}
 
-                  <Input.Dropdown data={genders} name="gender" placeholder="Selecione o sexo" valueData={selectedPatient?.sexo.nome} />
+                  <Input.Dropdown disabled data={genders} name="gender" placeholder="Selecione o sexo" valueData={selectedPatient?.sexo.nome} />
                 </div>
 
-                <Input.InputText placeholder="Contacto telefónico" name="phone_number" type="number" value={selectedPatient?.contacto_telefonico} />
-                <Input.InputText placeholder="Bilhete de Identidade" maxLength={14} name="identity" value={selectedPatient?.numero_identificacao} />
+                <Input.InputText maxLength={0} placeholder="Contacto telefónico" name="phone_number" value={selectedPatient?.contacto_telefonico} />
+                <Input.InputText maxLength={0} placeholder="Bilhete de Identidade" name="identity" value={selectedPatient?.numero_identificacao} />
               </div>
             </div>
             <div className="">
@@ -319,7 +301,7 @@ export default function New({}: INew) {
               </div>
             </div>
 
-            <Button.Primary className="m-2" type="submit" label="Agendar" />
+            <Button.Primary className="m-2" type="submit" label={isSaving ? "Marcando..." : "Agendar"} disabled={isSaving} />
           </div>
         </form>
       </div>
@@ -336,9 +318,7 @@ export default function New({}: INew) {
           <Input.InputText placeholder="Bilhete de Identidade" maxLength={14} name="identity" />
 
           <div className="space-x-2 flex justify-end mt-4">
-            <Button.Primary icon={<Save />} type="submit" className="bg-green-700">
-              Registar
-            </Button.Primary>
+            <Button.Primary icon={<Save />} type="submit" className="bg-green-700" label={isSaving ? "Salvando..." : "Salvar"} disabled={isSaving} />
             {/* <Button.Primary icon={<CircleX />} onClick={() => setWindowDialog(false)} className="bg-red-700">
               Cancelar
             </Button.Primary> */}
@@ -346,7 +326,7 @@ export default function New({}: INew) {
         </form>
       </DialogWindow.Window>
 
-      <DialogWindow.Message type="Sucesso" visible={messageDialog} setVisible={setMessageDialog} />
+      <DialogWindow.Message actionFn={()=> window.location.reload() } type="Sucesso" visible={messageDialog} setVisible={setMessageDialog}  />
       {/* <DialogWindow.Message type="Sucesso" visible={messageDialog} setVisible={setMessageDialog} /> */}
     </div>
   );

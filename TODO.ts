@@ -17,11 +17,7 @@
 
 
 /*
-get agendamentos solicitadis
-get agendamentos concluidos
-
-get patient at schedule
 set schedule
-
+close button on tost
 review
 */
