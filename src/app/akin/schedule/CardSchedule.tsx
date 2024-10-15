@@ -17,7 +17,8 @@ export default function CardSchdule({ data }: ICardSchdule) {
 
   const thisYear = new Date().getFullYear();
   // const birthYear = Number(.split("/")[2]);
-  const birthYear = data.Paciente?.data_nascimento ? new Date(data.Paciente.data_nascimento).getFullYear():0
+  // const birthYear = data.Paciente?.data_nascimento ? new Date(data.Paciente.data_nascimento).getFullYear():0
+  const birthYear = new Date(data.Paciente.data_nascimento).getFullYear()
   const age = thisYear - birthYear;
 
   {
