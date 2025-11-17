@@ -7,7 +7,7 @@ import { _axios } from "@/Api/axios.config";
 import { ___showErrorToastNotification, ___showSuccessToastNotification } from "@/lib/sonner";
 import { schemaSchedule } from "./utils/schemaZodNewPatient";
 import { PatientDetails } from "./components/PatientDetails";
-import { ScheduleDetails } from "./components/ScheduleDetails";
+import { ScheduleDetails, ScheduleItem } from "./components/ScheduleDetails";
 import { Button } from "@/components/ui/button";
 import { resetInputs } from "./utils/reset-inputs-func";
 import { getAllDataInCookies } from "@/utils/get-data-in-cookies";
@@ -23,7 +23,7 @@ export default function New() {
   const [patientAutoComplete, setPatientAutoComplete] = useState<{ value: string; id: string }[]>([]);
   const [selectedPatientId, setSelectedPatientId] = useState<string>("");
   const [selectedPatient, setSelectedPatient] = useState<Patient | undefined>();
-  const [schedules, setSchedules] = useState([{ exam: "", date: new Date(), time: "" }]);
+  const [schedules, setSchedules] = useState<ScheduleItem[]>([{ exam: null, date: null, time: "" }]);
   const [resetPatient, setResetPatient] = useState(false);
   const unit_health = getAllDataInCookies().userdata.health_unit_ref;
 
@@ -49,14 +49,6 @@ export default function New() {
 
       ___showSuccessToastNotification({ message: "Dados obtidos com sucesso!" });
     } catch (error) {
-      const mockPacients: Patient[] = [{ id: "1", nome_completo: "Victor Monteiro" } as Patient, { id: "2", nome_completo: "Adolfo Manuel" } as Patient];
-
-      setAvailablePatients(mockPacients);
-      setPatientAutoComplete(mockPacients.map((p) => ({ value: p.nome_completo, id: p.id })));
-
-      const mockExames: IExamProps[] = [{ id: "1", nome: "Exame de Sangue" } as IExamProps, { id: "2", nome: "Exame de Urina" } as IExamProps];
-      setAvailableExams(mockExames);
-
       ___showErrorToastNotification({ message: "Erro ao buscar dados" });
     } finally {
       setIsLoading(false);
@@ -99,7 +91,7 @@ export default function New() {
         id_paciente: selectedPatient!.id,
         id_unidade_de_saude: unit_health,
         exames_paciente: schedules.map((schedule) => {
-          const date = schedule.date instanceof Date ? schedule.date : new Date(schedule.date);
+          const date = schedule.date instanceof Date ? schedule.date : schedule.date ? new Date(schedule.date) : new Date();
           return {
             id_tipo_exame: schedule.exam,
             data_agendamento: date.toISOString().split("T")[0], // 'YYYY-MM-DD'

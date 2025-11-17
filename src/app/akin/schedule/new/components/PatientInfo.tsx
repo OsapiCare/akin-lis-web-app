@@ -7,6 +7,11 @@ export function PatientInfo({ patient, isLoading }: {
   patient: Patient | undefined,
   isLoading: boolean
 }) {
+  const parseDate = (date?:string | null) => {
+    if(!date) return null;
+    return new Date(date.includes("T") ? date : date + "T00:00:00");
+  };
+
   return (
     <div className="flex flex-nowrap gap-2 ">
       {
@@ -23,7 +28,7 @@ export function PatientInfo({ patient, isLoading }: {
                 noUseLabel
                 placeholder="Data de Nascimento"
                 maxDate={new Date()}
-                valueDate={patient?.data_nascimento ? new Date(patient.data_nascimento) : null}
+                valueDate={parseDate(patient?.data_nascimento)}
                 className="flex-1 h-12 px-3 lg:w-[400px] bg-gray-100 rounded-md"
               />
               <input
@@ -31,7 +36,7 @@ export function PatientInfo({ patient, isLoading }: {
                 name="gender"
                 placeholder="Sexo"
                 className="rounded-lg bg-gray-50 h-12 px-3 text-gray-400"
-                value={patient?.sexo?.nome}
+                value={patient?.sexo?.nome ?? ""}
               />
             </div>
 
@@ -39,7 +44,7 @@ export function PatientInfo({ patient, isLoading }: {
               placeholder="Contacto Telefónico"
               id="text"
               name="phone_number"
-              value={patient?.contacto_telefonico}
+              value={patient?.contacto_telefonico ?? ""}
               disabled
               className="w-full bg-gray-100 border-none "
             />
@@ -47,7 +52,7 @@ export function PatientInfo({ patient, isLoading }: {
             <Input.InputText
               placeholder="Bilhete de Identidade"
               name="identity"
-              value={patient?.numero_identificacao}
+              value={patient?.numero_identificacao ?? ""}
               disabled
               className="w-full bg-gray-100 border-none"
             />

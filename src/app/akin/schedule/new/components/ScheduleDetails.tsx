@@ -8,46 +8,29 @@ import { Calendar } from "primereact/calendar";
 import TimePicker from "@/components/ui/timepicker";
 import { IExamProps } from "@/module/types";
 
-export function ScheduleDetails({
-  isLoading,
-  exams,
-  schedules,
-  onChange,
-}: {
-  isLoading: boolean;
-  exams: IExamProps[];
-  schedules: { exam: string; date: Date; time: string }[];
-  onChange: (schedules: { exam: string; date: Date; time: string }[]) => void;
-}) {
+export type ScheduleItem = {
+  exam: IExamProps | null;
+  date: Date | null;
+  time: string;
+};
 
-  const handleScheduleChange = (index: number, key: string, eventOrValue: any) => {
-    const value = eventOrValue?.value || eventOrValue; // Extrai o campo 'value' se disponível
-    let formattedValue = value;
+export function ScheduleDetails({ isLoading, exams, schedules, onChange }: { isLoading: boolean; exams: IExamProps[]; schedules: ScheduleItem[]; onChange: (schedules: ScheduleItem[]) => void }) {
+  const handleScheduleChange = (index: number, key: keyof ScheduleItem, value: any) => {
+    const updatedSchedules = [...schedules];
 
     if (key === "date") {
-      const dateValue = value instanceof Date ? value : new Date(value);
-
-      if (!isNaN(dateValue.getTime())) {
-        // Ajusta para horário local
-        const localDate = new Date(dateValue.getTime() - dateValue.getTimezoneOffset() * 60 * 1000);
-        formattedValue = localDate.toISOString().split("T")[0]; // Formato 'YYYY-MM-DD'
-      } 
+      updatedSchedules[index].date = value instanceof Date ? value : null;
+    } else if (key === "exam") {
+      updatedSchedules[index].exam = value;
     } else if (key === "time") {
-      const timeValue = value instanceof Date ? value : new Date(`1970-01-01T${value}`);
-
-      if (!isNaN(timeValue.getTime())) {
-        formattedValue = timeValue.toTimeString().split(" ")[0].slice(0, 5); // Formato 'HH:mm'
-      } 
+      updatedSchedules[index].time = value instanceof Date ? value.toTimeString().slice(0, 5) : value;
     }
 
-    // Atualiza os agendamentos com o valor formatado
-    const updatedSchedules = [...schedules];
-    updatedSchedules[index] = { ...updatedSchedules[index], [key]: formattedValue };
     onChange(updatedSchedules);
   };
 
   const handleAddSchedule = () => {
-    onChange([...schedules, { exam: "", date: new Date(), time: "" }]);
+    onChange([...schedules, { exam: null, date: null, time: "" }]);
   };
 
   const handleRemoveSchedule = (index: number) => {
@@ -64,41 +47,23 @@ export function ScheduleDetails({
         <div key={index} className="flex flex-col flex-wrap lg:flex-nowrap md:flex-row gap-4 justify-between">
           <div className="flex flex-col justify-between w-full ">
             <label className="font-bold block mb-2">Exames Disponíveis</label>
-            <Combobox
-              data={exams}
-              displayKey="nome"
-              onSelect={(exam) => handleScheduleChange(index, "exam", exam?.id)}
-              placeholder="Selecionar exame"
-              clearLabel="Limpar"
-            />
+            <Combobox data={exams} displayKey="nome" selectedValue={schedule.exam} onSelect={(exam) => handleScheduleChange(index, "exam", exam?.id)} placeholder="Selecionar exame" clearLabel="Limpar" />
           </div>
           <div className="card gap-3 w-full">
-            <label htmlFor="buttondisplay" className="font-bold block mb-2">
+            <label htmlFor={`calendar-${index}`} className="font-bold block mb-2">
               Data
             </label>
-            <Calendar
-              id="buttondisplay"
-              className="w-full h-10 px-4 bg-gray-50 rounded-md shadow-sm border-gray-300 focus:ring-0 focus:border-none focus-visible:ring-0"
-              onChange={(date) => handleScheduleChange(index, "date", date)}
-              showIcon
-              dateFormat="yy/m/d"
-            />
+            <Calendar id={`calendar-${index}`} value={schedule.date} onChange={(e) => handleScheduleChange(index, "date", e.value)} showIcon dateFormat="yy/m/d" readOnlyInput className="w-full h-10 px-1  bg-white rounded-md shadow-sm border-gray-300 focus:border-none" />
           </div>
 
           <div className="flex items-end gap-0 w-full md:gap-2 flex-wrap md:flex-nowrap ">
             <div className="card gap-3 w-full">
-              <label htmlFor="buttondisplay" className="font-bold block mb-2">
+              <label htmlFor={`time-${index}`} className="font-bold block mb-2">
                 Hora
               </label>
-              <TimePicker
-                onChange={(time) => handleScheduleChange(index, "time", time)}
-              />
+              <TimePicker value={schedule.time} onChange={(time) => handleScheduleChange(index, "time", time)} />
             </div>
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => handleRemoveSchedule(index)}
-            >
+            <Button type="button" variant="ghost" onClick={() => handleRemoveSchedule(index)}>
               <Trash2 size={45} className="text-red-600" />
             </Button>
           </div>
