@@ -9,10 +9,10 @@ export const _axios = axios.create({
 
 _axios.interceptors.request.use(
   async (config) => {
-    const { token, logout } = useAuthStore.getState();
+    const { user, logout } = useAuthStore.getState();
 
-    if (token) {
-      config.headers['Authorization'] = `Bearer ${token}`;
+    if (user?.access_token) {
+      config.headers['Authorization'] = `Bearer ${user.access_token}`;
     }
     return config;
   },

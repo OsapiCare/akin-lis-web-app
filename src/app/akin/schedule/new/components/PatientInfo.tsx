@@ -31,7 +31,7 @@ export function PatientInfo({ patient, isLoading }: {
                 name="gender"
                 placeholder="Sexo"
                 className="rounded-lg bg-gray-50 h-12 px-3 text-gray-400"
-                value={patient?.sexo.nome}
+                value={patient?.sexo?.nome}
               />
             </div>
 

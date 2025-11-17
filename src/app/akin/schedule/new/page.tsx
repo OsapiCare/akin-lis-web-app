@@ -27,7 +27,6 @@ export default function New() {
   const [resetPatient, setResetPatient] = useState(false);
   const unit_health = getAllDataInCookies().userdata.health_unit_ref;
 
-
   useEffect(() => {
     fetchPatientsAndExams();
   }, []);
@@ -50,6 +49,14 @@ export default function New() {
 
       ___showSuccessToastNotification({ message: "Dados obtidos com sucesso!" });
     } catch (error) {
+      const mockPacients: Patient[] = [{ id: "1", nome_completo: "Victor Monteiro" } as Patient, { id: "2", nome_completo: "Adolfo Manuel" } as Patient];
+
+      setAvailablePatients(mockPacients);
+      setPatientAutoComplete(mockPacients.map((p) => ({ value: p.nome_completo, id: p.id })));
+
+      const mockExames: IExamProps[] = [{ id: "1", nome: "Exame de Sangue" } as IExamProps, { id: "2", nome: "Exame de Urina" } as IExamProps];
+      setAvailableExams(mockExames);
+
       ___showErrorToastNotification({ message: "Erro ao buscar dados" });
     } finally {
       setIsLoading(false);
@@ -113,7 +120,7 @@ export default function New() {
         setSchedules([]);
         setSelectedPatient(undefined);
         setSelectedPatientId("");
-        resetInputs()
+        resetInputs();
         setResetPatient(true);
       } else {
         ___showErrorToastNotification({ message: "Erro ao marcar agendamento. Tente novamente." });
@@ -144,22 +151,11 @@ export default function New() {
         {/* Detalhes do Paciente e Data */}
         <div className="flex flex-col gap-6 w-full ">
           <div className="p-4 bg-gray-100 rounded-lg border w-full">
-            <PatientDetails
-              isLoading={isLoading}
-              selectedPatient={selectedPatient}
-              autoCompleteData={patientAutoComplete}
-              onPatientSelect={(patientId) => setSelectedPatientId(patientId)}
-              resetPatient={resetPatient}
-            />
+            <PatientDetails isLoading={isLoading} selectedPatient={selectedPatient} autoCompleteData={patientAutoComplete} onPatientSelect={(patientId) => setSelectedPatientId(patientId)} resetPatient={resetPatient} />
           </div>
 
           <div className="p-4 bg-gray-100 rounded-lg border flex flex-col ">
-            <ScheduleDetails
-              isLoading={isLoading}
-              exams={availableExams}
-              schedules={schedules}
-              onChange={setSchedules}
-            />
+            <ScheduleDetails isLoading={isLoading} exams={availableExams} schedules={schedules} onChange={setSchedules} />
           </div>
         </div>
 
