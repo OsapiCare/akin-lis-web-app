@@ -4,16 +4,18 @@ import { PatientInfo } from "./PatientInfo";
 import Autocomplete from "@/components/ui/autocomplete";
 import { Patient } from "@/module/types";
 
-export function PatientDetails({ isLoading, selectedPatient, onPatientSelect, autoCompleteData, resetPatient }: {
-  isLoading: boolean,
-  selectedPatient: Patient | undefined,
-  onPatientSelect: (value: string) => void,
+interface PatientDetailsProps {
+  isLoading: boolean;
+  selectedPatient?: Patient;
+  onPatientSelect: (id: string) => void;
   autoCompleteData: {
     value: string;
     id: string;
-  }[],
-  resetPatient: boolean
-}) {
+  }[];
+  resetPatient: boolean;
+}
+
+export function PatientDetails({ isLoading, selectedPatient, onPatientSelect, autoCompleteData, resetPatient }: PatientDetailsProps) {
   return (
     <div className="flex flex-col gap-3">
       {isLoading ? (
@@ -33,12 +35,15 @@ export function PatientDetails({ isLoading, selectedPatient, onPatientSelect, au
             className="w-full bg-white "
           /> */}
 
-          <Autocomplete
-            suggestions={autoCompleteData}
-            onSelect={onPatientSelect}
-            placeholder={selectedPatient?.nome_completo || "Nome completo do paciente"}
+          <Autocomplete 
+          suggestions={autoCompleteData}
+           onSelect={(id)=> id  && onPatientSelect(id)} 
+           placeholder={
+            selectedPatient?.nome_completo || 
+            "Nome completo do paciente"
+            } 
             reset={resetPatient}
-          />
+            />
         </div>
       )}
       <PatientInfo patient={selectedPatient} isLoading={isLoading} />

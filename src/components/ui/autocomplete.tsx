@@ -79,6 +79,7 @@ const Autocomplete: React.FC<AutocompleteProps> = ({
           {filteredSuggestions.map((suggestion, index) => (
             <li
               key={index}
+              onMouseDown={(e)=>e.preventDefault()}
               onClick={() => onChangeValueFn(suggestion)}
               className={clsx(
                 "cursor-pointer px-4 py-2",

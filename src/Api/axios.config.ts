@@ -2,6 +2,7 @@
 import { useAuthStore } from "@/utils/zustand-store/authStore";
 import axios from "axios";
 export const API_BASE_URL = "https://magnetic-buzzard-osapicare-a83d5229.koyeb.app";
+import Cookies from "js-cookie";
 
 export const _axios = axios.create({
   baseURL: API_BASE_URL,
@@ -9,10 +10,10 @@ export const _axios = axios.create({
 
 _axios.interceptors.request.use(
   async (config) => {
-    const { user, logout } = useAuthStore.getState();
-
-    if (user?.access_token) {
-      config.headers['Authorization'] = `Bearer ${user.access_token}`;
+    const { user, token } = useAuthStore.getState();
+    const lastToken = user?.access_token || token || Cookies.get("akin-token");
+    if (lastToken) {
+      config.headers['Authorization'] = `Bearer ${lastToken}`;
     }
     return config;
   },
@@ -28,7 +29,7 @@ _axios.interceptors.response.use(
   },
   async (error) => {
     const originalRequest = error.config;
-    
+
     if (
       error.response &&
       error.response.status === 401 &&

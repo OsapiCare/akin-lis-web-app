@@ -44,6 +44,14 @@ export function Combobox<T>({
     setSelected(selectedValue ?? null)
   }, [selectedValue])
 
+  const handleClick = (item: T) => {
+    const isSelected = selected && selected[displayKey] === item[displayKey]
+    const newValue = isSelected ? null : item
+    setSelected(newValue)
+    onSelect(newValue)
+    setOpen(false)
+  }
+
   const handleSelect = (item: T) => {
     const isSelected = selected && selected[displayKey] === item[displayKey]
     const newValue = isSelected ? null : item
@@ -84,7 +92,10 @@ export function Combobox<T>({
                 <CommandItem
                   key={index}
                   value={String(item[displayKey])}
-                  onSelect={() => handleSelect(item)}
+                  onMouseDown={(e)=> {
+                    e.preventDefault()
+                    handleClick(item)
+                  }}
                 >
                   <Check
                     className={cn(

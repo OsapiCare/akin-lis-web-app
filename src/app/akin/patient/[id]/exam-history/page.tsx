@@ -11,7 +11,7 @@ import { PatientByIdProfileSkeleton } from "../utils/exam-history/patientByIdPro
 import { useQuery } from "@tanstack/react-query";
 import { DatePickerWithRange } from "@/components/ui/date-picker";
 import { isWithinInterval } from "date-fns";
-import { DateRange } from "react-day-picker";
+import "react-day-picker/dist/style.css";
 import { _axios } from "@/Api/axios.config";
 import { IExamProps } from "@/module/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,9 +20,16 @@ import { Calendar, Filter, Search, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import DayPicker from "react-day-picker";
 
 // Types
-interface ExamData {
+
+type DateRange = {
+  from?: Date;
+  to?: Date;
+};
+
+interface ExamData { 
   id: number;
   data_agendamento: string;
   hora_agendamento: string;
@@ -126,8 +133,8 @@ export default function ExamsHistory() {
   }, [filters, historyExams.data]);
 
   // Filter handlers
-  const handleDateChange = (date: DateRange | Date | undefined) => {
-    setFilters(prev => ({ ...prev, selectedDateRange: date as DateRange }));
+  const handleDateChange = (range: DateRange | undefined) => {
+    setFilters(prev => ({ ...prev, selectedDateRange: range }));
   };
 
   const handleExamSelect = (exam: IExamProps | null) => {
