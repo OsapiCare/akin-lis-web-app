@@ -47,13 +47,20 @@ export function ScheduleDetails({ isLoading, exams, schedules, onChange }: { isL
         <div key={index} className="flex flex-col flex-wrap lg:flex-nowrap md:flex-row gap-4 justify-between">
           <div className="flex flex-col justify-between w-full ">
             <label className="font-bold block mb-2">Exames Disponíveis</label>
-            <Combobox data={exams} displayKey="nome" selectedValue={schedule.exam} onSelect={(exam) => handleScheduleChange(index, "exam", exam?.id)} placeholder="Selecionar exame" clearLabel="Limpar" />
+            <Combobox 
+            data={exams} 
+            displayKey="nome" 
+            selectedValue={schedule.exam} 
+            onSelect={(exam) => handleScheduleChange(index, "exam", exam)} 
+            placeholder="Selecionar exame" 
+            clearLabel="Limpar"
+            />
           </div>
           <div className="card gap-3 w-full">
             <label htmlFor={`calendar-${index}`} className="font-bold block mb-2">
               Data
             </label>
-            <Calendar id={`calendar-${index}`} value={schedule.date} onChange={(e) => handleScheduleChange(index, "date", e.value)} showIcon dateFormat="yy/m/d" readOnlyInput className="w-full h-10 px-1  bg-white rounded-md shadow-sm border-gray-300 focus:border-none" />
+            <Calendar id={`calendar-${index}`} value={schedule.date} onChange={(e) => handleScheduleChange(index, "date", e.value)} showIcon dateFormat="yy/m/d" readOnlyInput className="w-full h-10 px-2  bg-white rounded-md shadow-sm border-gray-300 focus:border-none" />
           </div>
 
           <div className="flex items-end gap-0 w-full md:gap-2 flex-wrap md:flex-nowrap ">

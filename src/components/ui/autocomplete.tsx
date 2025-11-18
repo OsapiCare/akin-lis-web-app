@@ -64,7 +64,7 @@ const Autocomplete: React.FC<AutocompleteProps> = ({
         onFocus={() => setIsFocused(true)}
         onBlur={() => setTimeout(() => setIsFocused(false), 150)}
         className={clsx(
-          "form-input w-full rounded-md border border-gray-300 px-4 py-2 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50",
+          "form-input w-full rounded-md border border-gray-200 px-4 py-2 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50",
           inputClassName
         )}
         placeholder={placeholder}
