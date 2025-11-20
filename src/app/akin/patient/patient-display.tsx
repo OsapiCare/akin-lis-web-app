@@ -20,7 +20,7 @@ export default function PatientDisplay({ patients }: PatientDisplay) {
   const recepcionista = "RECEPCIONISTA";
 
   function handleSearch(searchText: string) {
-    setIsSearching(searchText.length > 0);
+    setIsSearching(searchText?.length > 0);
 
     const foundPatients = allPatients.filter((patient) =>
       patient.nome_completo.toLowerCase().includes(searchText.toLowerCase())
@@ -78,7 +78,7 @@ export default function PatientDisplay({ patients }: PatientDisplay) {
             />
             {isSearching && (
               <p className="mt-2 text-sm text-gray-600 italic">
-                {filteredPatients.length > 0
+                {filteredPatients?.length > 0
                   ? `Total de pacientes encontrados: ${filteredPatients.length}`
                   : "Nenhum paciente encontrado"}
               </p>
@@ -87,7 +87,7 @@ export default function PatientDisplay({ patients }: PatientDisplay) {
         </div>
       </div>
       {
-        filteredPatients.length > 0 ? (
+        filteredPatients?.length > 0 ? (
           <>
             {displayMode === "list" && <ListMode patientList={filteredPatients} />}
             {displayMode === "block" && <BlockMode patientList={filteredPatients} />}

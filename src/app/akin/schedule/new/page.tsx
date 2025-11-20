@@ -12,6 +12,8 @@ import { Button } from "@/components/ui/button";
 import { resetInputs } from "./utils/reset-inputs-func";
 import { getAllDataInCookies } from "@/utils/get-data-in-cookies";
 import { IExamProps, Patient } from "@/module/types";
+import { useQuery } from "@tanstack/react-query";
+import { patientRoutes } from "@/Api/Routes/patients";
 
 export type SchemaScheduleType = z.infer<typeof schemaSchedule>;
 
@@ -26,44 +28,29 @@ export default function New() {
   const [schedules, setSchedules] = useState<ScheduleItem[]>([{ exam: null, date: null, time: "" }]);
   const [resetPatient, setResetPatient] = useState(false);
   const unit_health = getAllDataInCookies().userdata.health_unit_ref || 1;
-
-  const mockPacients: Patient[] = [
-    { id: "1", nome_completo: "João Silva", sexo: { nome: "M" } },
-    { id: "2", nome_completo: "Maria Oliveira", sexo: { nome: "F" } },
-    { id: "3", nome_completo: "Pedro Santos", sexo: { nome: "M" } },
-  ];
-
-  const mockExams: IExamProps[] = [
-    { id: "1", nome: "Hemograma", descricao: "Exame de sangue" },
-    { id: "2", nome: "Urina", descricao: "Exame de urina" },
-    { id: "3", nome: "Glicemia", descricao: "Exame de glicose" },
-  ];
-
   
 
-  // useEffect(() => {
-  //   if (selectedPatientId) {
-  //     setSelectedPatient(availablePatients.find((patient) => patient.id === selectedPatientId));
-  //   }
-  // }, [selectedPatientId, availablePatients]);
+  useEffect(() => {
+    if (selectedPatientId) {
+      setSelectedPatient(availablePatients.find((patient) => patient.id === selectedPatientId));
+    }
+  }, [selectedPatientId, availablePatients]);
 
   const fetchPatientsAndExams = async () => {
     try {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      // const patientsResponse = await _axios.get("pacients");
-      // const patientsData = patientsResponse.data.map((patient: Patient) => ({ value: patient.nome_completo, id: patient.id }));
-      const patientsData = mockPacients.map((patient) => ({
-        value: patient.nome_completo,
-        id: patient.id,
-      }));
+      const patientsResponse = await patientRoutes.getAllPacients();
+     const patients : Patient[] = patientsResponse;
 
-      setPatientAutoComplete(patientsData);
-      setAvailablePatients(mockPacients);
-      // setAvailablePatients(patientsResponse.data);
-      setAvailableExams(mockExams);
+      setAvailablePatients(patients);
+      setPatientAutoComplete(
+        patients.map((patient) => ({
+          value: patient.nome_completo,
+          id: patient.id,
+        }))
+      );
 
-      // const examsResponse = await _axios.get("/exam-types");
-      // setAvailableExams(examsResponse.data.data);
+      const examsResponse = await _axios.get("/exam-types");
+      setAvailableExams(examsResponse.data.data);
 
       ___showSuccessToastNotification({ message: "Dados obtidos com sucesso!" });
     } catch (error) {
@@ -76,12 +63,6 @@ export default function New() {
   useEffect(() => {
     fetchPatientsAndExams();
   }, []);
-
-  useEffect(() => {
-    if (selectedPatientId) {
-      setSelectedPatient(availablePatients.find((patient) => patient.id === selectedPatientId));
-    }
-  }, [selectedPatientId, availablePatients]);
 
   const handleSavePatient = (patient: Patient) => {
     setPatientAutoComplete((prev) => [...prev, { value: patient.nome_completo, id: patient.id }]);
@@ -108,7 +89,7 @@ export default function New() {
       errors.push("Nenhum paciente selecionado.");
     }
 
-    if (errors.length > 0) {
+    if (errors?.length > 0) {
       ___showErrorToastNotification({ messages: errors });
       return { isValid: false };
     }
@@ -134,26 +115,16 @@ export default function New() {
     if (!validation.isValid) return;
     setIsSaving(true);
     try {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      ___showSuccessToastNotification({ message: "Agendamento marcado com sucesso" });
+      const response = await _axios.post("/schedulings/set-schedule", validation.data);
+      if (response.status === 201) {
+        ___showSuccessToastNotification({ message: "Agendamento marcado com sucesso" });
+       
+      } 
       setSchedules([{exam:null, date:null, time: ""}]);
       setSelectedPatient(undefined);
       setSelectedPatientId("");
       resetInputs();
       setResetPatient(true);
-
-      // const response = await _axios.post("/schedulings/set-schedule", validation.data);
-      // if (response.status === 201) {
-      //   ___showSuccessToastNotification({ message: "Agendamento marcado com sucesso" });
-      //   setSchedules([]);
-      //   setSelectedPatient(undefined);
-      //   setSelectedPatientId("");
-      //   resetInputs();
-      //   setResetPatient(true);
-      // } else {
-      //   ___showErrorToastNotification({ message: "Erro ao marcar agendamento. Tente novamente." });
-      //   setResetPatient(false);
-      // }
     } catch (error) {
       ___showErrorToastNotification({ message: "Erro ao marcar agendamento. Contate o suporte." });
       setResetPatient(false);

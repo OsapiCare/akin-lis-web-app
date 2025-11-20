@@ -1,6 +1,7 @@
 
 import { useAuthStore } from "@/utils/zustand-store/authStore";
 import axios from "axios";
+// export const API_BASE_URL = "http://localhost:3300";
 export const API_BASE_URL = "https://magnetic-buzzard-osapicare-a83d5229.koyeb.app";
 import Cookies from "js-cookie";
 
@@ -24,9 +25,7 @@ _axios.interceptors.request.use(
 );
 
 _axios.interceptors.response.use(
-  (response) => {
-    return response;
-  },
+  (response) => response,
   async (error) => {
     const originalRequest = error.config;
 
@@ -37,9 +36,11 @@ _axios.interceptors.response.use(
     ) {
       originalRequest._retry = true; // Evita loops infinitos
 
-      const { user, logout, login, token } = useAuthStore.getState();
+      const { user, logout, login } = useAuthStore.getState();
 
-      if (user?.id) {
+      console.log(user?.refresh_token);
+
+      if (user?.id && user?.refresh_token) {
         try {
           // Faz a chamada para renovar o token
           const response = await axios.post(
@@ -82,8 +83,9 @@ _axios.interceptors.response.use(
         //   message: "Erro ao renovar o token",
         //   messages: ["Falha ao renovar o token, por favor fa a o login novamente."],
         // });
+        logout();
       }
-      logout();
+      // logout();
     }
 
     return Promise.reject(error);
