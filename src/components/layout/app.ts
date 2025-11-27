@@ -63,7 +63,7 @@ export const APP_CONFIG = {
         label: "Exames Laboratoriais",
         icon: SquareActivity,
         path: "/akin/lab-exams",
-        access: ["RECEPCIONISTA", "CHEFE", "TECNICO"],
+        access: ["CHEFE", "TECNICO"],
         subItems: [
           { label: "Painel", icon: LayoutDashboard, path: "/akin/lab-exams", access: ["RECEPCIONISTA", "CHEFE", "TECNICO"] },
           { label: "Exames Pendentes", icon: SquareActivity, path: "/akin/lab-exams/pending-exams", access: ["RECEPCIONISTA", "CHEFE", "TECNICO"] },
@@ -75,7 +75,7 @@ export const APP_CONFIG = {
         label: "Gestão de Laudo",
         icon: FileText,
         path: "/akin/report",
-        access: ["RECEPCIONISTA", "CHEFE", "TECNICO"]
+        access: ["CHEFE", "TECNICO"]
       },
       {
         label: "Gestão Equipe",
@@ -91,7 +91,7 @@ export const APP_CONFIG = {
         label: "Gestão de stock",
         icon: Package,
         path: "/akin/stock/",
-        access: ["CHEFE", "TECNICO", "RECEPCIONISTA"],
+        access: ["CHEFE", "TECNICO"],
 
       },
       {
