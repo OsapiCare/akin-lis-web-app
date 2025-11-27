@@ -229,7 +229,7 @@ export default function Request() {
 
       {/* View Toggle and Content */}
       <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as "grid" | "list")}>
-        <div className="flex flex-col lg:flex-row items-center justify-between">
+        <div className="flex flex-col lg:flex-row items-center justify-between mb-4">
           <TabsList className="grid w-full max-w-md grid-cols-2">
             <TabsTrigger value="grid" className="flex items-center gap-2">
               <Grid3X3 className="w-4 h-4" />
@@ -241,7 +241,7 @@ export default function Request() {
             </TabsTrigger>
           </TabsList>
 
-          <div className="text-sm text-gray-600">
+          <div className="text-sm text-gray-600 mt-2 lg:mt-0">
             {filteredSchedules.length} de {totalSchedules} agendamentos
           </div>
         </div>
@@ -277,15 +277,17 @@ export default function Request() {
         ) : (
           <>
             <TabsContent value="grid" className="space-y-6">
-              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredSchedules.map((schedule) => (
                   <PendingScheduleCard key={schedule.id} schedule={schedule} />
                 ))}
               </div>
             </TabsContent>
 
-            <TabsContent value="list" className="space-y-4">
+            <TabsContent value="list" className="space-y-4 overflow-x-auto">
+              <div className="w-full min-w-[600px]">
               <PendingScheduleTable schedules={filteredSchedules} />
+              </div>
             </TabsContent>
           </>
         )}
