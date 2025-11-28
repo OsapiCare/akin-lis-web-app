@@ -134,9 +134,9 @@ export default function Request() {
       </div>
 
       {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardHeader className="flex items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Total Pendentes</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
@@ -151,7 +151,7 @@ export default function Request() {
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardHeader className="flex items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Hoje</CardTitle>
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
@@ -166,7 +166,7 @@ export default function Request() {
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardHeader className="flex items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Total Exames</CardTitle>
             <CheckCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
@@ -181,7 +181,7 @@ export default function Request() {
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardHeader className="flex items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Receita Potencial</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
@@ -229,7 +229,7 @@ export default function Request() {
 
       {/* View Toggle and Content */}
       <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as "grid" | "list")}>
-        <div className="flex flex-col lg:flex-row items-center justify-between mb-4">
+        <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
           <TabsList className="grid w-full max-w-md grid-cols-2">
             <TabsTrigger value="grid" className="flex items-center gap-2">
               <Grid3X3 className="w-4 h-4" />
@@ -241,7 +241,7 @@ export default function Request() {
             </TabsTrigger>
           </TabsList>
 
-          <div className="text-sm text-gray-600 mt-2 lg:mt-0">
+          <div className="text-sm text-gray-600">
             {filteredSchedules.length} de {totalSchedules} agendamentos
           </div>
         </div>
@@ -284,9 +284,34 @@ export default function Request() {
               </div>
             </TabsContent>
 
-            <TabsContent value="list" className="space-y-4 overflow-x-auto">
-              <div className="w-full min-w-[600px]">
+            <TabsContent value="list" className="space-y-4">
+              {/* <div className="w-full min-w-[600px]">
               <PendingScheduleTable schedules={filteredSchedules} />
+              </div> */}
+
+               <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Paciente</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">Data</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">Exames</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">Valor</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {filteredSchedules.map(schedule => (
+                      <tr key={schedule.id} className="hover:bg-gray-50">
+                        <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">{schedule.Paciente?.nome_completo}</td>
+                        <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500 hidden sm:table-cell">{new Date(schedule.Exame[0].data_agendamento).toLocaleDateString('pt-AO')}</td>
+                        <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500 hidden md:table-cell">{schedule.Exame?.length || 0}</td>
+                        <td className="px-4 py-2 whitespace-nowrap text-sm text-green-600 hidden lg:table-cell">
+                          {new Intl.NumberFormat('pt-AO', { style: 'currency', currency: 'AOA', notation: 'compact' }).format(schedule.Exame?.reduce((total, exam) => total + (exam.Tipo_Exame?.preco || 0), 0) || 0)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </TabsContent>
           </>
