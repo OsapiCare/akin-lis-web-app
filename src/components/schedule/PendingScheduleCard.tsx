@@ -129,7 +129,9 @@ export function PendingScheduleCard({ schedule }: PendingScheduleCardProps) {
             </div>
             <div className="min-w-0">
               <div className="text-xs text-gray-500 uppercase tracking-wide">Data</div>
-              <div className="font-medium text-gray-900 truncate" title={schedule.Exame && schedule.Exame.length > 0 ? formatDate(schedule.Exame[0].data_agendamento) : "Data não disponível"}>{schedule.Exame && schedule.Exame.length > 0 ? formatDate(schedule.Exame[0].data_agendamento) : "Data não disponível"}</div>
+              <div className="font-medium text-gray-900 truncate" title={schedule.Exame && schedule.Exame.length > 0 ? formatDate(schedule.Exame[0].data_agendamento) : "Data não disponível"}>
+                {schedule.Exame && schedule.Exame.length > 0 ? formatDate(schedule.Exame[0].data_agendamento) : "Data não disponível"}
+              </div>
             </div>
           </div>
           <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50">
@@ -138,7 +140,9 @@ export function PendingScheduleCard({ schedule }: PendingScheduleCardProps) {
             </div>
             <div className="min-w-0">
               <div className="text-xs text-gray-500 uppercase tracking-wide">Hora</div>
-              <div className="font-medium text-gray-900 truncate" title={schedule.Exame && schedule.Exame.length > 0 ? formatTime(schedule.Exame[0].hora_agendamento) : "Hora não disponível"}>{schedule.Exame && schedule.Exame.length > 0 ? formatTime(schedule.Exame[0].hora_agendamento) : "Hora não disponível"}</div>
+              <div className="font-medium text-gray-900 truncate" title={schedule.Exame && schedule.Exame.length > 0 ? formatTime(schedule.Exame[0].hora_agendamento) : "Hora não disponível"}>
+                {schedule.Exame && schedule.Exame.length > 0 ? formatTime(schedule.Exame[0].hora_agendamento) : "Hora não disponível"}
+              </div>
             </div>
           </div>
         </div>
@@ -151,7 +155,7 @@ export function PendingScheduleCard({ schedule }: PendingScheduleCardProps) {
           </div>
           <div className="p-3 rounded-lg bg-white border">
             <Label className="text-xs text-gray-500 uppercase tracking-wide">Contacto</Label>
-            <p className="mt-1 text-sm text-gray-900 flex items-center gap-2 truncate" >
+            <p className="mt-1 text-sm text-gray-900 flex items-center gap-2 truncate">
               <Phone className="w-4 h-4 mr-2 text-green-600" />
               {schedule.Paciente?.contacto_telefonico || "N/A"}
             </p>
@@ -163,49 +167,47 @@ export function PendingScheduleCard({ schedule }: PendingScheduleCardProps) {
         {/* Exames */}
         <div>
           <div className="flex items-center justify-between mb-2">
-          <Label className="flex items-center text-sm font-semibold text-gray-700">
-            <div className="p-1.5 mr-2">
-              <Stethoscope className="w-4 h-4  text-purple-600" />
-            </div>
-            <p>
-            Exames Solicitados ({schedule.Exame?.length || 0})
-            </p>
-          </Label>
-          <div className="text-xs text-gray-400">Últimos Códigos</div>
-        </div>
-         
+            <Label className="flex items-center text-sm font-semibold text-gray-700">
+              <div className="p-1.5 mr-2">
+                <Stethoscope className="w-4 h-4  text-purple-600" />
+              </div>
+              <p>Exames Solicitados ({schedule.Exame?.length || 0})</p>
+            </Label>
+            <div className="text-xs text-gray-400">Últimos Códigos</div>
+          </div>
+
           <div className="space-y-2 max-h-36 overflow-y-auto">
             {schedule.Exame && schedule.Exame.length > 0 ? (
               schedule.Exame.map((exam) => (
-              <div key={exam.id} className="flex items-center justify-between p-3 bg-gradient-to-r from-purple-50 to-pink-50  border border-purple-100">
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">{exam.Tipo_Exame?.nome}</p>
-                  <p className="text-xs text-gray-500">Código: #{exam.id}</p>
+                <div key={exam.id} className="flex items-center justify-between p-3 bg-gradient-to-r from-purple-50 to-pink-50  border border-purple-100">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">{exam.Tipo_Exame?.nome}</p>
+                    <p className="text-xs text-gray-500">Código: #{exam.id}</p>
+                  </div>
+                  <span className="ml-4 text-sm font-semibold text-purple-700 whitespace-nowrap">
+                    {new Intl.NumberFormat("pt-AO", {
+                      style: "currency",
+                      currency: "AOA",
+                      notation: "compact",
+                    }).format(exam.Tipo_Exame?.preco || 0)}
+                  </span>
                 </div>
-                <span className="ml-4 text-sm font-semibold text-purple-700 whitespace-nowrap">
-                  {new Intl.NumberFormat("pt-AO", {
-                    style: "currency",
-                    currency: "AOA",
-                    notation: "compact",
-                  }).format(exam.Tipo_Exame?.preco || 0)}
-                </span>
-              </div>
-            ))
+              ))
             ) : (
               <p className="text-sm text-gray-500">Nenhum exame solicitado.</p>
             )}
-            </div>
           </div>
+        </div>
 
         {/* Valor Total */}
-        <div className="flex flex-col lg:flex-row  justify-between items-start lg:items-center p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border-2 border-green-200">
-          <span className="flex items-center font-semibold text-green-800">
-            <div className="p-1.5 bg-green-500 rounded-lg mr-2">
-              <CreditCard className="w-4 h-4 text-white" />
+        <div className="flex items-center justify-between p-3 rounded-lg bg-green-50 border border-green-100">
+          <span className="flex items-center gap-2 text-sm text-green-800 font-medium">
+            <div className="p-1.5 bg-green-500 rounded text-white">
+              <CreditCard className="w-4 h-4" />
             </div>
             Valor Total
           </span>
-          <span className="font-bold text-xl text-green-700">
+          <span className="text-xl font-bold text-green-700">
             {new Intl.NumberFormat("pt-AO", {
               style: "currency",
               currency: "AOA",
@@ -214,7 +216,7 @@ export function PendingScheduleCard({ schedule }: PendingScheduleCardProps) {
         </div>
       </CardContent>
 
-      <CardFooter className="flex flex-col lg:flex-row w-full gap-2">
+      <CardFooter className="p-4 flex flex-col sm:flex-row gap-2">
         <Button onClick={handleAccept} disabled={acceptMutation.isPending} className="w-full bg-green-600 hover:bg-green-700 text-white">
           <CheckCircle className="w-4 h-4 mr-2" />
           {acceptMutation.isPending ? "Aceitando..." : "Aceitar"}
@@ -227,17 +229,19 @@ export function PendingScheduleCard({ schedule }: PendingScheduleCardProps) {
               Recusar
             </Button>
           </DialogTrigger>
-          <DialogContent>
+
+          <DialogContent className="sm:max-w-lg">
             <DialogHeader>
               <DialogTitle>Recusar Agendamento</DialogTitle>
               <DialogDescription>Por favor, forneça um motivo para recusar este agendamento.</DialogDescription>
             </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="reject-reason">Motivo da recusa</Label>
-                <Textarea id="reject-reason" placeholder="Digite o motivo da recusa..." value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} className="mt-2" />
-              </div>
+            <div className="py-2">
+              <Label htmlFor={`reject-reason-${schedule.id}`} className="text-sm">
+                Motivo da recusa
+              </Label>
+              <Textarea id={`reject-reason-${schedule.id}`} placeholder="Digite o motivo da recusa..." value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} className="mt-2" />
             </div>
+
             <DialogFooter>
               <Button variant="outline" onClick={() => setShowRejectDialog(false)}>
                 Cancelar
