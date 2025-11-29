@@ -21,15 +21,6 @@ export function NavUser({}: {}) {
     },
   });
 
-  const { data: allDataUsers } = useQuery({
-    queryKey: ["all-users"],
-    queryFn: async () => {
-      return await _axios.get(`/auth/me`);
-    },
-  });
-
-  console.log("Todos os dados do usuário: ", allDataUsers?.data);
-
   return (
     <SidebarMenu>
       <SidebarMenuItem>
