@@ -284,7 +284,7 @@ export default function Request() {
                   <tbody className="bg-white divide-y divide-gray-200">
                     {filteredSchedules.map((schedule) => (
                       <tr key={schedule.id} className="hover:bg-gray-50">
-                        <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">{schedule.Paciente?.nome_completo.split(" ")[0].slice(0, 1)}</td>
+                        <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">{schedule.Paciente?.nome_completo.split(" ")[0]}</td>
                         <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500 sm:table-cell">{new Date(schedule.Exame[0].data_agendamento).toLocaleDateString("pt-AO")}</td>
                         <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500 hidden lg:table-cell">{schedule.Exame?.length || 0}</td>
                         <td className="px-4 py-2 whitespace-nowrap text-sm text-green-600 hidden lg:table-cell">
