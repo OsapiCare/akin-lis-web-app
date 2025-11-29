@@ -133,8 +133,25 @@ export default function ExamsHistory() {
   }, [filters, historyExams.data]);
 
   // Filter handlers
-  const handleDateChange = (range: DateRange | undefined) => {
-    setFilters(prev => ({ ...prev, selectedDateRange: range }));
+  const handleDateChange = (date: Date | DateRange | undefined) => {
+    if(!date) return;
+
+    if((date as DateRange).from && (date as DateRange).to) {
+      const range = date as DateRange;
+    setFilters(prev => ({ 
+      ...prev, 
+      startDate: range.from,
+      endDate: range.to
+    }));
+  };
+
+  if(date instanceof Date) {
+      setFilters(prev => ({ 
+        ...prev,
+        startDate: date,
+        endDate: date
+      }));
+    }
   };
 
   const handleExamSelect = (exam: IExamProps | null) => {
