@@ -32,6 +32,16 @@ export function NavUser({
       return await _axios.get<UserData>(`/users/${user?.id}`);
     }
   })
+
+  const {data: allDataUsers} = useQuery({
+    queryKey: ['all-users'],
+    queryFn: async () => {
+      return await _axios.get<UserData[]>(`/auth/me`);
+    }
+  })
+
+  console.log("Todos os dados do usuário: ", allDataUsers?.data)
+  
   return (
     <SidebarMenu>
       <SidebarMenuItem>
@@ -42,7 +52,7 @@ export function NavUser({
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
               <Avatar className="h-8 w-8 rounded-lg">
-                <AvatarImage src={""} alt={loggedUser?.data.nome} />
+                <AvatarImage src={"/image/avatar.png"} alt={loggedUser?.data.nome} />
                 <AvatarFallback className="rounded-lg text-black">{loggedUser?.data.nome.slice(0, 2).charAt(0)}</AvatarFallback>
               </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
