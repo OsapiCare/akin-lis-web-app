@@ -26,7 +26,7 @@ export const usePatientData = (patient: PatientType) => {
     },
     {
       label: "Idade",
-      value: `${getAgeText(patient.data_nascimento, currentYear)}`,
+      value: `${getAgeText(patient.data_nascimento)}`,
       icon: "clock"
     },
     {
