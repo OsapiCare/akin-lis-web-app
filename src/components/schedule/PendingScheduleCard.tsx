@@ -27,15 +27,14 @@ export function PendingScheduleCard({ schedule }: PendingScheduleCardProps) {
   const acceptMutation = useMutation({
     mutationFn: (scheduleId: number) => scheduleRoutes.acceptSchedule(scheduleId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['pending-schedules'] });
+      queryClient.invalidateQueries({ queryKey: ["pending-schedules"] });
     },
   });
 
   const rejectMutation = useMutation({
-    mutationFn: ({ scheduleId }: { scheduleId: number}) =>
-      scheduleRoutes.rejectSchedule(scheduleId),
+    mutationFn: ({ scheduleId }: { scheduleId: number }) => scheduleRoutes.rejectSchedule(scheduleId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['pending-schedules'] });
+      queryClient.invalidateQueries({ queryKey: ["pending-schedules"] });
       setShowRejectDialog(false);
       setRejectReason("");
     },
@@ -60,7 +59,11 @@ export function PendingScheduleCard({ schedule }: PendingScheduleCardProps) {
 
   const getPatientInitials = () => {
     const name = schedule.Paciente?.nome_completo || "";
-    return name.split(" ").map(n => n[0]).join("").toUpperCase();
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase();
   };
 
   const formatDate = (dateString: string) => {
@@ -77,94 +80,78 @@ export function PendingScheduleCard({ schedule }: PendingScheduleCardProps) {
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
-      case 'pendente':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'confirmado':
-        return 'bg-green-100 text-green-800 border-green-200';
-      case 'cancelado':
-        return 'bg-red-100 text-red-800 border-red-200';
+      case "pendente":
+        return "bg-yellow-100 text-yellow-800 border-yellow-200";
+      case "confirmado":
+        return "bg-green-100 text-green-800 border-green-200";
+      case "cancelado":
+        return "bg-red-100 text-red-800 border-red-200";
       default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
+        return "bg-gray-100 text-gray-800 border-gray-200";
     }
   };
 
   return (
-    <Card className="w-full hover:shadow-lg transition-all duration-300 border-l-4 border-l-blue-500 overflow-hidden">
-      <CardHeader className="pb-3 bg-gradient-to-r from-blue-50 to-indigo-50">
+    <Card className="w-full transition-shadow duration-200 hover:shadow-lg">
+      <CardHeader className="p-4">
         <div className="flex flex-col lg:flex-row gap-2 items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <Avatar className="h-12 w-12 ring-2 ring-blue-200">
-              <AvatarImage src="" />
-              <AvatarFallback className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-bold">
-                {getPatientInitials()}
-              </AvatarFallback>
+          <div className="flex items-center gap-3 min-w-0">
+            <Avatar className="h-12 w-12 flex-shrink-0 ">
+              {(schedule.Paciente as any)?.foto ? <AvatarImage src={(schedule.Paciente as any).foto} alt={schedule.Paciente?.nome_completo || "Paciente"} /> : <AvatarFallback className="bg-blue-500 text-white font-semibold">{getPatientInitials()}</AvatarFallback>}
             </Avatar>
-            <div>
-              <h3 className="font-semibold text-lg text-gray-900 line-clamp-1">
-                {schedule.Paciente?.nome_completo}
-              </h3>
-              <div className="flex flex-wrap items-center space-y-2  space-x-3 text-sm text-gray-600">
-                <span className="flex items-center bg-white px-2 py-1 rounded-md shadow-sm">
-                  <User className="w-3 h-3 mr-1 text-blue-600" />
-                  {schedule.Paciente?.numero_identificacao}
+            <div className="min-w-0">
+              <h3 className="text-lg font-semibold text-gray-900 line-clamp-1">{schedule.Paciente?.nome_completo || "Nome não disponível"}</h3>
+              <div className="flex flex-wrap items-center gap-2 text-sm text-gray-500 truncate">
+                <span className="inline-flex items-center gap-1">
+                  <User className="w-3 h-3  text-blue-600" />
+                  {schedule.Paciente?.numero_identificacao || "-"}
                 </span>
-                <span className="bg-white px-2 py-1 rounded-md shadow-sm">
-                  {getPatientAge()}
-                </span>
+                <span className="inline-flex items-center gap-1">{getPatientAge()}</span>
               </div>
             </div>
           </div>
-          <Badge className={getStatusColor(schedule.status)} variant="outline">
-            <AlertCircle className="w-3 h-3 mr-1" />
-            {schedule.status}
-          </Badge>
+
+          <div className="flex-shrink-0 ml-2">
+            <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-md text-xs font-semibold border ${getStatusColor(schedule.status)}`} aria-label={`Status: ${schedule.status || "Pendente"}`}>
+              <AlertCircle className="w-3 h-3" />
+              <span className="whitespace-nowrap">{schedule.status || "Pendente"}</span>
+            </span>
+          </div>
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-4 p-6">
+      <CardContent className="space-y-4 p-4">
         {/* Data e Hora */}
-        <div className="flex flex-col lg:flex-row  items-start lg:items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg border border-blue-200">
-          <div className="flex items-center space-x-3">
-            <div className="p-2 bg-blue-500 rounded-lg">
-              <CalendarDays className="w-4 h-4 text-white" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50">
+            <div className="p-2 rounded-md bg-blue-500 text-white flex-shrink-0">
+              <CalendarDays className="w-4 h-4" />
             </div>
-            <div>
-              <p className="text-xs text-gray-600 uppercase tracking-wide">Data</p>
-              <p className="font-semibold text-gray-900">
-                {schedule.Exame && schedule.Exame.length > 0
-                  ? formatDate(schedule.Exame[0].data_agendamento)
-                  : "Data não disponível"
-                }
-              </p>
+            <div className="min-w-0">
+              <div className="text-xs text-gray-500 uppercase tracking-wide">Data</div>
+              <div className="font-medium text-gray-900 truncate" title={schedule.Exame && schedule.Exame.length > 0 ? formatDate(schedule.Exame[0].data_agendamento) : "Data não disponível"}>{schedule.Exame && schedule.Exame.length > 0 ? formatDate(schedule.Exame[0].data_agendamento) : "Data não disponível"}</div>
             </div>
           </div>
-          <div className="flex items-center space-x-3">
-            <div className="p-2 bg-blue-500 rounded-lg">
-              <Clock className="w-4 h-4 text-white" />
+          <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50">
+            <div className="p-2 rounded-md bg-blue-500 text-white flex-shrink-0">
+              <Clock className="w-4 h-4" />
             </div>
-            <div>
-              <p className="text-xs text-gray-600 uppercase tracking-wide">Hora</p>
-              <p className="font-semibold text-gray-900">
-                {schedule.Exame && schedule.Exame.length > 0
-                  ? formatTime(schedule.Exame[0].hora_agendamento)
-                  : "Hora não disponível"
-                }
-              </p>
+            <div className="min-w-0">
+              <div className="text-xs text-gray-500 uppercase tracking-wide">Hora</div>
+              <div className="font-medium text-gray-900 truncate" title={schedule.Exame && schedule.Exame.length > 0 ? formatTime(schedule.Exame[0].hora_agendamento) : "Hora não disponível"}>{schedule.Exame && schedule.Exame.length > 0 ? formatTime(schedule.Exame[0].hora_agendamento) : "Hora não disponível"}</div>
             </div>
           </div>
         </div>
 
         {/* Informações do Paciente */}
-        <div className="flex flex-col lg:flex-row  flex-wrap">
-          <div className="p-3 bg-gray-50 rounded-lg">
-            <Label className="text-xs text-gray-600 uppercase tracking-wide">Sexo</Label>
-            <p className="font-semibold text-gray-900 mt-1">
-              {schedule.Paciente?.id_sexo === 1 ? "Masculino" : "Feminino"}
-            </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="p-3 rounded-lg bg-white border">
+            <Label className="text-xs text-gray-500 uppercase tracking-wide">Sexo</Label>
+            <p className="mt-1 text-sm text-gray-900">{schedule.Paciente?.id_sexo === 1 ? "Masculino" : "Feminino"}</p>
           </div>
-          <div className="p-3 bg-gray-50 rounded-lg">
-            <Label className="text-xs text-gray-600 uppercase tracking-wide">Contacto</Label>
-            <p className="font-semibold text-gray-900 flex items-center mt-1">
+          <div className="p-3 rounded-lg bg-white border">
+            <Label className="text-xs text-gray-500 uppercase tracking-wide">Contacto</Label>
+            <p className="mt-1 text-sm text-gray-900 flex items-center gap-2 truncate" >
               <Phone className="w-4 h-4 mr-2 text-green-600" />
               {schedule.Paciente?.contacto_telefonico || "N/A"}
             </p>
@@ -189,10 +176,10 @@ export function PendingScheduleCard({ schedule }: PendingScheduleCardProps) {
                   <p className="text-xs text-gray-500">Código: #{exam.id}</p>
                 </div>
                 <span className="text-sm text-purple-700 font-bold bg-purple-100 px-2 py-1 rounded-md">
-                  {new Intl.NumberFormat('pt-AO', {
-                    style: 'currency',
-                    currency: 'AOA',
-                    notation: 'compact'
+                  {new Intl.NumberFormat("pt-AO", {
+                    style: "currency",
+                    currency: "AOA",
+                    notation: "compact",
                   }).format(exam.Tipo_Exame?.preco || 0)}
                 </span>
               </div>
@@ -209,31 +196,23 @@ export function PendingScheduleCard({ schedule }: PendingScheduleCardProps) {
             Valor Total
           </span>
           <span className="font-bold text-xl text-green-700">
-            {new Intl.NumberFormat('pt-AO', {
-              style: 'currency',
-              currency: 'AOA'
+            {new Intl.NumberFormat("pt-AO", {
+              style: "currency",
+              currency: "AOA",
             }).format(getTotalPrice())}
           </span>
         </div>
       </CardContent>
 
       <CardFooter className="flex flex-col lg:flex-row w-full gap-2">
-        <Button
-          onClick={handleAccept}
-          disabled={acceptMutation.isPending}
-          className="w-full bg-green-600 hover:bg-green-700 text-white"
-        >
+        <Button onClick={handleAccept} disabled={acceptMutation.isPending} className="w-full bg-green-600 hover:bg-green-700 text-white">
           <CheckCircle className="w-4 h-4 mr-2" />
           {acceptMutation.isPending ? "Aceitando..." : "Aceitar"}
         </Button>
 
         <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
           <DialogTrigger asChild>
-            <Button
-              variant="destructive"
-              className="w-full"
-              disabled={rejectMutation.isPending}
-            >
+            <Button variant="destructive" className="w-full" disabled={rejectMutation.isPending}>
               <XCircle className="w-4 h-4 mr-2" />
               Recusar
             </Button>
@@ -241,34 +220,19 @@ export function PendingScheduleCard({ schedule }: PendingScheduleCardProps) {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Recusar Agendamento</DialogTitle>
-              <DialogDescription>
-                Por favor, forneça um motivo para recusar este agendamento.
-              </DialogDescription>
+              <DialogDescription>Por favor, forneça um motivo para recusar este agendamento.</DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div>
                 <Label htmlFor="reject-reason">Motivo da recusa</Label>
-                <Textarea
-                  id="reject-reason"
-                  placeholder="Digite o motivo da recusa..."
-                  value={rejectReason}
-                  onChange={(e) => setRejectReason(e.target.value)}
-                  className="mt-2"
-                />
+                <Textarea id="reject-reason" placeholder="Digite o motivo da recusa..." value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} className="mt-2" />
               </div>
             </div>
             <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setShowRejectDialog(false)}
-              >
+              <Button variant="outline" onClick={() => setShowRejectDialog(false)}>
                 Cancelar
               </Button>
-              <Button
-                variant="destructive"
-                onClick={handleReject}
-                disabled={!rejectReason.trim() || rejectMutation.isPending}
-              >
+              <Button variant="destructive" onClick={handleReject} disabled={!rejectReason.trim() || rejectMutation.isPending}>
                 {rejectMutation.isPending ? "Recusando..." : "Confirmar Recusa"}
               </Button>
             </DialogFooter>
