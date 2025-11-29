@@ -274,19 +274,19 @@ export default function Request() {
                   <thead className="bg-gray-50">
                     <tr>
                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Paciente</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">Data</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sm:table-cell">Data</th>
                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">Exames</th>
                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">Valor</th>
                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">Estado</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">Ações</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sm:table-cell">Ações</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {filteredSchedules.map((schedule) => (
                       <tr key={schedule.id} className="hover:bg-gray-50">
-                        <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">{schedule.Paciente?.nome_completo}</td>
-                        <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500 hidden sm:table-cell">{new Date(schedule.Exame[0].data_agendamento).toLocaleDateString("pt-AO")}</td>
-                        <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500 hidden md:table-cell">{schedule.Exame?.length || 0}</td>
+                        <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">{schedule.Paciente?.nome_completo.split(" ")[0].slice(0, 1)}</td>
+                        <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500 sm:table-cell">{new Date(schedule.Exame[0].data_agendamento).toLocaleDateString("pt-AO")}</td>
+                        <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500 hidden lg:table-cell">{schedule.Exame?.length || 0}</td>
                         <td className="px-4 py-2 whitespace-nowrap text-sm text-green-600 hidden lg:table-cell">
                           {new Intl.NumberFormat("pt-AO", { style: "currency", currency: "AOA", notation: "compact" }).format(schedule.Exame?.reduce((total, exam) => total + (exam.Tipo_Exame?.preco || 0), 0) || 0)}
                         </td>
@@ -296,7 +296,7 @@ export default function Request() {
                             {schedule.status}
                           </Badge>
                         </td>
-                        <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500 hidden sm:table-cell">
+                        <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500  sm:table-cell">
                           <div className="flex gap-2 items-center justify-center md:space-x-2">
                             <Button onClick={() => handleAccept(schedule.id)} disabled={acceptMutation.isPending} size="sm" className="w-full bg-green-600 hover:bg-green-700 text-white px-2 py-1 text-xs">
                               <CheckCircle className="w-3 h-3 mr-1 flex items-center" />
