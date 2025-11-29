@@ -162,20 +162,27 @@ export function PendingScheduleCard({ schedule }: PendingScheduleCardProps) {
 
         {/* Exames */}
         <div>
-          <Label className="text-gray-700 flex items-center mb-3 font-semibold">
-            <div className="p-1.5 bg-purple-100 rounded-lg mr-2">
-              <Stethoscope className="w-4 h-4 text-purple-600" />
+          <div className="flex items-center justify-between mb-2">
+          <Label className="flex items-center text-sm font-semibold text-gray-700">
+            <div className="p-1.5 mr-2">
+              <Stethoscope className="w-4 h-4  text-purple-600" />
             </div>
+            <p>
             Exames Solicitados ({schedule.Exame?.length || 0})
+            </p>
           </Label>
-          <div className="space-y-2 max-h-32 overflow-y-auto">
-            {schedule.Exame?.map((exam, index) => (
-              <div key={exam.id} className="flex justify-between items-center p-3 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border border-purple-100 hover:shadow-sm transition-shadow">
-                <div>
-                  <p className="text-sm font-medium text-gray-900">{exam.Tipo_Exame?.nome}</p>
+          <div className="text-xs text-gray-400">Últimos Códigos</div>
+        </div>
+         
+          <div className="space-y-2 max-h-36 overflow-y-auto">
+            {schedule.Exame && schedule.Exame.length > 0 ? (
+              schedule.Exame.map((exam) => (
+              <div key={exam.id} className="flex items-center justify-between p-3 bg-gradient-to-r from-purple-50 to-pink-50  border border-purple-100">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-gray-900 truncate">{exam.Tipo_Exame?.nome}</p>
                   <p className="text-xs text-gray-500">Código: #{exam.id}</p>
                 </div>
-                <span className="text-sm text-purple-700 font-bold bg-purple-100 px-2 py-1 rounded-md">
+                <span className="ml-4 text-sm font-semibold text-purple-700 whitespace-nowrap">
                   {new Intl.NumberFormat("pt-AO", {
                     style: "currency",
                     currency: "AOA",
@@ -183,9 +190,12 @@ export function PendingScheduleCard({ schedule }: PendingScheduleCardProps) {
                   }).format(exam.Tipo_Exame?.preco || 0)}
                 </span>
               </div>
-            ))}
+            ))
+            ) : (
+              <p className="text-sm text-gray-500">Nenhum exame solicitado.</p>
+            )}
+            </div>
           </div>
-        </div>
 
         {/* Valor Total */}
         <div className="flex flex-col lg:flex-row  justify-between items-start lg:items-center p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border-2 border-green-200">
