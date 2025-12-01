@@ -28,7 +28,6 @@ export default function New() {
   const [schedules, setSchedules] = useState<ScheduleItem[]>([{ exam: null, date: null, time: "" }]);
   const [resetPatient, setResetPatient] = useState(false);
   const unit_health = getAllDataInCookies().userdata.health_unit_ref || 1;
-  
 
   useEffect(() => {
     if (selectedPatientId) {
@@ -39,7 +38,7 @@ export default function New() {
   const fetchPatientsAndExams = async () => {
     try {
       const patientsResponse = await patientRoutes.getAllPacients();
-     const patients : Patient[] = patientsResponse;
+      const patients: Patient[] = patientsResponse;
 
       setAvailablePatients(patients);
       setPatientAutoComplete(
@@ -100,9 +99,10 @@ export default function New() {
         id_paciente: selectedPatient!.id,
         id_unidade_de_saude: unit_health,
         exames_paciente: schedules.map((schedule) => {
+          console.log("Schedule date value:", schedule.exam);
           const date = schedule.date instanceof Date ? schedule.date : schedule.date ? new Date(schedule.date) : new Date();
           return {
-            id_tipo_exame: schedule.exam,
+            id_tipo_exame: schedule.exam?.id,
             data_agendamento: date.toISOString().split("T")[0], // 'YYYY-MM-DD'
             hora_agendamento: schedule.time, // 'HH:mm'
           };
@@ -118,9 +118,8 @@ export default function New() {
       const response = await _axios.post("/schedulings/set-schedule", validation.data);
       if (response.status === 201) {
         ___showSuccessToastNotification({ message: "Agendamento marcado com sucesso" });
-       
-      } 
-      setSchedules([{exam:null, date:null, time: ""}]);
+      }
+      setSchedules([{ exam: null, date: null, time: "" }]);
       setSelectedPatient(undefined);
       setSelectedPatientId("");
       resetInputs();
@@ -150,22 +149,11 @@ export default function New() {
         {/* Detalhes do Paciente e Data */}
         <div className="flex flex-col gap-6 w-full ">
           <div className="p-4 bg-gray-100 rounded-lg border w-full">
-            <PatientDetails
-             isLoading={isLoading} 
-             selectedPatient={selectedPatient} 
-             autoCompleteData={patientAutoComplete} 
-             onPatientSelect={(patientId) => setSelectedPatientId(patientId)} 
-             resetPatient={resetPatient} 
-             />
+            <PatientDetails isLoading={isLoading} selectedPatient={selectedPatient} autoCompleteData={patientAutoComplete} onPatientSelect={(patientId) => setSelectedPatientId(patientId)} resetPatient={resetPatient} />
           </div>
 
           <div className="p-4 bg-gray-100 rounded-lg border flex flex-col ">
-            <ScheduleDetails 
-            isLoading={isLoading} 
-            exams={availableExams} 
-            schedules={schedules} 
-            onChange={setSchedules} 
-            />
+            <ScheduleDetails isLoading={isLoading} exams={availableExams} schedules={schedules} onChange={setSchedules} />
           </div>
         </div>
 

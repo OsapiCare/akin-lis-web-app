@@ -139,9 +139,9 @@ export function CompletedScheduleFilters({
                       <Calendar
                         mode="single"
                         selected={filters.dateFrom}
-                        onSelect={(date) => handleFilterChange("dateFrom", date)}
-                        disabled={(date) => {
-                          return date > new Date() || date < new Date("1900-01-01");
+                        onSelect={(date: Date) => handleFilterChange("dateFrom", date)}
+                        disabled={(date: Date) => {
+                          return date < new Date("2025-01-01");
                         }}
                         initialFocus
                       />
@@ -173,9 +173,9 @@ export function CompletedScheduleFilters({
                       <Calendar
                         mode="single"
                         selected={filters.dateTo}
-                        onSelect={(date) => handleFilterChange("dateTo", date)}
-                        disabled={(date) => {
-                          if (date > new Date() || date < new Date("1900-01-01")) {
+                        onSelect={(date: Date) => handleFilterChange("dateTo", date)}
+                        disabled={(date: Date) => {
+                          if (date < new Date("1900-01-01")) {
                             return true;
                           }
                           if (filters.dateFrom && date < filters.dateFrom) {
