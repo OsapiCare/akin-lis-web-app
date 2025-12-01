@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -21,12 +21,6 @@ import {
   TableRow
 } from "@/components/ui/table";
 import {
-  CalendarDays,
-  Clock,
-  User,
-  Phone,
-  CreditCard,
-  Stethoscope,
   CheckCircle,
   XCircle,
   AlertCircle,
@@ -34,10 +28,7 @@ import {
   Eye,
   FileText,
   DollarSign,
-  UserCheck
 } from "lucide-react";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
 
 interface CompletedScheduleTableProps {
   schedules: CompletedScheduleType[];
@@ -52,9 +43,16 @@ export function CompletedScheduleTable({
 }: CompletedScheduleTableProps) {
   const [selectedSchedules, setSelectedSchedules] = useState<number[]>([]);
 
+  // Remove duplicados por ID
+  const uniqueSchedules = useMemo(() => {
+    const map = new Map<number, CompletedScheduleType>();
+    schedules.forEach(s => map.set(s.id, s));
+    return Array.from(map.values());
+  }, [schedules]);
+
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedSchedules(schedules.map(s => s.id));
+      setSelectedSchedules(uniqueSchedules.map(s => s.id));
     } else {
       setSelectedSchedules([]);
     }
@@ -102,11 +100,7 @@ export function CompletedScheduleTable({
           </Badge>
         );
       default:
-        return (
-          <Badge variant="secondary">
-            {status}
-          </Badge>
-        );
+        return <Badge variant="secondary">{status}</Badge>;
     }
   };
 
@@ -134,222 +128,172 @@ export function CompletedScheduleTable({
           </Badge>
         );
       default:
-        return (
-          <Badge variant="secondary">
-            {status}
-          </Badge>
-        );
+        return <Badge variant="secondary">{status}</Badge>;
     }
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between">
-          <span>Agendamentos Concluídos</span>
-          <div className="flex items-center gap-2">
-            {selectedSchedules.length > 0 && (
-              <Badge variant="outline">
-                {selectedSchedules.length} selecionado(s)
-              </Badge>
-            )}
-          </div>
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-12">
+    <div className="space-y-6">
+      {/* Grid responsivo para mobile */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:hidden">
+        {uniqueSchedules.map(schedule => {
+          const totalValue = schedule.Exame?.reduce((sum, exam) => sum + (exam.Tipo_Exame?.preco || 0), 0) || 0;
+          const completedExams = schedule.Exame?.filter(e => e.status === "CONCLUIDO").length || 0;
+          const totalExams = schedule.Exame?.length || 0;
+          const paidExams = schedule.Exame?.filter(e => e.status_pagamento === "PAGO").length || 0;
+          const hasAllocatedTechnician = schedule.Exame?.some(e => e.id_tecnico_alocado);
+
+          return (
+            <Card key={schedule.id} className="w-full transition-shadow duration-200 hover:shadow-lg">
+              <CardHeader className="p-4">
+                <div className="flex justify-between items-center text-sm">
+                  {schedule.Paciente?.nome_completo || "Nome não disponível"}
                   <Checkbox
-                    checked={selectedSchedules.length === schedules.length}
-                    onCheckedChange={handleSelectAll}
+                    checked={selectedSchedules.includes(schedule.id)}
+                    onCheckedChange={(checked) => handleSelectSchedule(schedule.id, checked as boolean)}
                   />
-                </TableHead>
-                <TableHead>Paciente</TableHead>
-                <TableHead>Exames</TableHead>
-                <TableHead>Data do Agendamento</TableHead>
-                <TableHead>Status dos Exames</TableHead>
-                <TableHead>Pagamento</TableHead>
-                <TableHead>Valor Total</TableHead>
-                <TableHead>Técnico</TableHead>
-                <TableHead className="w-16">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {schedules.map((schedule) => {
-                const totalValue = schedule.Exame?.reduce((total, exam) =>
-                  total + (exam.Tipo_Exame?.preco || 0), 0
-                ) || 0;
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Avatar className="w-8 h-8">
+                    <AvatarImage src="" alt={schedule.Paciente?.nome_completo} />
+                    <AvatarFallback className="bg-blue-100 text-blue-600">
+                      {getPatientInitials(schedule.Paciente?.nome_completo || "")}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="text-xs text-gray-600">{getPatientAge(schedule.Paciente?.data_nascimento || "")}</span>
+                  <span className="text-xs text-gray-600">{schedule.Paciente?.contacto_telefonico || "N/A"}</span>
+                </div>
+                <div className="text-xs">
+                  <span className="font-medium">{totalExams} exame(s)</span>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {schedule.Exame?.slice(0, 3).map((exam, idx) => (
+                      <Badge key={idx} variant="outline" className="text-xs">
+                        {exam.Tipo_Exame?.nome}
+                      </Badge>
+                    ))}
+                    {totalExams > 3 && <span className="text-blue-600 text-xs">+{totalExams - 3} mais</span>}
+                  </div>
+                </div>
+                <div className="text-xs text-gray-500 flex justify-between mt-1">
+                  <span>{completedExams}/{totalExams} concluídos</span>
+                  <span>{paidExams}/{totalExams} pagos</span>
+                </div>
+                <div className="text-xs font-medium">
+                  {new Intl.NumberFormat("pt-AO", { style: "currency", currency: "AOA" }).format(totalValue)}
+                </div>
+                <div className="flex items-center justify-between mt-2">
+                  <Badge variant="outline" className={`text-xs ${hasAllocatedTechnician ? "bg-green-100 text-green-800 border-green-200" : "bg-gray-100 text-gray-600 border-gray-200"}`}>
+                    {hasAllocatedTechnician ? "Alocado" : "Não alocado"}
+                  </Badge>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" className="h-6 w-6 p-0">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => onViewDetails?.(schedule)}>
+                        <Eye className="mr-2 h-4 w-4" /> Ver Detalhes
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => onViewReport?.(schedule)}>
+                        <FileText className="mr-2 h-4 w-4" /> Gerar Relatório
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
 
-                const completedExams = schedule.Exame?.filter(exam => exam.status === "CONCLUIDO").length || 0;
-                const totalExams = schedule.Exame?.length || 0;
+      {/* Tabela para desktop */}
+      <div className="hidden md:block overflow-x-auto">
+        <Card>
+          <CardHeader>
+            <CardTitle>Agendamentos Concluídos</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-12">
+                    <Checkbox
+                      checked={selectedSchedules.length === uniqueSchedules.length}
+                      onCheckedChange={handleSelectAll}
+                    />
+                  </TableHead>
+                  <TableHead>Paciente</TableHead>
+                  <TableHead>Exames</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Pagamento</TableHead>
+                  <TableHead>Valor Total</TableHead>
+                  <TableHead>Técnico</TableHead>
+                  <TableHead className="w-16">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {uniqueSchedules.map(schedule => {
+                  const totalValue = schedule.Exame?.reduce((sum, exam) => sum + (exam.Tipo_Exame?.preco || 0), 0) || 0;
+                  const completedExams = schedule.Exame?.filter(e => e.status === "CONCLUIDO").length || 0;
+                  const totalExams = schedule.Exame?.length || 0;
+                  const paidExams = schedule.Exame?.filter(e => e.status_pagamento === "PAGO").length || 0;
+                  const hasAllocatedTechnician = schedule.Exame?.some(e => e.id_tecnico_alocado);
 
-                const paidExams = schedule.Exame?.filter(exam => exam.status_pagamento === "PAGO").length || 0;
-
-                const hasAllocatedTechnician = schedule.Exame?.some(exam => exam.id_tecnico_alocado);
-
-                return (
-                  <TableRow key={schedule.id}>
-                    <TableCell>
-                      <Checkbox
-                        checked={selectedSchedules.includes(schedule.id)}
-                        onCheckedChange={(checked) =>
-                          handleSelectSchedule(schedule.id, checked as boolean)
-                        }
-                      />
-                    </TableCell>
-
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <Avatar className="w-10 h-10">
-                          <AvatarImage src="" alt={schedule.Paciente?.nome_completo} />
-                          <AvatarFallback className="bg-blue-100 text-blue-600">
-                            {getPatientInitials(schedule.Paciente?.nome_completo || "")}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <div className="font-medium text-gray-900">
-                            {schedule.Paciente?.nome_completo || "Nome não disponível"}
-                          </div>
-                          <div className="text-sm text-gray-500 flex items-center gap-4">
-                            <span className="flex items-center gap-1">
-                              <User className="w-3 h-3" />
-                              {getPatientAge(schedule.Paciente?.data_nascimento || "")}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <Phone className="w-3 h-3" />
-                              {schedule.Paciente?.contacto_telefonico || "N/A"}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </TableCell>
-
-                    <TableCell>
-                      <div className="space-y-1">
-                        <div className="text-sm font-medium">
-                          {totalExams} exame(s)
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {schedule.Exame?.slice(0, 2).map((exam, idx) => (
-                            <div key={idx} className="truncate">
-                              {exam.Tipo_Exame?.nome || "Exame não especificado"}
-                            </div>
-                          ))}
-                          {totalExams > 2 && (
-                            <div className="text-blue-600">
-                              +{totalExams - 2} mais
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </TableCell>
-
-                    <TableCell>
-                      <div className="space-y-1">
-                        {schedule.Exame?.slice(0, 1).map((exam, idx) => (
-                          <div key={idx} className="text-sm">
-                            <div className="flex items-center gap-1">
-                              <CalendarDays className="w-3 h-3" />
-                              {format(new Date(exam.data_agendamento), "dd/MM/yyyy", { locale: ptBR })}
-                            </div>
-                            <div className="flex items-center gap-1 text-gray-500">
-                              <Clock className="w-3 h-3" />
-                              {exam.hora_agendamento || "N/A"}
-                            </div>
-                          </div>
+                  return (
+                    <TableRow key={schedule.id}>
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedSchedules.includes(schedule.id)}
+                          onCheckedChange={(checked) => handleSelectSchedule(schedule.id, checked as boolean)}
+                        />
+                      </TableCell>
+                      <TableCell>{schedule.Paciente?.nome_completo || "Nome não disponível"}</TableCell>
+                      <TableCell>
+                        {schedule.Exame?.slice(0, 3).map((exam, idx) => (
+                          <Badge key={idx} variant="outline" className="mr-1 text-xs">
+                            {exam.Tipo_Exame?.nome}
+                          </Badge>
                         ))}
-                        {totalExams > 1 && (
-                          <div className="text-xs text-blue-600">
-                            Ver todas as datas
-                          </div>
-                        )}
-                      </div>
-                    </TableCell>
-
-                    <TableCell>
-                      <div className="space-y-1">
-                        <div className="text-sm font-medium">
-                          {completedExams}/{totalExams} concluídos
-                        </div>
-                        <div className="flex flex-wrap gap-1">
-                          {schedule.Exame?.slice(0, 2).map((exam, idx) => (
-                            <div key={idx}>
-                              {getExamStatusBadge(exam.status)}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </TableCell>
-
-                    <TableCell>
-                      <div className="space-y-1">
-                        <div className="text-sm font-medium">
-                          {paidExams}/{totalExams} pagos
-                        </div>
-                        <div className="flex flex-wrap gap-1">
-                          {schedule.Exame?.slice(0, 2).map((exam, idx) => (
-                            <div key={idx}>
-                              {getPaymentStatusBadge(exam.status_pagamento)}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </TableCell>
-
-                    <TableCell>
-                      <div className="font-medium text-gray-900">
-                        {new Intl.NumberFormat('pt-AO', {
-                          style: 'currency',
-                          currency: 'AOA'
-                        }).format(totalValue)}
-                      </div>
-                    </TableCell>
-
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        {hasAllocatedTechnician ? (
-                          <Badge variant="outline" className="bg-green-100 text-green-800 border-green-200">
-                            <UserCheck className="w-3 h-3 mr-1" />
-                            Alocado
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="bg-gray-100 text-gray-600 border-gray-200">
-                            <AlertCircle className="w-3 h-3 mr-1" />
-                            Não alocado
-                          </Badge>
-                        )}
-                      </div>
-                    </TableCell>
-
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => onViewDetails?.(schedule)}>
-                            <Eye className="mr-2 h-4 w-4" />
-                            Ver Detalhes
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => onViewReport?.(schedule)}>
-                            <FileText className="mr-2 h-4 w-4" />
-                            Gerar Relatório
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </div>
-      </CardContent>
-    </Card>
+                        {totalExams > 3 && <span className="text-blue-600 text-xs">+{totalExams - 3}</span>}
+                      </TableCell>
+                      <TableCell>{completedExams}/{totalExams} concluídos</TableCell>
+                      <TableCell>{paidExams}/{totalExams} pagos</TableCell>
+                      <TableCell>
+                        {new Intl.NumberFormat("pt-AO", { style: "currency", currency: "AOA" }).format(totalValue)}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={`text-xs ${hasAllocatedTechnician ? "bg-green-100 text-green-800 border-green-200" : "bg-gray-100 text-gray-600 border-gray-200"}`}>
+                          {hasAllocatedTechnician ? "Alocado" : "Não alocado"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-6 w-6 p-0">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => onViewDetails?.(schedule)}>
+                              <Eye className="mr-2 h-4 w-4" /> Ver Detalhes
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => onViewReport?.(schedule)}>
+                              <FileText className="mr-2 h-4 w-4" /> Gerar Relatório
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
   );
 }

@@ -111,6 +111,8 @@ export default function New() {
     };
   };
   const handleSubmit = async () => {
+    if (isSaving) return; // Bloqueia duplo clique instantaneamente
+
     const validation = validateSchedule();
     if (!validation.isValid) return;
     setIsSaving(true);
@@ -142,6 +144,7 @@ export default function New() {
       <form
         onSubmit={(e) => {
           e.preventDefault();
+          if(isSaving) return;
           handleSubmit();
         }}
         className="flex flex-col gap-6 w-full"
@@ -157,7 +160,7 @@ export default function New() {
           </div>
         </div>
 
-        <Button type="submit" className="bg-akin-turquoise hover:bg-akin-turquoise/80">
+        <Button type="submit" disabled={isSaving} className="bg-akin-turquoise hover:bg-akin-turquoise/80">
           {isSaving ? "Agendando..." : "Agendar"}
         </Button>
       </form>

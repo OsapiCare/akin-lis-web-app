@@ -6,21 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
-import {
-  CalendarDays,
-  User,
-  Phone,
-  CreditCard,
-  Stethoscope,
-  CheckCircle,
-  XCircle,
-  AlertCircle,
-  UserCheck,
-  DollarSign,
-  Eye,
-  FileText,
-  MapPin
-} from "lucide-react";
+import { CalendarDays, User, Phone, CreditCard, Stethoscope, CheckCircle, XCircle, AlertCircle, UserCheck, DollarSign, Eye, FileText, MapPin } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -30,12 +16,7 @@ interface CompletedScheduleCardProps {
   onViewReport?: (schedule: CompletedScheduleType) => void;
 }
 
-export function CompletedScheduleCard({
-  schedule,
-  onViewDetails,
-  onViewReport
-}: CompletedScheduleCardProps) {
-
+export function CompletedScheduleCard({ schedule, onViewDetails, onViewReport }: CompletedScheduleCardProps) {
   const getPatientAge = () => {
     if (!schedule.Paciente?.data_nascimento) return "N/A";
     const birthDate = new Date(schedule.Paciente.data_nascimento);
@@ -45,7 +26,11 @@ export function CompletedScheduleCard({
 
   const getPatientInitials = () => {
     const name = schedule.Paciente?.nome_completo || "";
-    return name.split(" ").map(n => n[0]).join("").toUpperCase();
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase();
   };
 
   const formatDate = (dateString: string) => {
@@ -61,41 +46,40 @@ export function CompletedScheduleCard({
   };
 
   const getPaidAmount = () => {
-    return schedule.Exame?.filter(exam => exam.status_pagamento === "PAGO")
-      .reduce((total, exam) => total + (exam.Tipo_Exame?.preco || 0), 0) || 0;
+    return schedule.Exame?.filter((exam) => exam.status_pagamento === "PAGO").reduce((total, exam) => total + (exam.Tipo_Exame?.preco || 0), 0) || 0;
   };
 
   const getExamStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
-      case 'pendente':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'concluido':
-        return 'bg-green-100 text-green-800 border-green-200';
-      case 'cancelado':
-        return 'bg-red-100 text-red-800 border-red-200';
+      case "pendente":
+        return "bg-yellow-100 text-yellow-800 border-yellow-200";
+      case "concluido":
+        return "bg-green-100 text-green-800 border-green-200";
+      case "cancelado":
+        return "bg-red-100 text-red-800 border-red-200";
       default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
+        return "bg-gray-100 text-gray-800 border-gray-200";
     }
   };
 
   const getPaymentStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
-      case 'pago':
-        return 'bg-green-100 text-green-800 border-green-200';
-      case 'pendente':
-        return 'bg-orange-100 text-orange-800 border-orange-200';
-      case 'cancelado':
-        return 'bg-red-100 text-red-800 border-red-200';
+      case "pago":
+        return "bg-green-100 text-green-800 border-green-200";
+      case "pendente":
+        return "bg-orange-100 text-orange-800 border-orange-200";
+      case "cancelado":
+        return "bg-red-100 text-red-800 border-red-200";
       default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
+        return "bg-gray-100 text-gray-800 border-gray-200";
     }
   };
 
   const getExamStatusIcon = (status: string) => {
     switch (status.toLowerCase()) {
-      case 'concluido':
+      case "concluido":
         return <CheckCircle className="w-3 h-3" />;
-      case 'cancelado':
+      case "cancelado":
         return <XCircle className="w-3 h-3" />;
       default:
         return <AlertCircle className="w-3 h-3" />;
@@ -103,71 +87,69 @@ export function CompletedScheduleCard({
   };
 
   // Calculate summary metrics
-  const completedExams = schedule.Exame?.filter(exam => exam.status === "CONCLUIDO").length || 0;
-  const pendingExams = schedule.Exame?.filter(exam => exam.status === "PENDENTE").length || 0;
-  const cancelledExams = schedule.Exame?.filter(exam => exam.status === "CANCELADO").length || 0;
+  const completedExams = schedule.Exame?.filter((exam) => exam.status === "CONCLUIDO").length || 0;
+  const pendingExams = schedule.Exame?.filter((exam) => exam.status === "PENDENTE").length || 0;
+  const cancelledExams = schedule.Exame?.filter((exam) => exam.status === "CANCELADO").length || 0;
   const totalExams = schedule.Exame?.length || 0;
 
   return (
-    <Card className="w-full hover:shadow-lg transition-all duration-300 border-l-4 border-l-green-500 overflow-hidden">
-      <CardHeader className="pb-3 bg-gradient-to-r from-green-50 to-emerald-50">
+    <Card className="w-full  transition-shadow duration-200 hover:shadow-lg">
+      <CardHeader className="p-4 bg-gradient-to-r from-green-50 to-emerald-50">
         <div className="flex flex-col items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <Avatar className="h-12 w-12 ring-2 ring-green-200">
-              <AvatarImage src="github.com/marypaul21.png" />
-              <AvatarFallback className="bg-gradient-to-br from-green-500 to-emerald-600 text-white font-bold">
-                {getPatientInitials()}
-              </AvatarFallback>
-            </Avatar>
-            <div>
-              <h3 className="font-semibold text-lg text-gray-900 line-clamp-1">
-                {schedule.Paciente?.nome_completo}
-              </h3>
-              <div className="flex items-center space-x-3 text-sm text-gray-600">
-                <span className="flex items-center bg-white px-2 py-1 rounded-md shadow-sm">
-                  <User className="w-3 h-3 mr-1 text-green-600" />
-                  {schedule.Paciente?.numero_identificacao}
-                </span>
-                <span className="bg-white px-2 py-1 rounded-md shadow-sm">
-                  {getPatientAge()}
-                </span>
+          <div className="flex flex-col lg:flex-row gap-2 items-center justify-between">
+            <div className="flex items-center gap-3 min-w-0">
+              <Avatar className="h-12 w-12 flex-shrink-0 ring-2 ring-green-200">
+                {(schedule.Paciente as any)?.foto ? (
+                  <AvatarImage src={(schedule.Paciente as any).foto} alt={schedule.Paciente?.nome_completo || "Paciente"} />
+                ) : (
+                  <AvatarFallback className="bg-gradient-to-br from-green-500 to-emerald-600 text-white font-bold">{getPatientInitials()}</AvatarFallback>
+                )}
+              </Avatar>
+              <div className="min-w-0">
+                <h3 className="font-semibold text-lg text-gray-900 line-clamp-1" title={schedule.Paciente?.nome_completo || "Nome não disponível"}>
+                  {schedule.Paciente?.nome_completo}
+                </h3>
+                <div className="flex flex-wrap items-center gap-2 text-sm text-gray-500 truncate">
+                  <span className="flex items-center bg-white px-2 py-1 rounded-md shadow-sm">
+                    <User className="w-3 h-3 text-green-600" />
+                    {schedule.Paciente?.numero_identificacao}
+                  </span>
+                  <span className="inline-flex items-center gap-1">{getPatientAge()}</span>
+                </div>
               </div>
             </div>
+
+            <div className="flex-shrink-0 ml-2">
+              <span className="inline-flex items-center gap-1">
+                <CheckCircle className="w-3 h-3 mr-1" />
+                <span className="whitespace-nowrap">{schedule.status || "Pendente"}</span>
+              </span>
+            </div>
           </div>
-          <Badge className="bg-green-100 text-green-800 border-green-200" variant="outline">
-            <CheckCircle className="w-3 h-3 mr-1" />
-            {schedule.status}
-          </Badge>
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-4 p-6">
+      <CardContent className="space-y-4 p-4">
         {/* Data de criação do agendamento */}
-        <div className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg border border-blue-200">
-          <div className="flex items-center space-x-3">
-            <div className="p-2 bg-blue-500 rounded-lg">
-              <CalendarDays className="w-4 h-4 text-white" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50">
+            <div className="p-2 rounded-md bg-blue-500 text-white flex-shrink-0">
+              <CalendarDays className="w-4 h-4" />
             </div>
-            <div>
-              <p className="text-xs text-gray-600 uppercase tracking-wide">Agendamento criado em</p>
-              <p className="font-semibold text-gray-900">
-                {formatDate(schedule.criado_aos)}
-              </p>
-            </div>
+            <div className="min-w-0">
+              <div className="text-xs text-gray-600 uppercase tracking-wide">Agendamento criado em</div>
+              <div className="font-medium text-gray-900 truncate" title={schedule.Exame && schedule.Exame.length > 0 ? formatDate(schedule.Exame[0].data_agendamento): "Data não disponível"}>
+                {schedule.Exame && schedule.Exame.length > 0 ? formatTime(schedule.Exame[0].hora_agendamento) : "Hora não disponível"}
+              </div>
           </div>
-          <div className="text-right">
-            <p className="text-xs text-gray-600 uppercase tracking-wide">ID</p>
-            <p className="font-semibold text-gray-900">#{schedule.id}</p>
           </div>
         </div>
-
+        
         {/* Informações do Paciente */}
         <div className="flex flex-col lg:flex-row gap-4">
           <div className="p-3 bg-gray-50 rounded-lg">
             <Label className="text-xs text-gray-600 uppercase tracking-wide">Sexo</Label>
-            <p className="font-semibold text-gray-900 mt-1">
-              {schedule.Paciente?.sexo?.nome || "N/A"}
-            </p>
+            <p className="font-semibold text-gray-900 mt-1">{schedule.Paciente?.sexo?.nome || "N/A"}</p>
           </div>
           <div className="p-3 bg-gray-50 rounded-lg">
             <Label className="text-xs text-gray-600 uppercase tracking-wide">Contacto</Label>
@@ -232,19 +214,15 @@ export function CompletedScheduleCard({
                   )}
                 </div>
                 <span className="text-sm text-purple-700 font-bold bg-purple-100 px-2 py-1 rounded-md ml-2">
-                  {new Intl.NumberFormat('pt-AO', {
-                    style: 'currency',
-                    currency: 'AOA',
-                    notation: 'compact'
+                  {new Intl.NumberFormat("pt-AO", {
+                    style: "currency",
+                    currency: "AOA",
+                    notation: "compact",
                   }).format(exam.Tipo_Exame?.preco || 0)}
                 </span>
               </div>
             ))}
-            {schedule.Exame && schedule.Exame.length > 3 && (
-              <div className="text-center text-sm text-gray-500 py-2">
-                +{schedule.Exame.length - 3} exames adicionais
-              </div>
-            )}
+            {schedule.Exame && schedule.Exame.length > 3 && <div className="text-center text-sm text-gray-500 py-2">+{schedule.Exame.length - 3} exames adicionais</div>}
           </div>
         </div>
 
@@ -258,9 +236,9 @@ export function CompletedScheduleCard({
               Valor Total
             </span>
             <span className="font-bold text-xl text-green-700">
-              {new Intl.NumberFormat('pt-AO', {
-                style: 'currency',
-                currency: 'AOA'
+              {new Intl.NumberFormat("pt-AO", {
+                style: "currency",
+                currency: "AOA",
               }).format(getTotalPrice())}
             </span>
           </div>
@@ -273,9 +251,9 @@ export function CompletedScheduleCard({
               Valor Pago
             </span>
             <span className="font-bold text-xl text-blue-700">
-              {new Intl.NumberFormat('pt-AO', {
-                style: 'currency',
-                currency: 'AOA'
+              {new Intl.NumberFormat("pt-AO", {
+                style: "currency",
+                currency: "AOA",
               }).format(getPaidAmount())}
             </span>
           </div>
@@ -283,20 +261,12 @@ export function CompletedScheduleCard({
       </CardContent>
 
       <CardFooter className="flex flex-col gap-3 pt-4 bg-gray-50 border-t">
-        <Button
-          variant="outline"
-          className="w-full"
-          onClick={() => onViewDetails?.(schedule)}
-        >
+        <Button variant="outline" className="w-full" onClick={() => onViewDetails?.(schedule)}>
           <Eye className="w-4 h-4 mr-2" />
           Ver Detalhes
         </Button>
 
-        <Button
-          variant="default"
-          className="w-full bg-green-600 hover:bg-green-700"
-          onClick={() => onViewReport?.(schedule)}
-        >
+        <Button variant="default" className="w-full bg-green-600 hover:bg-green-700" onClick={() => onViewReport?.(schedule)}>
           <FileText className="w-4 h-4 mr-2" />
           Relatório
         </Button>

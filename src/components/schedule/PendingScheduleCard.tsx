@@ -100,7 +100,7 @@ export function PendingScheduleCard({ schedule }: PendingScheduleCardProps) {
               {(schedule.Paciente as any)?.foto ? <AvatarImage src={(schedule.Paciente as any).foto} alt={schedule.Paciente?.nome_completo || "Paciente"} /> : <AvatarFallback className="bg-blue-500 text-white font-semibold">{getPatientInitials()}</AvatarFallback>}
             </Avatar>
             <div className="min-w-0">
-              <h3 className="text-lg font-semibold text-gray-900 line-clamp-1">{schedule.Paciente?.nome_completo || "Nome não disponível"}</h3>
+              <h3 className="text-lg font-semibold text-gray-900 line-clamp-1" title={schedule.Paciente?.nome_completo || "Nome não disponível"}>{schedule.Paciente?.nome_completo || "Nome não disponível"}</h3>
               <div className="flex flex-wrap items-center gap-2 text-sm text-gray-500 truncate">
                 <span className="inline-flex items-center gap-1">
                   <User className="w-3 h-3  text-blue-600" />
@@ -110,7 +110,7 @@ export function PendingScheduleCard({ schedule }: PendingScheduleCardProps) {
               </div>
             </div>
           </div>
-
+   
           <div className="flex-shrink-0 ml-2">
             <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-md text-xs font-semibold border ${getStatusColor(schedule.status)}`} aria-label={`Status: ${schedule.status || "Pendente"}`}>
               <AlertCircle className="w-3 h-3" />
@@ -217,16 +217,14 @@ export function PendingScheduleCard({ schedule }: PendingScheduleCardProps) {
       </CardContent>
 
       <CardFooter className="p-4 flex flex-col sm:flex-row gap-2">
-        <Button onClick={handleAccept} disabled={acceptMutation.isPending} className="w-full bg-green-600 hover:bg-green-700 text-white">
-          <CheckCircle className="w-4 h-4 mr-2" />
-          {acceptMutation.isPending ? "Aceitando..." : "Aceitar"}
+        <Button onClick={handleAccept} title={"Aceitar"} disabled={acceptMutation.isPending} className="w-full bg-green-600 hover:bg-green-700 text-white">
+          <CheckCircle className="w-4 h-4" />
         </Button>
 
         <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
           <DialogTrigger asChild>
-            <Button variant="destructive" className="w-full" disabled={rejectMutation.isPending}>
-              <XCircle className="w-4 h-4 mr-2" />
-              Recusar
+            <Button variant="destructive" title="Recusar" className="w-full" disabled={rejectMutation.isPending}>
+              <XCircle className="w-4 h-4" />
             </Button>
           </DialogTrigger>
 
