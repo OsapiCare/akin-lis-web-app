@@ -13,6 +13,7 @@ import { Search, Filter, CalendarIcon, X, Users, Clock, DollarSign, CheckCircle,
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { useAuthRoleStore } from "@/utils/zustand-store/userRoleStore";
 
 interface CompletedScheduleFiltersProps {
   onSearch: (query: string) => void;
@@ -32,6 +33,10 @@ export function CompletedScheduleFilters({
   filteredCount
 }: CompletedScheduleFiltersProps) {
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const { role } = useAuthRoleStore();
+  const isChefeLaboratorio = role === "CHEFE";
+
+  console.log("User role in CompletedScheduleFilters:", role);
 
   const handleSearchChange = (value: string) => {
     onSearch(value);
@@ -239,7 +244,8 @@ export function CompletedScheduleFilters({
                 </div>
 
                 {/* Technician Filter */}
-                <div className="space-y-2 md:col-span-2 lg:col-span-1">
+                {isChefeLaboratorio && (
+                  <div className="space-y-2 md:col-span-2 lg:col-span-1">
                   <Label className="flex items-center gap-1">
                     <UserCheck className="w-4 h-4" />
                     Técnico
@@ -258,6 +264,7 @@ export function CompletedScheduleFilters({
                     </SelectContent>
                   </Select>
                 </div>
+            )}
               </div>
 
               {/* Quick Filters */}

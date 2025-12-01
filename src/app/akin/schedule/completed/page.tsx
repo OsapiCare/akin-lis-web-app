@@ -13,7 +13,7 @@ import { ptBR } from "date-fns/locale";
 
 // Components
 import { CompletedScheduleCard } from "@/components/schedule/CompletedScheduleCard";
-import { CompletedScheduleTable } from "@/components/schedule/CompletedScheduleTable";
+// import { CompletedScheduleTable } from "@/components/schedule/CompletedScheduleTable";
 import { CompletedScheduleFilters } from "@/components/schedule/CompletedScheduleFilters";
 import { CompletedScheduleStats } from "@/components/schedule/CompletedScheduleStats";
 import { CompletedScheduleDetailsModal } from "@/components/schedule/CompletedScheduleDetailsModal";
@@ -24,12 +24,6 @@ import { useCompletedScheduleFilters } from "@/hooks/useCompletedScheduleFilters
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-
-interface CompletedScheduleTableProps {
-  schedules: CompletedScheduleType[];
-  onViewDetails?: (schedule: CompletedScheduleType) => void;
-  onViewReport?: (schedule: CompletedScheduleType) => void;
-}
 
 export default function CompletedSchedulesPage() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");

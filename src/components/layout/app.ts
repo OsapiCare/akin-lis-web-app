@@ -41,7 +41,19 @@ export const APP_CONFIG = {
         label: "Agendamentos",
         icon: CalendarCheck,
         path: "/akin/schedule/dashboard",
-        access: ["RECEPCIONISTA", "CHEFE"],
+        access: ["RECEPCIONISTA"],
+         subItems: [
+          // { label: "Painel", icon: LayoutDashboard, path: "/akin/schedule/dashboard", access: ["RECEPCIONISTA", "CHEFE", "TECNICO"] },
+          { label: "Novo", icon: CalendarPlus2, path: "/akin/schedule/new", access: ["RECEPCIONISTA"] },
+          { label: "Solicitações", icon: CalendarSearch, path: "/akin/schedule/request", access: ["RECEPCIONISTA"] },
+          { label: "Confirmados", icon: CalendarCheck2, path: "/akin/schedule/completed", access: ["CHEFE", "RECEPCIONISTA"] }
+        ]
+      },
+      {
+        label: "Agendamentos",
+        icon: CalendarCheck,
+        path: "/akin/schedule/dashboard",
+        access: ["CHEFE"],
         subItems: [
           { label: "Painel", icon: LayoutDashboard, path: "/akin/schedule/dashboard", access: ["RECEPCIONISTA", "CHEFE", "TECNICO"] },
           { label: "Novo", icon: CalendarPlus2, path: "/akin/schedule/new", access: ["RECEPCIONISTA"] },
@@ -94,23 +106,23 @@ export const APP_CONFIG = {
         access: ["CHEFE", "TECNICO"],
 
       },
-      {
-        label: "Pagamentos",
-        icon: CreditCard,
-        path: "/akin/payment",
-        access: ["RECEPCIONISTA"]
-      },
+      // {
+      //   label: "Pagamentos",
+      //   icon: CreditCard,
+      //   path: "/akin/payment",
+      //   access: ["RECEPCIONISTA"]
+      // },
       {
         label: "Mensagens",
         icon: MessageSquareMore,
         path: "/akin/message",
-        access: ["RECEPCIONISTA", "TECNICO", "CHEFE"]
+        access: ["TECNICO", "CHEFE"]
       },
       {
         label: "Notificações",
         icon: Bell,
         path: "/akin/notifications",
-        access: ["RECEPCIONISTA", "TECNICO", "CHEFE"]
+        access: ["TECNICO", "CHEFE"]
       },
       {
         label: "Definições",
@@ -122,7 +134,7 @@ export const APP_CONFIG = {
         label: "Perfil",
         icon: UserRound,
         path: "/akin/profile",
-        access: ["RECEPCIONISTA", "CHEFE", "TECNICO"]
+        access: ["CHEFE", "TECNICO"]
       },
       {
         label: "Sair",

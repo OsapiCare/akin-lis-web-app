@@ -1,12 +1,20 @@
+import { useAuthRoleStore } from "@/utils/zustand-store/userRoleStore";
 import { useState, useMemo } from "react";
 
 export function useCompletedScheduleFilters(schedules: CompletedScheduleType[]) {
+  const { role } = useAuthRoleStore();
+
+
   const [filters, setFilters] = useState<CompletedScheduleFilters>({
     searchQuery: "",
     examStatus: "TODOS",
     paymentStatus: "TODOS",
     technicianFilter: "TODOS",
   });
+
+  if (role === "CHEFE") {
+    delete filters.technicianFilter;
+  }
 
   const filteredSchedules = useMemo(() => {
     if (!schedules) return [];
