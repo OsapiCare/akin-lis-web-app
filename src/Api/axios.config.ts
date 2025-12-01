@@ -38,8 +38,6 @@ _axios.interceptors.response.use(
 
       const { user, logout, login } = useAuthStore.getState();
 
-      console.log(user?.refresh_token);
-
       if (user?.id && user?.refresh_token) {
         try {
           // Faz a chamada para renovar o token

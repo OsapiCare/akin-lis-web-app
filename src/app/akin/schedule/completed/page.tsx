@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -58,21 +58,25 @@ export default function CompletedSchedulesPage() {
     clearFilters,
   } = useCompletedScheduleFilters(schedules);
 
+  // Memoized derived values (performance)
+  const totalCount = useMemo(() => statistics?.totalSchedules ?? 0, [statistics]);
+  const filteredCount = useMemo(() => filteredSchedules.length, [filteredSchedules]);
+
   // Handlers
-  const handleViewDetails = (schedule: CompletedScheduleType) => {
+  const handleViewDetails = useCallback((schedule: CompletedScheduleType) => {
     setSelectedSchedule(schedule);
     setIsDetailsModalOpen(true);
-  };
+  }, []);
 
-  const handleViewReport = (schedule: CompletedScheduleType) => {
+  const handleViewReport = useCallback((schedule: CompletedScheduleType) => {
     console.log("View report for schedule:", schedule.id);
     // TODO: Implement report generation
-  };
+  }, []);
 
-  const handleCloseDetailsModal = () => {
+  const handleCloseDetailsModal = useCallback(() => {
     setIsDetailsModalOpen(false);
     setSelectedSchedule(null);
-  };
+  }, []);
 
   if (isError) {
     return (
@@ -128,7 +132,7 @@ export default function CompletedSchedulesPage() {
             onClick={() => refetch()}
             disabled={isRefetching}
           >
-            <RefreshCw className={`w-4 h-4 mr-2 ${isRefetching ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-4 h-4 mr-2 ${isRefetching ? "animate-spin" : ""}`} />
             Atualizar
           </Button>
         </div>
@@ -216,8 +220,8 @@ export default function CompletedSchedulesPage() {
         onFilterChange={handleFilterChange}
         onClearFilters={clearFilters}
         filters={filters}
-        totalSchedules={statistics.totalSchedules}
-        filteredCount={filteredSchedules.length}
+        totalSchedules={totalCount}
+        filteredCount={filteredCount}
       />
 
       {/* View Toggle and Content */}
@@ -235,10 +239,11 @@ export default function CompletedSchedulesPage() {
           </TabsList>
 
           <div className="text-sm text-gray-600">
-            {filteredSchedules.length} de {statistics.totalSchedules} agendamentos
+            {filteredCount} de {totalCount} agendamentos
           </div>
         </div>
 
+        {/* Loading */}
         {isLoading ? (
           <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 mt-6">
             {[...Array(6)].map((_, i) => (

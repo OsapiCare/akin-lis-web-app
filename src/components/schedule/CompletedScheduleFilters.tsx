@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -41,20 +41,29 @@ export function CompletedScheduleFilters({
     onFilterChange({ [key]: value });
   };
 
-  const hasActiveFilters = () => {
-    return filters.dateFrom || filters.dateTo || filters.examStatus !== "TODOS" ||
-      filters.paymentStatus !== "TODOS" || filters.technicianFilter !== "TODOS" || filters.searchQuery;
-  };
+  const hasActiveFilters = useMemo(() => {
+    return Boolean(
+      filters.dateFrom ||
+      filters.dateTo ||
+      (filters.examStatus && filters.examStatus !== "TODOS") ||
+      (filters.paymentStatus && filters.paymentStatus !== "TODOS") ||
+      (filters.technicianFilter && filters.technicianFilter !== "TODOS") ||
+      (filters.searchQuery && filters.searchQuery.trim() !== "")
+    );
+  }, [filters]);
 
-  const getActiveFilterCount = () => {
+  const getActiveFilterCount = useMemo(() => {
     let count = 0;
-    if (filters.searchQuery) count++;
+    if (filters.searchQuery && filters.searchQuery.trim() !== "") count++;
     if (filters.dateFrom || filters.dateTo) count++;
-    if (filters.examStatus !== "TODOS") count++;
-    if (filters.paymentStatus !== "TODOS") count++;
-    if (filters.technicianFilter !== "TODOS") count++;
+    if (filters.examStatus && filters.examStatus !== "TODOS") count++;
+    if (filters.paymentStatus && filters.paymentStatus !== "TODOS") count++;
+    if (filters.technicianFilter && filters.technicianFilter !== "TODOS") count++;
     return count;
-  };
+  }, [filters]);
+
+  // Helper: minimum allowed date (year 1900)
+  const minAllowedDate = new Date("1900-01-01");
 
   return (
     <Card className="mb-6">
@@ -66,7 +75,7 @@ export function CompletedScheduleFilters({
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               <Input
                 placeholder="Buscar por nome do paciente, BI ou contacto..."
-                value={filters.searchQuery}
+                value={filters.searchQuery || ""}
                 onChange={(e) => handleSearchChange(e.target.value)}
                 className="pl-10"
               />
@@ -80,14 +89,14 @@ export function CompletedScheduleFilters({
               >
                 <Filter className="w-4 h-4" />
                 Filtros
-                {getActiveFilterCount() > 0 && (
+                {getActiveFilterCount > 0 && (
                   <Badge variant="secondary" className="ml-1">
-                    {getActiveFilterCount()}
+                    {getActiveFilterCount}
                   </Badge>
                 )}
               </Button>
 
-              {hasActiveFilters() && (
+              {hasActiveFilters && (
                 <Button variant="ghost" size="sm" onClick={onClearFilters}>
                   <X className="w-4 h-4 mr-1" />
                   Limpar
@@ -104,7 +113,7 @@ export function CompletedScheduleFilters({
                 Mostrando {filteredCount} de {totalSchedules} agendamentos
               </span>
             </div>
-            {filters.searchQuery && (
+            {filters.searchQuery && filters.searchQuery.trim() !== "" && (
               <Badge variant="outline">
                 Busca: &quot;{filters.searchQuery}&quot;
               </Badge>
@@ -140,9 +149,8 @@ export function CompletedScheduleFilters({
                         mode="single"
                         selected={filters.dateFrom}
                         onSelect={(date: Date) => handleFilterChange("dateFrom", date)}
-                        disabled={(date: Date) => {
-                          return date < new Date("2025-01-01");
-                        }}
+                        // Only disable dates before 1900 (allows future dates)
+                        disabled={(date: Date) => date < minAllowedDate}
                         initialFocus
                       />
                     </PopoverContent>
@@ -174,13 +182,10 @@ export function CompletedScheduleFilters({
                         mode="single"
                         selected={filters.dateTo}
                         onSelect={(date: Date) => handleFilterChange("dateTo", date)}
+                        // Allow future dates; only disable dates before 1900 or earlier than dateFrom
                         disabled={(date: Date) => {
-                          if (date < new Date("1900-01-01")) {
-                            return true;
-                          }
-                          if (filters.dateFrom && date < filters.dateFrom) {
-                            return true;
-                          }
+                          if (date < minAllowedDate) return true;
+                          if (filters.dateFrom && date < filters.dateFrom) return true;
                           return false;
                         }}
                         initialFocus
@@ -196,7 +201,7 @@ export function CompletedScheduleFilters({
                     Status do Exame
                   </Label>
                   <Select
-                    value={filters.examStatus}
+                    value={filters.examStatus || "TODOS"}
                     onValueChange={(value) => handleFilterChange("examStatus", value)}
                   >
                     <SelectTrigger>
@@ -218,7 +223,7 @@ export function CompletedScheduleFilters({
                     Status Pagamento
                   </Label>
                   <Select
-                    value={filters.paymentStatus}
+                    value={filters.paymentStatus || "TODOS"}
                     onValueChange={(value) => handleFilterChange("paymentStatus", value)}
                   >
                     <SelectTrigger>
@@ -240,7 +245,7 @@ export function CompletedScheduleFilters({
                     Técnico
                   </Label>
                   <Select
-                    value={filters.technicianFilter}
+                    value={filters.technicianFilter || "TODOS"}
                     onValueChange={(value) => handleFilterChange("technicianFilter", value)}
                   >
                     <SelectTrigger>
