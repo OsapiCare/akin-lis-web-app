@@ -3,26 +3,25 @@
 import * as React from "react";
 import { format } from "date-fns";
 import { CalendarIcon } from "lucide-react";
-import { DateRange } from "react-day-picker";
-
+import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
-interface DatePickerWithRangeProps
-  extends React.HTMLAttributes<HTMLDivElement> {
-  defaultDate?: DateRange | Date | undefined;
+// Definir o tipo SelectedRange manualmente
+export type SelectedRange = {
+  from?: Date;
+  to?: Date;
+};
+
+interface DatePickerWithRangeProps extends React.HTMLAttributes<HTMLDivElement> {
+  defaultDate?: SelectedRange | Date;
   dateFormat?: string;
   placeholderText?: string;
-  enableRange?: boolean; // Novo controle para habilitar/desabilitar range
-  onDateChange?: (date: DateRange | Date | undefined) => void;
-  enableDateFilter?: boolean; // Novo controle para habilitar/desabilitar filtragem de data
-  setEnableDateFilter?: (enable: boolean) => void; // Adicione esta linha para passar a função de ativação de filtragem
+  enableRange?: boolean; // Habilita/desabilita intervalo
+  onDateChange?: (date: SelectedRange | Date | undefined) => void;
+  enableDateFilter?: boolean; // Habilita/desabilita filtragem de data
+  setEnableDateFilter?: (enable: boolean) => void; // Função para ativar filtro
 }
 
 export function DatePickerWithRange({
@@ -30,97 +29,68 @@ export function DatePickerWithRange({
   defaultDate,
   dateFormat = "LLL dd, y",
   placeholderText = "Selecione uma data",
-  enableRange = true, // Ativo por padrão
+  enableRange = true,
   onDateChange,
-  enableDateFilter = true, // Ativo por padrão
-  setEnableDateFilter, // Adicione esta linha para passar a função de ativação de filtragem
+  enableDateFilter = true,
+  setEnableDateFilter,
 }: DatePickerWithRangeProps) {
-  const [date, setDate] = React.useState<DateRange | Date | undefined>(
-    defaultDate ? (enableRange ? defaultDate : (defaultDate as DateRange)?.from) : undefined
+  const [date, setDate] = React.useState<SelectedRange | Date | undefined>(
+    defaultDate ? (enableRange ? (defaultDate as SelectedRange) : (defaultDate as Date)) : undefined
   );
 
-  const handleDateChange = (
-    selectedDate: DateRange | Date | undefined
-  ) => {
+  const handleDateChange = (selectedDate: SelectedRange | Date | undefined) => {
     setDate(selectedDate);
     onDateChange?.(selectedDate);
     if (selectedDate && setEnableDateFilter) {
-      setEnableDateFilter(true); // Ativa a filtragem de data ao selecionar uma data
+      setEnableDateFilter(true);
     }
   };
 
   const clearDates = () => {
-    setDate(enableRange ? { from: undefined, to: undefined } : undefined);
-    onDateChange?.(enableRange ? { from: undefined, to: undefined } : undefined);
-    if (setEnableDateFilter) {
-      setEnableDateFilter(false); // Desativa a filtragem de data ao limpar as datas
-    }
+    const empty = enableRange ? { from: undefined, to: undefined } : undefined;
+    setDate(empty);
+    onDateChange?.(empty);
+    if (setEnableDateFilter) setEnableDateFilter(false);
   };
+
+  // Preparar datas para exibição
+  const fromDate = enableRange && (date as SelectedRange)?.from ? format((date as SelectedRange).from!, dateFormat) : null;
+  const toDate = enableRange && (date as SelectedRange)?.to ? format((date as SelectedRange).to!, dateFormat) : null;
+  const singleDate = !enableRange && date instanceof Date ? format(date, dateFormat) : null;
 
   return (
     <div className={cn("grid gap-2 w-full", className)}>
       <Popover>
         <PopoverTrigger asChild>
           <Button
-            id="date-picker-trigger"
             variant="outline"
-            className={cn(
-              "w-full justify-start text-left font-normal",
-              !date && "text-muted-foreground"
-            )}
-            aria-label="Abrir seletor de data"
+            className={cn("w-full justify-start text-left font-normal", !date && "text-muted-foreground")}
           >
             <CalendarIcon className="mr-2 h-4 w-4" />
-            {enableDateFilter ? (
-              enableRange ? (
-                date && (date as DateRange)?.from ? (
-                  (date as DateRange)?.to ? (
-                    <>
-                      {format((date as DateRange).from!, dateFormat)} -{" "}
-                      {format((date as DateRange).to!, dateFormat)}
-                    </>
-                  ) : (
-                    format((date as DateRange).from!, dateFormat)
-                  )
-                ) : (
-                  <span>{placeholderText}</span>
-                )
-              ) : date ? (
-                format(date as Date, dateFormat)
-              ) : (
-                <span>{placeholderText}</span>
-              )
-            ) : (
-              <span>{placeholderText}</span>
-            )}
+            {enableDateFilter
+              ? enableRange
+                ? fromDate
+                  ? toDate
+                    ? `${fromDate} - ${toDate}`
+                    : fromDate
+                  : placeholderText
+                : singleDate
+                ? singleDate
+                : placeholderText
+              : placeholderText}
           </Button>
         </PopoverTrigger>
-        <PopoverContent
-          className="w-auto p-0"
-          align="start"
-          aria-label="Seletor de intervalo de datas"
-        >
+        <PopoverContent className="w-auto p-0" align="start">
           {enableDateFilter && (
-            enableRange ? (
-              <Calendar
-                initialFocus
-                mode="range"
-                defaultMonth={(date as DateRange)?.from}
-                selected={date as DateRange}
-                onSelect={handleDateChange}
-                numberOfMonths={2}
-              />
-            ) : (
-              <Calendar
-                initialFocus
-                mode="single"
-                defaultMonth={date as Date}
-                selected={date as Date}
-                onSelect={handleDateChange}
-                numberOfMonths={1}
-                className="w-full"
-              />
-            )
+            <Calendar
+              initialFocus
+              mode={enableRange ? "range" : "single"}
+              defaultMonth={enableRange ? (date as SelectedRange)?.from : (date as Date)}
+              selected={date}
+              onSelect={handleDateChange}
+              numberOfMonths={enableRange ? 2 : 1}
+              className="w-full"
+            />
           )}
           <Button variant="outline" className="w-full mt-2" onClick={clearDates}>
             Limpar Datas
@@ -130,4 +100,3 @@ export function DatePickerWithRange({
     </div>
   );
 }
-

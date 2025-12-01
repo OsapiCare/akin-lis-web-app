@@ -15,10 +15,19 @@ import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useAuthRoleStore } from "@/utils/zustand-store/userRoleStore";
 
+export interface CompletedScheduleFilters {
+  searchQuery?: string;
+  dateFrom?: Date | null;
+  dateTo?: Date | null;
+  examStatus?: string;
+  paymentStatus?: string;
+  technicianFilter?: string;
+}
+
 interface CompletedScheduleFiltersProps {
   onSearch: (query: string) => void;
   onFilterChange: (filters: Partial<CompletedScheduleFilters>) => void;
-  onClearFilters: () => void;
+  onClearFilters: (key?: keyof CompletedScheduleFilters) => void;
   filters: CompletedScheduleFilters;
   totalSchedules: number;
   filteredCount: number;
@@ -30,13 +39,11 @@ export function CompletedScheduleFilters({
   onClearFilters,
   filters,
   totalSchedules,
-  filteredCount
+  filteredCount,
 }: CompletedScheduleFiltersProps) {
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const { role } = useAuthRoleStore();
   const isChefeLaboratorio = role === "CHEFE";
-
-  console.log("User role in CompletedScheduleFilters:", role);
 
   const handleSearchChange = (value: string) => {
     onSearch(value);
@@ -67,7 +74,6 @@ export function CompletedScheduleFilters({
     return count;
   }, [filters]);
 
-  // Helper: minimum allowed date (year 1900)
   const minAllowedDate = new Date("1900-01-01");
 
   return (
@@ -87,11 +93,7 @@ export function CompletedScheduleFilters({
             </div>
 
             <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-                className="flex items-center gap-2"
-              >
+              <Button variant="outline" onClick={() => setShowAdvancedFilters(!showAdvancedFilters)} className="flex items-center gap-2">
                 <Filter className="w-4 h-4" />
                 Filtros
                 {getActiveFilterCount > 0 && (
@@ -102,25 +104,56 @@ export function CompletedScheduleFilters({
               </Button>
 
               {hasActiveFilters && (
-                <Button variant="ghost" size="sm" onClick={onClearFilters}>
+                <Button variant="ghost" size="sm" onClick={() => onClearFilters()}>
                   <X className="w-4 h-4 mr-1" />
-                  Limpar
+                  Limpar todos
                 </Button>
               )}
             </div>
           </div>
 
           {/* Results Summary */}
-          <div className="flex items-center gap-4 text-sm text-gray-600">
+          <div className="flex items-center gap-4 text-sm text-gray-600 flex-wrap">
             <div className="flex items-center gap-1">
               <Users className="w-4 h-4" />
-              <span>
-                Mostrando {filteredCount} de {totalSchedules} agendamentos
-              </span>
+              <span>Mostrando {filteredCount} de {totalSchedules} agendamentos</span>
             </div>
+
+            {/* Active Filters as Badges */}
             {filters.searchQuery && filters.searchQuery.trim() !== "" && (
               <Badge variant="outline">
-                Busca: &quot;{filters.searchQuery}&quot;
+                Busca: "{filters.searchQuery}"{" "}
+                <X className="inline w-3 h-3 ml-1 cursor-pointer" onClick={() => onClearFilters("searchQuery")} />
+              </Badge>
+            )}
+            {filters.dateFrom && (
+              <Badge variant="outline">
+                De: {format(filters.dateFrom, "PPP", { locale: ptBR })}{" "}
+                <X className="inline w-3 h-3 ml-1 cursor-pointer" onClick={() => onClearFilters("dateFrom")} />
+              </Badge>
+            )}
+            {filters.dateTo && (
+              <Badge variant="outline">
+                Até: {format(filters.dateTo, "PPP", { locale: ptBR })}{" "}
+                <X className="inline w-3 h-3 ml-1 cursor-pointer" onClick={() => onClearFilters("dateTo")} />
+              </Badge>
+            )}
+            {filters.examStatus && filters.examStatus !== "TODOS" && (
+              <Badge variant="outline">
+                Status Exame: {filters.examStatus}{" "}
+                <X className="inline w-3 h-3 ml-1 cursor-pointer" onClick={() => onClearFilters("examStatus")} />
+              </Badge>
+            )}
+            {filters.paymentStatus && filters.paymentStatus !== "TODOS" && (
+              <Badge variant="outline">
+                Status Pagamento: {filters.paymentStatus}{" "}
+                <X className="inline w-3 h-3 ml-1 cursor-pointer" onClick={() => onClearFilters("paymentStatus")} />
+              </Badge>
+            )}
+            {filters.technicianFilter && filters.technicianFilter !== "TODOS" && (
+              <Badge variant="outline">
+                Técnico: {filters.technicianFilter}{" "}
+                <X className="inline w-3 h-3 ml-1 cursor-pointer" onClick={() => onClearFilters("technicianFilter")} />
               </Badge>
             )}
           </div>
@@ -134,28 +167,17 @@ export function CompletedScheduleFilters({
                   <Label>Data inicial</Label>
                   <Popover>
                     <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "w-full justify-start text-left font-normal",
-                          !filters.dateFrom && "text-muted-foreground"
-                        )}
-                      >
+                      <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !filters.dateFrom && "text-muted-foreground")}>
                         <CalendarIcon className="mr-2 h-4 w-4" />
-                        {filters.dateFrom ? (
-                          format(filters.dateFrom, "PPP", { locale: ptBR })
-                        ) : (
-                          "Selecionar data"
-                        )}
+                        {filters.dateFrom ? format(filters.dateFrom, "PPP", { locale: ptBR }) : "Selecionar data"}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
                       <Calendar
                         mode="single"
                         selected={filters.dateFrom}
-                        onSelect={(date: Date) => handleFilterChange("dateFrom", date)}
-                        // Only disable dates before 1900 (allows future dates)
-                        disabled={(date: Date) => date < minAllowedDate}
+                        onSelect={(date: Date | undefined) => handleFilterChange("dateFrom", date ?? null)}
+                        disabled={(date: Date) => date < new Date("1900-01-01")}
                         initialFocus
                       />
                     </PopoverContent>
@@ -167,51 +189,31 @@ export function CompletedScheduleFilters({
                   <Label>Data final</Label>
                   <Popover>
                     <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "w-full justify-start text-left font-normal",
-                          !filters.dateTo && "text-muted-foreground"
-                        )}
-                      >
+                      <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !filters.dateTo && "text-muted-foreground")}>
                         <CalendarIcon className="mr-2 h-4 w-4" />
-                        {filters.dateTo ? (
-                          format(filters.dateTo, "PPP", { locale: ptBR })
-                        ) : (
-                          "Selecionar data"
-                        )}
+                        {filters.dateTo ? format(filters.dateTo, "PPP", { locale: ptBR }) : "Selecionar data"}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
                       <Calendar
                         mode="single"
                         selected={filters.dateTo}
-                        onSelect={(date: Date) => handleFilterChange("dateTo", date)}
-                        // Allow future dates; only disable dates before 1900 or earlier than dateFrom
-                        disabled={(date: Date) => {
-                          if (date < minAllowedDate) return true;
-                          if (filters.dateFrom && date < filters.dateFrom) return true;
-                          return false;
-                        }}
+                        onSelect={(date: Date | undefined) => handleFilterChange("dateTo", date ?? null)}
+                        disabled={(date: Date) => filters.dateFrom ? date < filters.dateFrom : date < new Date("1900-01-01")}
                         initialFocus
                       />
                     </PopoverContent>
                   </Popover>
                 </div>
 
-                {/* Exam Status Filter */}
+                {/* Exam Status */}
                 <div className="space-y-2">
                   <Label className="flex items-center gap-1">
                     <CheckCircle className="w-4 h-4" />
                     Status do Exame
                   </Label>
-                  <Select
-                    value={filters.examStatus || "TODOS"}
-                    onValueChange={(value) => handleFilterChange("examStatus", value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecionar status" />
-                    </SelectTrigger>
+                  <Select value={filters.examStatus || "TODOS"} onValueChange={(value) => handleFilterChange("examStatus", value)}>
+                    <SelectTrigger><SelectValue placeholder="Selecionar status" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="TODOS">Todos</SelectItem>
                       <SelectItem value="PENDENTE">Pendente</SelectItem>
@@ -221,19 +223,14 @@ export function CompletedScheduleFilters({
                   </Select>
                 </div>
 
-                {/* Payment Status Filter */}
+                {/* Payment Status */}
                 <div className="space-y-2">
                   <Label className="flex items-center gap-1">
                     <DollarSign className="w-4 h-4" />
                     Status Pagamento
                   </Label>
-                  <Select
-                    value={filters.paymentStatus || "TODOS"}
-                    onValueChange={(value) => handleFilterChange("paymentStatus", value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecionar status" />
-                    </SelectTrigger>
+                  <Select value={filters.paymentStatus || "TODOS"} onValueChange={(value) => handleFilterChange("paymentStatus", value)}>
+                    <SelectTrigger><SelectValue placeholder="Selecionar status" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="TODOS">Todos</SelectItem>
                       <SelectItem value="PENDENTE">Pendente</SelectItem>
@@ -246,56 +243,33 @@ export function CompletedScheduleFilters({
                 {/* Technician Filter */}
                 {isChefeLaboratorio && (
                   <div className="space-y-2 md:col-span-2 lg:col-span-1">
-                  <Label className="flex items-center gap-1">
-                    <UserCheck className="w-4 h-4" />
-                    Técnico
-                  </Label>
-                  <Select
-                    value={filters.technicianFilter || "TODOS"}
-                    onValueChange={(value) => handleFilterChange("technicianFilter", value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecionar filtro" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="TODOS">Todos</SelectItem>
-                      <SelectItem value="ALOCADO">Com técnico alocado</SelectItem>
-                      <SelectItem value="NAO_ALOCADO">Sem técnico alocado</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-            )}
+                    <Label className="flex items-center gap-1">
+                      <UserCheck className="w-4 h-4" />
+                      Técnico
+                    </Label>
+                    <Select value={filters.technicianFilter || "TODOS"} onValueChange={(value) => handleFilterChange("technicianFilter", value)}>
+                      <SelectTrigger><SelectValue placeholder="Selecionar filtro" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="TODOS">Todos</SelectItem>
+                        <SelectItem value="ALOCADO">Com técnico alocado</SelectItem>
+                        <SelectItem value="NAO_ALOCADO">Sem técnico alocado</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </div>
 
               {/* Quick Filters */}
               <div className="flex flex-wrap gap-2 pt-4 border-t">
                 <Label className="text-sm font-medium text-gray-700">Filtros rápidos:</Label>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleFilterChange("examStatus", "PENDENTE")}
-                  className="text-xs"
-                >
-                  <Clock className="w-3 h-3 mr-1" />
-                  Exames Pendentes
+                <Button variant="outline" size="sm" onClick={() => handleFilterChange("examStatus", "PENDENTE")} className="text-xs">
+                  <Clock className="w-3 h-3 mr-1" /> Exames Pendentes
                 </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleFilterChange("paymentStatus", "PENDENTE")}
-                  className="text-xs"
-                >
-                  <DollarSign className="w-3 h-3 mr-1" />
-                  Pagamentos Pendentes
+                <Button variant="outline" size="sm" onClick={() => handleFilterChange("paymentStatus", "PENDENTE")} className="text-xs">
+                  <DollarSign className="w-3 h-3 mr-1" /> Pagamentos Pendentes
                 </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleFilterChange("technicianFilter", "NAO_ALOCADO")}
-                  className="text-xs"
-                >
-                  <AlertCircle className="w-3 h-3 mr-1" />
-                  Sem Técnico
+                <Button variant="outline" size="sm" onClick={() => handleFilterChange("technicianFilter", "NAO_ALOCADO")} className="text-xs">
+                  <AlertCircle className="w-3 h-3 mr-1" /> Sem Técnico
                 </Button>
               </div>
             </div>

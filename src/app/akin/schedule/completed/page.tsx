@@ -101,7 +101,7 @@ export default function CompletedSchedulesPage() {
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Agendamentos Concluídos</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Agendamentos Confirmados</h1>
           <p className="text-gray-600 mt-1 text-wrap">Visualize e gerencie todos os agendamentos que foram finalizados</p>
         </div>
 

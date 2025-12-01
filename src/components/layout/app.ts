@@ -67,7 +67,7 @@ export const APP_CONFIG = {
         path: "/akin/patient/dashboard",
         access: ["RECEPCIONISTA", "CHEFE", "TECNICO"],
         subItems: [
-          { label: "Painel", icon: LayoutDashboard, path: "/akin/patient/dashboard", access: ["RECEPCIONISTA", "CHEFE", "TECNICO"] },
+          { label: "Painel", icon: LayoutDashboard, path: "/akin/patient/dashboard", access: ["CHEFE", "TECNICO"] },
           { label: "Lista de Pacientes", icon: UsersRound, path: "/akin/patient/list", access: ["RECEPCIONISTA", "CHEFE", "TECNICO"] },
         ]
       },
