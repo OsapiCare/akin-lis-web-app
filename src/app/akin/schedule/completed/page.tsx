@@ -7,23 +7,37 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Grid3X3, List, RefreshCw, Calendar, AlertTriangle, CheckCircle, BarChart3, FileText, TrendingUp, Users, MoreHorizontal, Eye } from "lucide-react";
+import {
+  Grid3X3,
+  List,
+  RefreshCw,
+  Calendar,
+  AlertTriangle,
+  CheckCircle,
+  FileText,
+  TrendingUp,
+  MoreHorizontal,
+  Eye
+} from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
-// Components
 import { CompletedScheduleCard } from "@/components/schedule/CompletedScheduleCard";
-// import { CompletedScheduleTable } from "@/components/schedule/CompletedScheduleTable";
 import { CompletedScheduleFilters } from "@/components/schedule/CompletedScheduleFilters";
 import { CompletedScheduleStats } from "@/components/schedule/CompletedScheduleStats";
 import { CompletedScheduleDetailsModal } from "@/components/schedule/CompletedScheduleDetailsModal";
 
-// Hooks
 import { useCompletedSchedules } from "@/hooks/useCompletedSchedules";
 import { useCompletedScheduleFilters } from "@/hooks/useCompletedScheduleFilters";
+
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu";
 
 export default function CompletedSchedulesPage() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -33,52 +47,55 @@ export default function CompletedSchedulesPage() {
   const [selectedSchedules, setSelectedSchedules] = useState<number[]>([]);
 
   // Fetch completed schedules
-  const { schedules, statistics, isLoading, isError, error, refetch, isRefetching } = useCompletedSchedules();
+  const { schedules, statistics, isLoading, isError, refetch, isRefetching } =
+    useCompletedSchedules();
 
-  // Use custom hook for filtering
-  const { filteredSchedules, filters, handleSearch, handleFilterChange, clearFilters } = useCompletedScheduleFilters(schedules);
-
-  // Memoized derived values (performance)
-  const totalCount = useMemo(() => statistics?.totalSchedules ?? 0, [statistics]);
-  const filteredCount = useMemo(() => filteredSchedules.length, [filteredSchedules]);
-
-  // Remove duplicados por ID
+  /**
+   * FIX 1: Remover duplicados ANTES de aplicar filtros
+   */
   const uniqueSchedules = useMemo(() => {
     const map = new Map<number, CompletedScheduleType>();
     schedules.forEach((s) => map.set(s.id, s));
     return Array.from(map.values());
   }, [schedules]);
 
+  /**
+   * FIX 2: Agora o hook de filtros recebe APENAS schedules únicos
+   */
+  const {
+    filteredSchedules,
+    filters,
+    handleSearch,
+    handleFilterChange,
+    clearFilters
+  } = useCompletedScheduleFilters(uniqueSchedules);
+
+  const totalCount = statistics?.totalSchedules ?? 0;
+  const filteredCount = filteredSchedules.length;
+
   const handleSelectAll = (checked: boolean) => {
-    if (checked) {
-      setSelectedSchedules(uniqueSchedules.map((s) => s.id));
-    } else {
-      setSelectedSchedules([]);
-    }
+    setSelectedSchedules(checked ? filteredSchedules.map((s) => s.id) : []);
   };
 
   const handleSelectSchedule = (scheduleId: number, checked: boolean) => {
-    if (checked) {
-      setSelectedSchedules((prev) => [...prev, scheduleId]);
-    } else {
-      setSelectedSchedules((prev) => prev.filter((id) => id !== scheduleId));
-    }
+    setSelectedSchedules((prev) =>
+      checked ? [...prev, scheduleId] : prev.filter((id) => id !== scheduleId)
+    );
   };
-  // Handlers
-  const handleViewDetails = useCallback((schedule: CompletedScheduleType) => {
+
+  const handleViewDetails = (schedule: CompletedScheduleType) => {
     setSelectedSchedule(schedule);
     setIsDetailsModalOpen(true);
-  }, []);
+  };
 
-  const handleViewReport = useCallback((schedule: CompletedScheduleType) => {
-    console.log("View report for schedule:", schedule.id);
-    // TODO: Implement report generation
-  }, []);
-
-  const handleCloseDetailsModal = useCallback(() => {
-    setIsDetailsModalOpen(false);
+  const handleCloseDetailsModal = () => {
     setSelectedSchedule(null);
-  }, []);
+    setIsDetailsModalOpen(false);
+  };
+
+  const handleViewReport = (schedule: CompletedScheduleType) => {
+    console.log("View report for schedule:", schedule.id);
+  };
 
   if (isError) {
     return (
@@ -87,7 +104,7 @@ export default function CompletedSchedulesPage() {
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
             Erro ao carregar agendamentos concluídos.
-            <Button variant="link" className="p-0 h-auto ml-2" onClick={() => refetch()}>
+            <Button variant="link" onClick={() => refetch()} className="ml-2 p-0">
               Tentar novamente
             </Button>
           </AlertDescription>
@@ -102,7 +119,9 @@ export default function CompletedSchedulesPage() {
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Agendamentos Confirmados</h1>
-          <p className="text-gray-600 mt-1 text-wrap">Visualize e gerencie todos os agendamentos que foram finalizados</p>
+          <p className="text-gray-600 mt-1">
+            Visualize e gerencie todos os agendamentos que foram finalizados
+          </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
@@ -112,26 +131,26 @@ export default function CompletedSchedulesPage() {
           </Badge>
 
           <Button variant="outline" size="sm" onClick={() => setShowStats(!showStats)}>
-            <BarChart3 className="w-4 h-4 mr-2" />
+            <CheckCircle className="w-4 h-4 mr-2" />
             {showStats ? "Ocultar" : "Mostrar"} Estatísticas
           </Button>
 
-          <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isRefetching}>
+          <Button variant="outline" size="sm" onClick={() => refetch()}>
             <RefreshCw className={`w-4 h-4 mr-2 ${isRefetching ? "animate-spin" : ""}`} />
             Atualizar
           </Button>
         </div>
       </div>
 
-      {/* Quick Stats Cards */}
-      <div className="grid  grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {/* Statistics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card>
           <CardHeader className="flex items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Total Concluídos</CardTitle>
             <CheckCircle className="w-6 h-6 text-green-600" />
           </CardHeader>
-          <CardContent className="flex m-auto">
-            <div className="text-2xl font-bold text-gray-900">{isLoading ? <Skeleton className="h-8 w-16 flex m-auto" /> : statistics.totalSchedules}</div>
+          <CardContent className="text-2xl font-bold text-gray-900">
+            {isLoading ? <Skeleton className="h-8 w-16" /> : statistics.totalSchedules}
           </CardContent>
         </Card>
 
@@ -140,8 +159,8 @@ export default function CompletedSchedulesPage() {
             <CardTitle className="text-sm font-medium">Total de Exames</CardTitle>
             <FileText className="w-6 h-6 text-purple-600" />
           </CardHeader>
-          <CardContent className="flex m-auto">
-            <div className="text-2xl font-bold text-gray-900">{isLoading ? <Skeleton className="h-8 w-16" /> : statistics.totalExams}</div>
+          <CardContent className="text-2xl font-bold text-gray-900">
+            {isLoading ? <Skeleton className="h-8 w-16" /> : statistics.totalExams}
           </CardContent>
         </Card>
 
@@ -150,18 +169,16 @@ export default function CompletedSchedulesPage() {
             <CardTitle className="text-sm font-medium">Receita Total</CardTitle>
             <TrendingUp className="w-6 h-6 text-blue-600" />
           </CardHeader>
-          <CardContent className="flex m-auto">
-            <div className="text-2xl font-bold text-gray-900">
-              {isLoading ? (
-                <Skeleton className="h-8 w-24" />
-              ) : (
-                new Intl.NumberFormat("pt-AO", {
-                  style: "currency",
-                  currency: "AOA",
-                  notation: "compact",
-                }).format(statistics.totalRevenue)
-              )}
-            </div>
+          <CardContent className="text-2xl font-bold">
+            {isLoading ? (
+              <Skeleton className="h-8 w-24" />
+            ) : (
+              new Intl.NumberFormat("pt-AO", {
+                style: "currency",
+                currency: "AOA",
+                notation: "compact"
+              }).format(statistics.totalRevenue)
+            )}
           </CardContent>
         </Card>
 
@@ -170,32 +187,42 @@ export default function CompletedSchedulesPage() {
             <CardTitle className="text-sm font-medium">Taxa de Conclusão</CardTitle>
             <CheckCircle className="w-6 h-6 text-orange-600" />
           </CardHeader>
-          <CardContent className="flex items-center m-auto">
-            <div className="text-2xl font-bold text-gray-900">{isLoading ? <Skeleton className="h-8 w-16" /> : `${statistics.totalExams > 0 ? ((statistics.completedExams / statistics.totalExams) * 100).toFixed(1) : 0}%`}</div>
+          <CardContent className="text-2xl font-bold">
+            {isLoading ? (
+              <Skeleton className="h-8 w-16" />
+            ) : (
+              `${statistics.totalExams > 0
+                ? ((statistics.completedExams / statistics.totalExams) * 100).toFixed(1)
+                : 0}%`
+            )}
           </CardContent>
         </Card>
       </div>
 
-      {/* Detailed Statistics (conditionally shown) */}
-      {showStats && <CompletedScheduleStats statistics={statistics} isLoading={isLoading} />}
+      {/* Expanded statistics */}
+      {showStats && <CompletedScheduleStats statistics={statistics} />}
 
       {/* Filters */}
-      <CompletedScheduleFilters onSearch={handleSearch} onFilterChange={handleFilterChange} onClearFilters={clearFilters} filters={filters} totalSchedules={totalCount} filteredCount={filteredCount} />
+      <CompletedScheduleFilters
+        onSearch={handleSearch}
+        onFilterChange={handleFilterChange}
+        onClearFilters={clearFilters}
+        filters={filters}
+        totalSchedules={totalCount}
+        filteredCount={filteredCount}
+      />
 
-      {/* View Toggle and Content */}
-      <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as "grid" | "list")}>
+      {/* View Mode */}
+      <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "grid" | "list")}>
         <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
           <TabsList className="grid w-full max-w-md grid-cols-2">
-            <TabsTrigger value="grid" className="flex items-center gap-2">
-              <Grid3X3 className="w-4 h-4" />
-              Cards
+            <TabsTrigger value="grid">
+              <Grid3X3 className="w-4 h-4 mr-2" /> Cards
             </TabsTrigger>
-            <TabsTrigger value="list" className="flex items-center gap-2">
-              <List className="w-4 h-4" />
-              Lista
+            <TabsTrigger value="list">
+              <List className="w-4 h-4 mr-2" /> Lista
             </TabsTrigger>
           </TabsList>
-
           <div className="text-sm text-gray-600">
             {filteredCount} de {totalCount} agendamentos
           </div>
@@ -211,36 +238,47 @@ export default function CompletedSchedulesPage() {
             ))}
           </div>
         ) : filteredSchedules.length === 0 ? (
-          <Card className="p-12">
-            <div className="text-center">
-              <AlertTriangle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Nenhum agendamento encontrado</h3>
-              <p className="text-gray-600 mb-4">{statistics.totalSchedules === 0 ? "Não há agendamentos concluídos no momento." : "Tente ajustar os filtros para encontrar agendamentos."}</p>
-              {filters.searchQuery && (
-                <Button variant="outline" onClick={() => handleSearch("")}>
-                  Limpar busca
-                </Button>
-              )}
-            </div>
+          <Card className="p-12 text-center">
+            <AlertTriangle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold">Nenhum agendamento encontrado</h3>
+            <p className="text-gray-600 mt-2">
+              {statistics.totalSchedules === 0
+                ? "Não há agendamentos concluídos no momento."
+                : "Tente ajustar os filtros."}
+            </p>
+            {filters.searchQuery && (
+              <Button variant="outline" className="mt-4" onClick={() => handleSearch("")}>
+                Limpar busca
+              </Button>
+            )}
           </Card>
         ) : (
           <>
-            <TabsContent value="grid" className="space-y-6">
+            {/* GRID MODE */}
+            <TabsContent value="grid">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredSchedules.map((schedule) => (
-                  <CompletedScheduleCard key={schedule.id} schedule={schedule} onViewDetails={handleViewDetails} onViewReport={handleViewReport} />
+                  <CompletedScheduleCard
+                    key={schedule.id}
+                    schedule={schedule}
+                    onViewDetails={handleViewDetails}
+                    onViewReport={handleViewReport}
+                  />
                 ))}
               </div>
             </TabsContent>
 
-            <TabsContent value="list" className="space-y-4 mt-6">
-              {/* <CompletedScheduleTable schedules={filteredSchedules} onViewDetails={handleViewDetails} onViewReport={handleViewReport} /> */}
-              <div className="overflow-x-auto">
+            {/* LIST MODE */}
+            <TabsContent value="list">
+              <div className="overflow-x-auto mt-6">
                 <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="">
+                  <thead>
                     <tr>
                       <th className="w-12">
-                        <Checkbox checked={selectedSchedules.length === uniqueSchedules.length} onCheckedChange={handleSelectAll} />
+                        <Checkbox
+                          checked={selectedSchedules.length === filteredSchedules.length}
+                          onCheckedChange={handleSelectAll}
+                        />
                       </th>
                       <th>Paciente</th>
                       <th>Exames</th>
@@ -251,40 +289,80 @@ export default function CompletedSchedulesPage() {
                       <th className="w-16">Ações</th>
                     </tr>
                   </thead>
+
                   <tbody>
-                    {uniqueSchedules.map((schedule) => {
-                      const totalValue = schedule.Exame?.reduce((sum, exam) => sum + (exam.Tipo_Exame?.preco || 0), 0) || 0;
-                      const completedExams = schedule.Exame?.filter((e) => e.status === "CONCLUIDO").length || 0;
+                    {filteredSchedules.map((schedule) => {
+                      const totalValue =
+                        schedule.Exame?.reduce(
+                          (sum, e) => sum + (e.Tipo_Exame?.preco || 0),
+                          0
+                        ) || 0;
+
+                      const completedExams =
+                        schedule.Exame?.filter((e) => e.status === "CONCLUIDO").length || 0;
+
                       const totalExams = schedule.Exame?.length || 0;
-                      const paidExams = schedule.Exame?.filter((e) => e.status_pagamento === "PAGO").length || 0;
-                      const hasAllocatedTechnician = schedule.Exame?.some((e) => e.id_tecnico_alocado);
+
+                      const paidExams =
+                        schedule.Exame?.filter((e) => e.status_pagamento === "PAGO").length || 0;
+
+                      const hasAllocatedTechnician =
+                        schedule.Exame?.some((e) => e.id_tecnico_alocado);
 
                       return (
                         <tr key={schedule.id}>
                           <td>
-                            <Checkbox checked={selectedSchedules.includes(schedule.id)} onCheckedChange={(checked) => handleSelectSchedule(schedule.id, checked as boolean)} />
+                            <Checkbox
+                              checked={selectedSchedules.includes(schedule.id)}
+                              onCheckedChange={(checked) =>
+                                handleSelectSchedule(schedule.id, checked as boolean)
+                              }
+                            />
                           </td>
-                          <td>{schedule.Paciente?.nome_completo || "Nome não disponível"}</td>
+
+                          <td>{schedule.Paciente?.nome_completo}</td>
+
                           <td>
-                            {schedule.Exame?.slice(0, 3).map((exam, idx) => (
-                              <Badge key={idx} variant="outline" className="mr-1 text-xs">
+                            {schedule.Exame?.slice(0, 3).map((exam, i) => (
+                              <Badge key={i} variant="outline" className="mr-1 text-xs">
                                 {exam.Tipo_Exame?.nome}
                               </Badge>
                             ))}
-                            {totalExams > 3 && <span className="text-blue-600 text-xs">+{totalExams - 3}</span>}
+                            {totalExams > 3 && (
+                              <span className="text-blue-600 text-xs">
+                                +{totalExams - 3}
+                              </span>
+                            )}
                           </td>
+
                           <td>
                             {completedExams}/{totalExams} concluídos
                           </td>
+
                           <td>
                             {paidExams}/{totalExams} pagos
                           </td>
-                          <td>{new Intl.NumberFormat("pt-AO", { style: "currency", currency: "AOA" }).format(totalValue)}</td>
+
                           <td>
-                            <Badge variant="outline" className={`text-xs ${hasAllocatedTechnician ? "bg-green-100 text-green-800 border-green-200" : "bg-gray-100 text-gray-600 border-gray-200"}`}>
+                            {new Intl.NumberFormat("pt-AO", {
+                              style: "currency",
+                              currency: "AOA"
+                            }).format(totalValue)}
+                          </td>
+
+                          <td>
+                            <Badge
+                              variant="outline"
+                              className={`text-xs ${
+                                hasAllocatedTechnician
+                                  ? "bg-green-100 text-green-700"
+                                  : "bg-gray-100 text-gray-600"
+                              }`}
+                            >
                               {hasAllocatedTechnician ? "Alocado" : "Não alocado"}
                             </Badge>
                           </td>
+
                           <td>
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
@@ -292,10 +370,12 @@ export default function CompletedSchedulesPage() {
                                   <MoreHorizontal className="h-4 w-4" />
                                 </Button>
                               </DropdownMenuTrigger>
+
                               <DropdownMenuContent align="end">
                                 <DropdownMenuItem onClick={() => handleViewDetails(schedule)}>
                                   <Eye className="mr-2 h-4 w-4" /> Ver Detalhes
                                 </DropdownMenuItem>
+
                                 <DropdownMenuItem onClick={() => handleViewReport(schedule)}>
                                   <FileText className="mr-2 h-4 w-4" /> Gerar Relatório
                                 </DropdownMenuItem>
@@ -313,8 +393,12 @@ export default function CompletedSchedulesPage() {
         )}
       </Tabs>
 
-      {/* Details Modal */}
-      <CompletedScheduleDetailsModal schedule={selectedSchedule} isOpen={isDetailsModalOpen} onClose={handleCloseDetailsModal} />
+      {/* MODAL */}
+      <CompletedScheduleDetailsModal
+        schedule={selectedSchedule}
+        isOpen={isDetailsModalOpen}
+        onClose={handleCloseDetailsModal}
+      />
     </div>
   );
 }
