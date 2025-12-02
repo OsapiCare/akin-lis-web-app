@@ -19,6 +19,12 @@ interface DatePickerWithRangeProps extends React.HTMLAttributes<HTMLDivElement> 
   setEnableDateFilter?: (enable: boolean) => void;
 }
 
+export type SelectedRange = {
+  from?: Date;
+  to?: Date;
+};
+
+
 export function DatePickerWithRange({
   className,
   defaultDate,
