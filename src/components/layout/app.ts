@@ -38,7 +38,7 @@ export const APP_CONFIG = {
         access: ["CHEFE", "TECNICO"]
       },
       {
-        label: "Agendamentos",
+        label: "Gestão de Agendamentos",
         icon: CalendarCheck,
         path: "/akin/schedule/dashboard",
         access: ["RECEPCIONISTA"],

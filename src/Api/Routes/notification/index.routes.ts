@@ -1,8 +1,8 @@
 import { _axios } from "@/Api/axios.config";
 
 class NotificationRoutes {
-  async getNotificationsByUserId(userId: string) {
-    const response = await _axios.get(`/notification/${userId}`);
+  async getNotificationsByUserId(id_usuario: string) {
+    const response = await _axios.get(`/notification/${id_usuario}`);
     return response.data;
   }
 

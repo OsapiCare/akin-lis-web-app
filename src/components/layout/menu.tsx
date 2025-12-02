@@ -19,7 +19,6 @@ export default function Menu() {
   const [isSheetOpen, setSheetOpen] = useState(false);
   const role = getAllDataInCookies().userRole;
   const routes = role ? filterRoutesByAccess(role) : [];
-
   return (
     <>
       {/* Menu em tela pequena (com Sheet) */}

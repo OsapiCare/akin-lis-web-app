@@ -227,7 +227,7 @@ export function ExpandableAppSidebar({ ...props }: ExpandableAppSidebarProps) {
                     <SidebarMenuButton
                       className="w-full justify-start gap-3 py-3 bg-akin-turquoise/50 text-white hover:bg-akin-turquoise/60 rounded-md hover:text-white "
                     >
-                      <div className="flex items-center gap-2 text-[14px] font-bold">
+                      <div className="flex items-center gap-2 text-xs font-bold">
                         {expandedMenuData?.icon && <expandedMenuData.icon className="h-5 w-5 font-bold" />}
                         {expandedMenuData?.title}
                       </div>
@@ -246,7 +246,7 @@ export function ExpandableAppSidebar({ ...props }: ExpandableAppSidebarProps) {
                 className="w-full flex items-center gap-2 py-2 px-3 text-white font-semibold cursor-pointer hover:bg-slate-600/50 mb-1 rounded-md transition-colors"
               >
                 <ChevronLeft className="h-6 w-6 font-bold" />
-                <span className="text-[14px]">Voltar</span>
+                <span className="text-[12px]">Voltar</span>
               </button>
 
               <SidebarGroupContent>
@@ -268,7 +268,7 @@ export function ExpandableAppSidebar({ ...props }: ExpandableAppSidebarProps) {
                             onClick={() => handleSubMenuClick(subItem.id)}
                           >
                             {subItem.icon && <subItem.icon className="h-5 w-5" />}
-                            <span>{subItem.title}</span>
+                            <span className="text-xs">{subItem.title}</span>
                           </Link>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
@@ -317,7 +317,7 @@ export function ExpandableAppSidebar({ ...props }: ExpandableAppSidebarProps) {
                                 isCollapsed ? "justify-center" : "gap-3"
                               )}>
                                 <item.icon className="h-5 w-5 flex-shrink-0" />
-                                {!isCollapsed && <span>{item.title}</span>}
+                                {!isCollapsed && <span className="text-xs">{item.title}</span>}
                               </div>
                               {!isCollapsed && <ChevronRight className="h-4 w-4 flex-shrink-0" />}
                             </div>
@@ -331,7 +331,7 @@ export function ExpandableAppSidebar({ ...props }: ExpandableAppSidebarProps) {
                                 isCollapsed ? "justify-center" : "gap-3"
                               )}>
                                 <item.icon className="h-5 w-5 flex-shrink-0" />
-                                {!isCollapsed && <span>{item.title}</span>}
+                                {!isCollapsed && <span className="text-xs">{item.title}</span>}
                               </div>
                             </Link>
                           )}
