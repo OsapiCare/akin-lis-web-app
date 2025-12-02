@@ -12,7 +12,6 @@ import { Button } from "@/components/ui/button";
 import { resetInputs } from "./utils/reset-inputs-func";
 import { getAllDataInCookies } from "@/utils/get-data-in-cookies";
 import { IExamProps, Patient } from "@/module/types";
-import { useQuery } from "@tanstack/react-query";
 import { patientRoutes } from "@/Api/Routes/patients";
 
 export type SchemaScheduleType = z.infer<typeof schemaSchedule>;
@@ -29,31 +28,26 @@ export default function New() {
   const [resetPatient, setResetPatient] = useState(false);
   const unit_health = getAllDataInCookies().userdata.health_unit_ref || 1;
 
+  /** Atualiza paciente selecionado quando muda o ID */
   useEffect(() => {
     if (selectedPatientId) {
-      setSelectedPatient(availablePatients.find((patient) => patient.id === selectedPatientId));
+      setSelectedPatient(availablePatients.find((p) => p.id === selectedPatientId));
     }
   }, [selectedPatientId, availablePatients]);
 
+  /** Busca pacientes e exames */
   const fetchPatientsAndExams = async () => {
     try {
       const patientsResponse = await patientRoutes.getAllPacients();
-      const patients: Patient[] = patientsResponse;
-
-      setAvailablePatients(patients);
-      setPatientAutoComplete(
-        patients.map((patient) => ({
-          value: patient.nome_completo,
-          id: patient.id,
-        }))
-      );
+      setAvailablePatients(patientsResponse);
+      setPatientAutoComplete(patientsResponse.map((p: Patient) => ({ value: p.nome_completo, id: p.id })));
 
       const examsResponse = await _axios.get("/exam-types");
       setAvailableExams(examsResponse.data.data);
 
       ___showSuccessToastNotification({ message: "Dados obtidos com sucesso!" });
     } catch (error) {
-      ___showErrorToastNotification({ message: "Erro ao buscar dados" });
+      ___showErrorToastNotification({ message: "Erro ao buscar dados. Contate o suporte." });
     } finally {
       setIsLoading(false);
     }
@@ -69,6 +63,20 @@ export default function New() {
     setSelectedPatient(patient);
   };
 
+  /** Calcula idade em anos, meses ou dias */
+  const getPatientAge = (birthDate: string) => {
+    const birth = new Date(birthDate);
+    const today = new Date();
+    const diff = today.getTime() - birth.getTime();
+    const ageYears = Math.floor(diff / (1000 * 60 * 60 * 24 * 365));
+    if (ageYears > 0) return `${ageYears} ano${ageYears > 1 ? "s" : ""}`;
+    const ageMonths = Math.floor(diff / (1000 * 60 * 60 * 24 * 30));
+    if (ageMonths > 0) return `${ageMonths} mês${ageMonths > 1 ? "es" : ""}`;
+    const ageDays = Math.floor(diff / (1000 * 60 * 60 * 24));
+    return `${ageDays} dia${ageDays > 1 ? "s" : ""}`;
+  };
+
+  /** Validação detalhada de cada agendamento */
   const validateSchedule = () => {
     const errors: string[] = [];
     const today = new Date();
@@ -78,9 +86,15 @@ export default function New() {
         errors.push(`Exame não selecionado para o agendamento ${index + 1}`);
       }
 
-      const scheduleDateTime = new Date(`${schedule.date}T${schedule.time}`);
-      if (scheduleDateTime < today) {
-        errors.push(`A data e hora do agendamento ${index + 1} devem ser futuras.`);
+      if (!schedule.date || !schedule.time) {
+        errors.push(`Data ou hora não preenchida no agendamento ${index + 1}`);
+      }
+
+      if (schedule.date && schedule.time) {
+        const scheduleDateTime = new Date(`${schedule.date}T${schedule.time}`);
+        if (scheduleDateTime < today) {
+          errors.push(`A data e hora do agendamento ${index + 1} devem ser futuras.`);
+        }
       }
     });
 
@@ -88,7 +102,7 @@ export default function New() {
       errors.push("Nenhum paciente selecionado.");
     }
 
-    if (errors?.length > 0) {
+    if (errors.length > 0) {
       ___showErrorToastNotification({ messages: errors });
       return { isValid: false };
     }
@@ -98,27 +112,24 @@ export default function New() {
       data: {
         id_paciente: selectedPatient!.id,
         id_unidade_de_saude: unit_health,
-        exames_paciente: schedules.map((schedule) => {
-          console.log("Schedule date value:", schedule.exam);
-          const date = schedule.date instanceof Date ? schedule.date : schedule.date ? new Date(schedule.date) : new Date();
-          return {
-            id_tipo_exame: schedule.exam?.id,
-            data_agendamento: date.toISOString().split("T")[0], // 'YYYY-MM-DD'
-            hora_agendamento: schedule.time, // 'HH:mm'
-          };
-        }),
+        exames_paciente: schedules.map((schedule) => ({
+          id_tipo_exame: schedule.exam?.id,
+          data_agendamento: schedule.date instanceof Date ? schedule.date.toISOString().split("T")[0] : schedule.date ? new Date(schedule.date).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
+          hora_agendamento: schedule.time,
+        })),
       },
     };
   };
+
   const handleSubmit = async () => {
-    if (isSaving) return; // Bloqueia duplo clique instantaneamente
+    if (isSaving) return;
 
     const validation = validateSchedule();
     if (!validation.isValid) return;
+
     setIsSaving(true);
     try {
       const response = await _axios.post("/schedulings/set-schedule", validation.data);
-      console.log("Response: ", response);
       if (response.status === 201) {
         ___showSuccessToastNotification({ message: "Agendamento marcado com sucesso" });
       }
@@ -127,17 +138,20 @@ export default function New() {
       setSelectedPatientId("");
       resetInputs();
       setResetPatient(true);
-    } catch (error) {
-      ___showErrorToastNotification({ message: "Erro ao marcar agendamento. Contate o suporte." });
+    } catch (error: any) {
+      // Tenta extrair erro detalhado do backend
+      const msg = error?.response?.data?.message || "Erro ao marcar agendamento. Contate o suporte.";
+      ___showErrorToastNotification({ message: msg });
       setResetPatient(false);
     } finally {
       setIsSaving(false);
     }
   };
+
   return (
     <div className="min-h-screen px-6 py-2 pb-5 overflow-x-hidden">
       {/* Cabeçalho */}
-      <div className={"flex flex-col md:flex-row justify-between pr-3 mb-4"}>
+      <div className="flex flex-col md:flex-row justify-between pr-3 mb-4">
         <ModalNewPatient onPatientSaved={handleSavePatient} />
       </div>
 
@@ -145,18 +159,25 @@ export default function New() {
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          if (isSaving) return;
           handleSubmit();
         }}
         className="flex flex-col gap-6 w-full"
       >
-        {/* Detalhes do Paciente e Data */}
-        <div className="flex flex-col gap-6 w-full ">
+        {/* Detalhes do paciente */}
+        <div className="flex flex-col gap-6 w-full">
           <div className="p-4 bg-gray-100 rounded-lg border w-full">
-            <PatientDetails isLoading={isLoading} selectedPatient={selectedPatient} autoCompleteData={patientAutoComplete} onPatientSelect={(patientId) => setSelectedPatientId(patientId)} resetPatient={resetPatient} />
+            <PatientDetails
+              isLoading={isLoading}
+              selectedPatient={selectedPatient}
+              autoCompleteData={patientAutoComplete}
+              onPatientSelect={(patientId) => setSelectedPatientId(patientId)}
+              resetPatient={resetPatient}
+              getPatientAge={getPatientAge} // <-- Idade detalhada
+            />
           </div>
 
-          <div className="p-4 bg-gray-100 rounded-lg border flex flex-col ">
+          {/* Detalhes dos exames */}
+          <div className="p-4 bg-gray-100 rounded-lg border flex flex-col">
             <ScheduleDetails isLoading={isLoading} exams={availableExams} schedules={schedules} onChange={setSchedules} />
           </div>
         </div>

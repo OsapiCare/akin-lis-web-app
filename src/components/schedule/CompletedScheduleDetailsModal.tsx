@@ -38,21 +38,18 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
   const isReceptionist = userRole === "RECEPCIONISTA";
   const isLabChief = userRole === "CHEFE";
 
-  // Fetch technicians (only for Lab Chief)
   const { data: technicians } = useQuery({
     queryKey: ["lab-technicians"],
     queryFn: async () => (await labTechniciansRoutes.getAllLabTechnicians()).data,
     enabled: isLabChief,
   });
 
-  // Fetch lab chiefs (only for Receptionist)
   const { data: labChiefs } = useQuery({
     queryKey: ["lab-chiefs"],
     queryFn: async () => await labChiefRoutes.getAllLabChief(),
     enabled: isReceptionist,
   });
 
-  // Mutations
   const updateExamMutation = useMutation({
     mutationFn: async (data: { examId: number; updates: EditableExam }) => await examRoutes.editExam(data.examId, data.updates),
     onSuccess: () => {
@@ -86,10 +83,20 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
 
   if (!schedule) return null;
 
+  // 🔹 Função para calcular idade em anos, meses ou dias
   const getPatientAge = () => {
     if (!schedule.Paciente?.data_nascimento) return "N/A";
     const birthDate = new Date(schedule.Paciente.data_nascimento);
-    return `${new Date().getFullYear() - birthDate.getFullYear()} anos`;
+    const now = new Date();
+
+    const diffTime = now.getTime() - birthDate.getTime();
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    const diffMonths = (now.getFullYear() - birthDate.getFullYear()) * 12 + now.getMonth() - birthDate.getMonth();
+    const diffYears = now.getFullYear() - birthDate.getFullYear();
+
+    if (diffYears > 0) return `${diffYears} ano${diffYears > 1 ? "s" : ""}`;
+    if (diffMonths > 0) return `${diffMonths} mês${diffMonths > 1 ? "es" : ""}`;
+    return `${diffDays} dia${diffDays > 1 ? "s" : ""}`;
   };
 
   const getPatientInitials = () =>
@@ -263,7 +270,6 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
                     <div className="flex items-center justify-between mb-3">
                       <h4 className="font-semibold text-lg">{exam.Tipo_Exame?.nome || "Exame não especificado"}</h4>
                       <div className="flex gap-2 items-center">
-                        {/* Apenas o status do exame, sem duplicar "Pendente" */}
                         {getExamStatusBadge(exam.status)}
                         <Button
                           variant="outline"
@@ -300,7 +306,6 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
                       )}
                     </div>
 
-                    {/* Alocação de Técnico (apenas para Chefe) */}
                     {isLabChief && (
                       <div className="mt-4 pt-4 border-t">
                         <Label>Alocar Técnico</Label>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -46,22 +46,15 @@ export default function CompletedSchedulesPage() {
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [selectedSchedules, setSelectedSchedules] = useState<number[]>([]);
 
-  // Fetch completed schedules
   const { schedules, statistics, isLoading, isError, refetch, isRefetching } =
     useCompletedSchedules();
 
-  /**
-   * FIX 1: Remover duplicados ANTES de aplicar filtros
-   */
   const uniqueSchedules = useMemo(() => {
     const map = new Map<number, CompletedScheduleType>();
     schedules.forEach((s) => map.set(s.id, s));
     return Array.from(map.values());
   }, [schedules]);
 
-  /**
-   * FIX 2: Agora o hook de filtros recebe APENAS schedules únicos
-   */
   const {
     filteredSchedules,
     filters,
@@ -103,7 +96,7 @@ export default function CompletedSchedulesPage() {
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
-            Erro ao carregar agendamentos concluídos.
+            Erro ao carregar agendamentos. Verifique sua conexão ou contate o suporte.
             <Button variant="link" onClick={() => refetch()} className="ml-2 p-0">
               Tentar novamente
             </Button>
@@ -199,10 +192,8 @@ export default function CompletedSchedulesPage() {
         </Card>
       </div>
 
-      {/* Expanded statistics */}
       {showStats && <CompletedScheduleStats statistics={statistics} />}
 
-      {/* Filters */}
       <CompletedScheduleFilters
         onSearch={handleSearch}
         onFilterChange={handleFilterChange}
@@ -212,7 +203,6 @@ export default function CompletedSchedulesPage() {
         filteredCount={filteredCount}
       />
 
-      {/* View Mode */}
       <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "grid" | "list")}>
         <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
           <TabsList className="grid w-full max-w-md grid-cols-2">
@@ -230,7 +220,6 @@ export default function CompletedSchedulesPage() {
 
         <Separator className="my-4" />
 
-        {/* Loading */}
         {isLoading ? (
           <div className="space-y-4">
             {[...Array(6)].map((_, i) => (
@@ -243,8 +232,8 @@ export default function CompletedSchedulesPage() {
             <h3 className="text-lg font-semibold">Nenhum agendamento encontrado</h3>
             <p className="text-gray-600 mt-2">
               {statistics.totalSchedules === 0
-                ? "Não há agendamentos concluídos no momento."
-                : "Tente ajustar os filtros."}
+                ? "Não há agendamentos disponíveis."
+                : "Ajuste os filtros ou tente novamente."}
             </p>
             {filters.searchQuery && (
               <Button variant="outline" className="mt-4" onClick={() => handleSearch("")}>
@@ -254,7 +243,6 @@ export default function CompletedSchedulesPage() {
           </Card>
         ) : (
           <>
-            {/* GRID MODE */}
             <TabsContent value="grid">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredSchedules.map((schedule) => (
@@ -268,7 +256,6 @@ export default function CompletedSchedulesPage() {
               </div>
             </TabsContent>
 
-            {/* LIST MODE */}
             <TabsContent value="list">
               <div className="overflow-x-auto mt-6">
                 <table className="min-w-full divide-y divide-gray-200">
@@ -393,7 +380,6 @@ export default function CompletedSchedulesPage() {
         )}
       </Tabs>
 
-      {/* MODAL */}
       <CompletedScheduleDetailsModal
         schedule={selectedSchedule}
         isOpen={isDetailsModalOpen}
