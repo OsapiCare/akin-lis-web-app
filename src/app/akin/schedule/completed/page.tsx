@@ -118,9 +118,9 @@ export default function CompletedSchedulesPage() {
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Agendamentos Confirmados</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Gestão de Agendamentos</h1>
           <p className="text-gray-600 mt-1">
-            Visualize e gerencie todos os agendamentos que foram finalizados
+            Visualize e gerencie todos os agendamentos pendentes e em andamento.
           </p>
         </div>
 
@@ -146,7 +146,7 @@ export default function CompletedSchedulesPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card>
           <CardHeader className="flex items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Total Concluídos</CardTitle>
+            <CardTitle className="text-sm font-medium">Total de Agendamentos</CardTitle>
             <CheckCircle className="w-6 h-6 text-green-600" />
           </CardHeader>
           <CardContent className="text-2xl font-bold text-gray-900">
@@ -184,7 +184,7 @@ export default function CompletedSchedulesPage() {
 
         <Card>
           <CardHeader className="flex items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Taxa de Conclusão</CardTitle>
+            <CardTitle className="text-sm font-medium">Progresso dos Exames</CardTitle>
             <CheckCircle className="w-6 h-6 text-orange-600" />
           </CardHeader>
           <CardContent className="text-2xl font-bold">
@@ -336,7 +336,7 @@ export default function CompletedSchedulesPage() {
                           </td>
 
                           <td>
-                            {completedExams}/{totalExams} concluídos
+                            {completedExams}/{totalExams} exames realizados
                           </td>
 
                           <td>

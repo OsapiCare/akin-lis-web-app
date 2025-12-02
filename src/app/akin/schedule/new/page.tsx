@@ -118,6 +118,7 @@ export default function New() {
     setIsSaving(true);
     try {
       const response = await _axios.post("/schedulings/set-schedule", validation.data);
+      console.log("Response: ", response);
       if (response.status === 201) {
         ___showSuccessToastNotification({ message: "Agendamento marcado com sucesso" });
       }
@@ -144,7 +145,7 @@ export default function New() {
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          if(isSaving) return;
+          if (isSaving) return;
           handleSubmit();
         }}
         className="flex flex-col gap-6 w-full"
