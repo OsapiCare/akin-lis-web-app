@@ -7,21 +7,16 @@ import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-
-// Definir o tipo SelectedRange manualmente
-export type SelectedRange = {
-  from?: Date;
-  to?: Date;
-};
+import { DateRange } from "react-day-picker";
 
 interface DatePickerWithRangeProps extends React.HTMLAttributes<HTMLDivElement> {
-  defaultDate?: SelectedRange | Date;
+  defaultDate?: Date | DateRange;
   dateFormat?: string;
   placeholderText?: string;
-  enableRange?: boolean; // Habilita/desabilita intervalo
-  onDateChange?: (date: SelectedRange | Date | undefined) => void;
-  enableDateFilter?: boolean; // Habilita/desabilita filtragem de data
-  setEnableDateFilter?: (enable: boolean) => void; // Função para ativar filtro
+  enableRange?: boolean;
+  onDateChange?: (date: Date | DateRange | undefined) => void;
+  enableDateFilter?: boolean;
+  setEnableDateFilter?: (enable: boolean) => void;
 }
 
 export function DatePickerWithRange({
@@ -34,29 +29,44 @@ export function DatePickerWithRange({
   enableDateFilter = true,
   setEnableDateFilter,
 }: DatePickerWithRangeProps) {
-  const [date, setDate] = React.useState<SelectedRange | Date | undefined>(
-    defaultDate ? (enableRange ? (defaultDate as SelectedRange) : (defaultDate as Date)) : undefined
+  const [singleDate, setSingleDate] = React.useState<Date | undefined>(
+    !enableRange && defaultDate instanceof Date ? defaultDate : undefined
   );
 
-  const handleDateChange = (selectedDate: SelectedRange | Date | undefined) => {
-    setDate(selectedDate);
-    onDateChange?.(selectedDate);
-    if (selectedDate && setEnableDateFilter) {
-      setEnableDateFilter(true);
-    }
+  const [rangeDate, setRangeDate] = React.useState<DateRange | undefined>(
+    enableRange && defaultDate && "from" in (defaultDate as DateRange)
+      ? (defaultDate as DateRange)
+      : undefined
+  );
+
+  const handleSingleDateChange = (date: Date | undefined) => {
+    setSingleDate(date);
+    onDateChange?.(date);
+    if (date && setEnableDateFilter) setEnableDateFilter(true);
+  };
+
+  const handleRangeDateChange = (range: DateRange | undefined) => {
+    setRangeDate(range);
+    onDateChange?.(range);
+    if (setEnableDateFilter) setEnableDateFilter(!!range);
   };
 
   const clearDates = () => {
-    const empty = enableRange ? { from: undefined, to: undefined } : undefined;
-    setDate(empty);
-    onDateChange?.(empty);
+    setSingleDate(undefined);
+    setRangeDate(undefined);
+    onDateChange?.(undefined);
     if (setEnableDateFilter) setEnableDateFilter(false);
   };
 
-  // Preparar datas para exibição
-  const fromDate = enableRange && (date as SelectedRange)?.from ? format((date as SelectedRange).from!, dateFormat) : null;
-  const toDate = enableRange && (date as SelectedRange)?.to ? format((date as SelectedRange).to!, dateFormat) : null;
-  const singleDate = !enableRange && date instanceof Date ? format(date, dateFormat) : null;
+  const displayText = enableRange
+    ? rangeDate && rangeDate.from && rangeDate.to
+      ? format(rangeDate.from, dateFormat) === format(rangeDate.to, dateFormat)
+        ? format(rangeDate.from, dateFormat)
+        : `${format(rangeDate.from, dateFormat)} - ${format(rangeDate.to, dateFormat)}`
+      : placeholderText
+    : singleDate
+    ? format(singleDate, dateFormat)
+    : placeholderText;
 
   return (
     <div className={cn("grid gap-2 w-full", className)}>
@@ -64,33 +74,41 @@ export function DatePickerWithRange({
         <PopoverTrigger asChild>
           <Button
             variant="outline"
-            className={cn("w-full justify-start text-left font-normal", !date && "text-muted-foreground")}
+            className={cn(
+              "w-full justify-start text-left font-normal",
+              !singleDate && !rangeDate && "text-muted-foreground"
+            )}
           >
             <CalendarIcon className="mr-2 h-4 w-4" />
-            {enableDateFilter
-              ? enableRange
-                ? fromDate
-                  ? toDate
-                    ? `${fromDate} - ${toDate}`
-                    : fromDate
-                  : placeholderText
-                : singleDate
-                ? singleDate
-                : placeholderText
-              : placeholderText}
+            {displayText}
           </Button>
         </PopoverTrigger>
+
         <PopoverContent className="w-auto p-0" align="start">
           {enableDateFilter && (
-            <Calendar
-              initialFocus
-              mode={enableRange ? "range" : "single"}
-              defaultMonth={enableRange ? (date as SelectedRange)?.from : (date as Date)}
-              selected={date}
-              onSelect={handleDateChange}
-              numberOfMonths={enableRange ? 2 : 1}
-              className="w-full"
-            />
+            <>
+              {enableRange ? (
+                <Calendar
+                  initialFocus
+                  mode="range"
+                  defaultMonth={rangeDate?.from || new Date()}
+                  selected={rangeDate}
+                  onSelect={handleRangeDateChange}
+                  numberOfMonths={2}
+                  className="w-full"
+                />
+              ) : (
+                <Calendar
+                  initialFocus
+                  mode="single"
+                  defaultMonth={singleDate || new Date()}
+                  selected={singleDate}
+                  onSelect={handleSingleDateChange}
+                  numberOfMonths={1}
+                  className="w-full"
+                />
+              )}
+            </>
           )}
           <Button variant="outline" className="w-full mt-2" onClick={clearDates}>
             Limpar Datas
