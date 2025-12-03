@@ -26,9 +26,7 @@ import { APP_CONFIG } from "@/components/layout/app";
 import { useMemo } from "react";
 import { NotificationIndicator } from "@/components/notifications/NotificationIndicator";
 
-// Função para gerar breadcrumbs dinamicamente baseado no path
 function generateBreadcrumbs(pathname: string) {
-  // Se estamos na raiz do sistema
   if (!pathname || pathname === "/akin" || pathname === "/akin/" || pathname === "/akin/dashboard") {
     return [
       {
@@ -39,21 +37,17 @@ function generateBreadcrumbs(pathname: string) {
     ];
   }
 
-  // Encontrar o item do menu correspondente ao path atual
   let bestMatch = null;
   let matchedSubItem = null;
   let bestMatchLength = 0;
 
-  // Procurar a melhor correspondência nos itens principais e subitens
   for (const menuItem of APP_CONFIG.ROUTES.MENU) {
-    // Verificar correspondência com item principal
     if (pathname.startsWith(menuItem.path) && menuItem.path.length > bestMatchLength) {
       bestMatch = menuItem;
       matchedSubItem = null;
       bestMatchLength = menuItem.path.length;
     }
 
-    // Se tem subitens, verificar correspondência com subitens
     if (menuItem.subItems) {
       for (const subItem of menuItem.subItems) {
         if (pathname.startsWith(subItem.path) && subItem.path.length > bestMatchLength) {
