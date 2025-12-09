@@ -84,7 +84,7 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
   if (!schedule) return null;
 
   // Filtra exames pendentes ou não concluídos para só exibir agendamentos ativos
-  const activeExams = schedule.Exame?.filter(exam => exam.status !== "CONCLUIDO") || [];
+  const activeExams = schedule.Exame?.filter((exam) => exam.status !== "CONCLUIDO") || [];
   if (activeExams.length === 0) return null; // Se todos os exames concluídos, não mostrar o bloco
 
   const getPatientAge = () => {
@@ -206,10 +206,10 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
+                  {/* <div>
                     <Label>Status</Label>
-                    <div className="mt-1">{/* Status removido do bloco */}</div>
-                  </div>
+                    <div className="mt-1 font-semibold">{"Sem status"}</div>
+                  </div> */}
                   <div>
                     <Label>Data de Criação</Label>
                     <p className="font-semibold">{format(new Date(schedule.criado_aos), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</p>
