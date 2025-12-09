@@ -40,7 +40,7 @@ export const APP_CONFIG = {
       {
         label: "Gestão de Agendamentos",
         icon: CalendarCheck,
-        path: "/akin/schedule/dashboard",
+        // path: "/akin/schedule/dashboard",
         access: ["RECEPCIONISTA"],
          subItems: [
           // { label: "Painel", icon: LayoutDashboard, path: "/akin/schedule/dashboard", access: ["RECEPCIONISTA", "CHEFE", "TECNICO"] },
