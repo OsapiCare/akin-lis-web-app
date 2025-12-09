@@ -84,6 +84,11 @@ export function CompletedScheduleCard({ schedule, onViewDetails, onViewReport }:
   const cancelledExams = schedule.Exame?.filter((e) => e.status === "CANCELADO").length || 0;
   const totalExams = schedule.Exame?.length || 0;
 
+  // Only show block if there are pending or non-concluded exams
+  if (completedExams === totalExams && totalExams > 0) {
+    return null; // block disappears from management view
+  }
+
   return (
     <Card className="w-full transition-shadow duration-200 hover:shadow-lg">
       {/* Header */}
@@ -106,13 +111,6 @@ export function CompletedScheduleCard({ schedule, onViewDetails, onViewReport }:
                 <span className="inline-flex items-center gap-1">{getPatientAge()}</span>
               </div>
             </div>
-          </div>
-
-          <div className="mt-2 sm:mt-0">
-            <span className="inline-flex items-center gap-1">
-              <CheckCircle className="w-3 h-3 mr-1" />
-              {schedule.status}
-            </span>
           </div>
         </div>
       </CardHeader>
