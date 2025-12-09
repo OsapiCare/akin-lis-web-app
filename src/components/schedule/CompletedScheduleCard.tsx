@@ -132,7 +132,7 @@ export function CompletedScheduleCard({ schedule, onViewDetails, onViewReport }:
               <div className="text-xs text-red-600">Cancelados</div>
             </div>
           </div>
-          <div className="text-center text-xs text-gray-500 py-1">Clique "Ver Detalhes" para ver todos os exames</div>
+          <div className="text-center text-xs text-gray-500 py-1">Clique em Ver Detalhes para ver todos os exames</div>
         </div>
 
         {/* Payment summary */}

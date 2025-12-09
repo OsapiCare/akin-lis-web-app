@@ -9,7 +9,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Save } from "lucide-react"
 import type { Figure, Annotation, Tool } from "../page"
 
-
 interface AnnotationCanvasProps {
   imageUrl: string
   annotations: Annotation[]
@@ -85,104 +84,110 @@ export function AnnotationCanvas({
     return () => window.removeEventListener("exportImage", handleExport)
   }, [])
 
-  const getResizeHandles = (annotation: Annotation): ResizeHandle[] => {
-    const handles: ResizeHandle[] = []
-    const { x, y, width, height } = annotation
-    const scale = zoomLevel / 100
+  const getResizeHandles = useCallback(
+    (annotation: Annotation): ResizeHandle[] => {
+      const handles: ResizeHandle[] = []
+      const { x, y, width, height } = annotation
+      const scale = zoomLevel / 100
 
-    handles.push(
-      { x: (x - 4) * scale, y: (y - 4) * scale, cursor: "nw-resize", position: "nw" },
-      { x: (x + width - 4) * scale, y: (y - 4) * scale, cursor: "ne-resize", position: "ne" },
-      { x: (x - 4) * scale, y: (y + height - 4) * scale, cursor: "sw-resize", position: "sw" },
-      { x: (x + width - 4) * scale, y: (y + height - 4) * scale, cursor: "se-resize", position: "se" },
-      { x: (x + width / 2 - 4) * scale, y: (y - 4) * scale, cursor: "n-resize", position: "n" },
-      { x: (x + width / 2 - 4) * scale, y: (y + height - 4) * scale, cursor: "s-resize", position: "s" },
-      { x: (x - 4) * scale, y: (y + height / 2 - 4) * scale, cursor: "w-resize", position: "w" },
-      { x: (x + width - 4) * scale, y: (y + height / 2 - 4) * scale, cursor: "e-resize", position: "e" },
-    )
+      handles.push(
+        { x: (x - 4) * scale, y: (y - 4) * scale, cursor: "nw-resize", position: "nw" },
+        { x: (x + width - 4) * scale, y: (y - 4) * scale, cursor: "ne-resize", position: "ne" },
+        { x: (x - 4) * scale, y: (y + height - 4) * scale, cursor: "sw-resize", position: "sw" },
+        { x: (x + width - 4) * scale, y: (y + height - 4) * scale, cursor: "se-resize", position: "se" },
+        { x: (x + width / 2 - 4) * scale, y: (y - 4) * scale, cursor: "n-resize", position: "n" },
+        { x: (x + width / 2 - 4) * scale, y: (y + height - 4) * scale, cursor: "s-resize", position: "s" },
+        { x: (x - 4) * scale, y: (y + height / 2 - 4) * scale, cursor: "w-resize", position: "w" },
+        { x: (x + width - 4) * scale, y: (y + height / 2 - 4) * scale, cursor: "e-resize", position: "e" },
+      )
 
-    return handles
-  }
+      return handles
+    },
+    [zoomLevel],
+  )
 
-  const drawShape = (
-    ctx: CanvasRenderingContext2D,
-    figure: Figure,
-    x: number,
-    y: number,
-    width: number,
-    height: number,
-    isSelected = false,
-  ) => {
-    const scale = zoomLevel / 100
-    const scaledX = x * scale
-    const scaledY = y * scale
-    const scaledWidth = width * scale
-    const scaledHeight = height * scale
+  const drawShape = useCallback(
+    (
+      ctx: CanvasRenderingContext2D,
+      figure: Figure,
+      x: number,
+      y: number,
+      width: number,
+      height: number,
+      isSelected = false,
+    ) => {
+      const scale = zoomLevel / 100
+      const scaledX = x * scale
+      const scaledY = y * scale
+      const scaledWidth = width * scale
+      const scaledHeight = height * scale
 
-    ctx.strokeStyle = figure.color
-    ctx.fillStyle = figure.color + "20"
-    ctx.lineWidth = (isSelected ? 3 : 2) * scale
+      ctx.strokeStyle = figure.color
+      ctx.fillStyle = figure.color + "20"
+      ctx.lineWidth = (isSelected ? 3 : 2) * scale
 
-    switch (figure.shape) {
-      case "rectangle":
-        ctx.strokeRect(scaledX, scaledY, scaledWidth, scaledHeight)
-        ctx.fillRect(scaledX, scaledY, scaledWidth, scaledHeight)
-        break
-      case "circle":
-        const centerX = scaledX + scaledWidth / 2
-        const centerY = scaledY + scaledHeight / 2
-        const radius = Math.min(Math.abs(scaledWidth), Math.abs(scaledHeight)) / 2
-        ctx.beginPath()
-        ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI)
-        ctx.stroke()
-        ctx.fill()
-        break
-      case "polygon":
-        const hexCenterX = scaledX + scaledWidth / 2
-        const hexCenterY = scaledY + scaledHeight / 2
-        const hexRadius = Math.min(Math.abs(scaledWidth), Math.abs(scaledHeight)) / 2
-        ctx.beginPath()
-        for (let i = 0; i < 6; i++) {
-          const angle = (i * Math.PI) / 3
-          const pointX = hexCenterX + hexRadius * Math.cos(angle)
-          const pointY = hexCenterY + hexRadius * Math.sin(angle)
-          if (i === 0) ctx.moveTo(pointX, pointY)
-          else ctx.lineTo(pointX, pointY)
-        }
-        ctx.closePath()
-        ctx.stroke()
-        ctx.fill()
-        break
-      case "arrow":
-        const arrowStartX = scaledX
-        const arrowStartY = scaledY + scaledHeight / 2
-        const arrowEndX = scaledX + scaledWidth
-        const arrowEndY = scaledY + scaledHeight / 2
-        const headLength = Math.min(scaledWidth * 0.3, 20 * scale)
+      switch (figure.shape) {
+        case "rectangle":
+          ctx.strokeRect(scaledX, scaledY, scaledWidth, scaledHeight)
+          ctx.fillRect(scaledX, scaledY, scaledWidth, scaledHeight)
+          break
+        case "circle":
+          const centerX = scaledX + scaledWidth / 2
+          const centerY = scaledY + scaledHeight / 2
+          const radius = Math.min(Math.abs(scaledWidth), Math.abs(scaledHeight)) / 2
+          ctx.beginPath()
+          ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI)
+          ctx.stroke()
+          ctx.fill()
+          break
+        case "polygon":
+          const hexCenterX = scaledX + scaledWidth / 2
+          const hexCenterY = scaledY + scaledHeight / 2
+          const hexRadius = Math.min(Math.abs(scaledWidth), Math.abs(scaledHeight)) / 2
+          ctx.beginPath()
+          for (let i = 0; i < 6; i++) {
+            const angle = (i * Math.PI) / 3
+            const pointX = hexCenterX + hexRadius * Math.cos(angle)
+            const pointY = hexCenterY + hexRadius * Math.sin(angle)
+            if (i === 0) ctx.moveTo(pointX, pointY)
+            else ctx.lineTo(pointX, pointY)
+          }
+          ctx.closePath()
+          ctx.stroke()
+          ctx.fill()
+          break
+        case "arrow":
+          const arrowStartX = scaledX
+          const arrowStartY = scaledY + scaledHeight / 2
+          const arrowEndX = scaledX + scaledWidth
+          const arrowEndY = scaledY + scaledHeight / 2
+          const headLength = Math.min(scaledWidth * 0.3, 20 * scale)
 
-        ctx.beginPath()
-        ctx.moveTo(arrowStartX, arrowStartY)
-        ctx.lineTo(arrowEndX, arrowEndY)
-        ctx.moveTo(arrowEndX, arrowEndY)
-        ctx.lineTo(arrowEndX - headLength, arrowEndY - headLength / 2)
-        ctx.moveTo(arrowEndX, arrowEndY)
-        ctx.lineTo(arrowEndX - headLength, arrowEndY + headLength / 2)
-        ctx.stroke()
-        break
-      case "line":
-        ctx.beginPath()
-        ctx.moveTo(scaledX, scaledY)
-        ctx.lineTo(scaledX + scaledWidth, scaledY + scaledHeight)
-        ctx.stroke()
-        break
-      case "text":
-        ctx.fillStyle = figure.color
-        ctx.font = `${Math.max(12, Math.min(scaledWidth / 8, 24)) * scale}px Arial`
-        ctx.fillText("Texto", scaledX + 5 * scale, scaledY + scaledHeight / 2)
-        ctx.strokeRect(scaledX, scaledY, scaledWidth, scaledHeight)
-        break
-    }
-  }
+          ctx.beginPath()
+          ctx.moveTo(arrowStartX, arrowStartY)
+          ctx.lineTo(arrowEndX, arrowEndY)
+          ctx.moveTo(arrowEndX, arrowEndY)
+          ctx.lineTo(arrowEndX - headLength, arrowEndY - headLength / 2)
+          ctx.moveTo(arrowEndX, arrowEndY)
+          ctx.lineTo(arrowEndX - headLength, arrowEndY + headLength / 2)
+          ctx.stroke()
+          break
+        case "line":
+          ctx.beginPath()
+          ctx.moveTo(scaledX, scaledY)
+          ctx.lineTo(scaledX + scaledWidth, scaledY + scaledHeight)
+          ctx.stroke()
+          break
+        case "text":
+          ctx.fillStyle = figure.color
+          ctx.font = `${Math.max(12, Math.min(scaledWidth / 8, 24)) * scale}px Arial`
+          ctx.fillText("Texto", scaledX + 5 * scale, scaledY + scaledHeight / 2)
+          ctx.strokeRect(scaledX, scaledY, scaledWidth, scaledHeight)
+          break
+      }
+    },
+    [zoomLevel],
+  )
 
   const drawImage = useCallback(() => {
     const canvas = canvasRef.current
@@ -232,7 +237,17 @@ export function AnnotationCanvas({
       const height = drawingState.currentY - drawingState.startY
       drawShape(ctx, selectedFigure, drawingState.startX, drawingState.startY, width, height)
     }
-  }, [annotations, figures, drawingState, selectedFigure, selectedAnnotation, activeTool, zoomLevel])
+  }, [
+    annotations,
+    figures,
+    drawingState,
+    selectedFigure,
+    selectedAnnotation,
+    activeTool,
+    zoomLevel,
+    drawShape,
+    getResizeHandles,
+  ])
 
   useEffect(() => {
     const image = new Image()
@@ -248,167 +263,207 @@ export function AnnotationCanvas({
     drawImage()
   }, [drawImage])
 
-  const getCanvasCoordinates = (event: React.MouseEvent<HTMLCanvasElement>) => {
-    const canvas = canvasRef.current
-    if (!canvas) return { x: 0, y: 0 }
+  const getCanvasCoordinates = useCallback(
+    (event: React.MouseEvent<HTMLCanvasElement>) => {
+      const canvas = canvasRef.current
+      if (!canvas) return { x: 0, y: 0 }
 
-    const rect = canvas.getBoundingClientRect()
-    const scale = zoomLevel / 100
-    const scaleX = canvas.width / scale / rect.width
-    const scaleY = canvas.height / scale / rect.height
+      const rect = canvas.getBoundingClientRect()
+      const scale = zoomLevel / 100
+      const scaleX = canvas.width / scale / rect.width
+      const scaleY = canvas.height / scale / rect.height
 
-    return {
-      x: (event.clientX - rect.left) * scaleX,
-      y: (event.clientY - rect.top) * scaleY,
-    }
-  }
+      return {
+        x: (event.clientX - rect.left) * scaleX,
+        y: (event.clientY - rect.top) * scaleY,
+      }
+    },
+    [zoomLevel],
+  )
 
-  const getClickedAnnotation = (x: number, y: number) => {
-    return annotations.find((annotation) => {
-      return (
-        x >= annotation.x &&
-        x <= annotation.x + annotation.width &&
-        y >= annotation.y &&
-        y <= annotation.y + annotation.height
+  const getClickedAnnotation = useCallback(
+    (x: number, y: number) => {
+      return annotations.find((annotation) => {
+        return (
+          x >= annotation.x &&
+          x <= annotation.x + annotation.width &&
+          y >= annotation.y &&
+          y <= annotation.y + annotation.height
+        )
+      })
+    },
+    [annotations],
+  )
+
+  const getClickedHandle = useCallback(
+    (x: number, y: number, annotation: Annotation) => {
+      const handles = getResizeHandles(annotation)
+      const scale = zoomLevel / 100
+      return handles.find(
+        (handle) =>
+          x * scale >= handle.x &&
+          x * scale <= handle.x + 8 * scale &&
+          y * scale >= handle.y &&
+          y * scale <= handle.y + 8 * scale,
       )
-    })
-  }
+    },
+    [getResizeHandles, zoomLevel],
+  )
 
-  const getClickedHandle = (x: number, y: number, annotation: Annotation) => {
-    const handles = getResizeHandles(annotation)
-    const scale = zoomLevel / 100
-    return handles.find(
-      (handle) =>
-        x * scale >= handle.x &&
-        x * scale <= handle.x + 8 * scale &&
-        y * scale >= handle.y &&
-        y * scale <= handle.y + 8 * scale,
-    )
-  }
+  const handleMouseDown = useCallback(
+    (event: React.MouseEvent<HTMLCanvasElement>) => {
+      const coords = getCanvasCoordinates(event)
 
-  const handleMouseDown = (event: React.MouseEvent<HTMLCanvasElement>) => {
-    const coords = getCanvasCoordinates(event)
+      if (activeTool === "pan") {
+        setIsPanning(true)
+        setPanStart({ x: event.clientX - canvasPosition.x, y: event.clientY - canvasPosition.y })
+        return
+      }
 
-    if (activeTool === "pan") {
-      setIsPanning(true)
-      setPanStart({ x: event.clientX - canvasPosition.x, y: event.clientY - canvasPosition.y })
-      return
-    }
+      if (activeTool === "select") {
+        const clickedAnnotation = getClickedAnnotation(coords.x, coords.y)
 
-    if (activeTool === "select") {
-      const clickedAnnotation = getClickedAnnotation(coords.x, coords.y)
+        if (clickedAnnotation) {
+          if (selectedAnnotation === clickedAnnotation.id) {
+            const handle = getClickedHandle(coords.x, coords.y, clickedAnnotation)
+            if (handle) {
+              setIsResizing(true)
+              setResizeHandle(handle.position)
+              return
+            }
+          }
 
-      if (clickedAnnotation) {
-        if (selectedAnnotation === clickedAnnotation.id) {
-          const handle = getClickedHandle(coords.x, coords.y, clickedAnnotation)
-          if (handle) {
-            setIsResizing(true)
-            setResizeHandle(handle.position)
-            return
+          onSelectAnnotation(clickedAnnotation.id)
+          setIsDragging(true)
+          setDragOffset({
+            x: coords.x - clickedAnnotation.x,
+            y: coords.y - clickedAnnotation.y,
+          })
+        } else {
+          onSelectAnnotation(null)
+        }
+      } else if (activeTool === "draw" && selectedFigure) {
+        setDrawingState({
+          isDrawing: true,
+          startX: coords.x,
+          startY: coords.y,
+          currentX: coords.x,
+          currentY: coords.y,
+        })
+      }
+    },
+    [
+      getCanvasCoordinates,
+      activeTool,
+      canvasPosition.x,
+      canvasPosition.y,
+      getClickedAnnotation,
+      selectedAnnotation,
+      getClickedHandle,
+      onSelectAnnotation,
+      selectedFigure,
+    ],
+  )
+
+  const handleMouseMove = useCallback(
+    (event: React.MouseEvent<HTMLCanvasElement>) => {
+      if (isPanning) {
+        onCanvasPositionChange({
+          x: event.clientX - panStart.x,
+          y: event.clientY - panStart.y,
+        })
+        return
+      }
+
+      const coords = getCanvasCoordinates(event)
+
+      if (activeTool === "select" && selectedAnnotation) {
+        const annotation = annotations.find((a) => a.id === selectedAnnotation)
+        if (!annotation) return
+
+        if (isDragging) {
+          const newX = coords.x - dragOffset.x
+          const newY = coords.y - dragOffset.y
+          onUpdateAnnotation(selectedAnnotation, { x: newX, y: newY })
+        } else if (isResizing && resizeHandle) {
+          let newX = annotation.x
+          let newY = annotation.y
+          let newWidth = annotation.width
+          let newHeight = annotation.height
+
+          switch (resizeHandle) {
+            case "nw":
+              newWidth = annotation.width + (annotation.x - coords.x)
+              newHeight = annotation.height + (annotation.y - coords.y)
+              newX = coords.x
+              newY = coords.y
+              break
+            case "ne":
+              newWidth = coords.x - annotation.x
+              newHeight = annotation.height + (annotation.y - coords.y)
+              newY = coords.y
+              break
+            case "sw":
+              newWidth = annotation.width + (annotation.x - coords.x)
+              newHeight = coords.y - annotation.y
+              newX = coords.x
+              break
+            case "se":
+              newWidth = coords.x - annotation.x
+              newHeight = coords.y - annotation.y
+              break
+            case "n":
+              newHeight = annotation.height + (annotation.y - coords.y)
+              newY = coords.y
+              break
+            case "s":
+              newHeight = coords.y - annotation.y
+              break
+            case "w":
+              newWidth = annotation.width + (annotation.x - coords.x)
+              newX = coords.x
+              break
+            case "e":
+              newWidth = coords.x - annotation.x
+              break
+          }
+
+          if (newWidth > 10 && newHeight > 10) {
+            onUpdateAnnotation(selectedAnnotation, {
+              x: newX,
+              y: newY,
+              width: newWidth,
+              height: newHeight,
+            })
           }
         }
-
-        onSelectAnnotation(clickedAnnotation.id)
-        setIsDragging(true)
-        setDragOffset({
-          x: coords.x - clickedAnnotation.x,
-          y: coords.y - clickedAnnotation.y,
-        })
-      } else {
-        onSelectAnnotation(null)
+      } else if (activeTool === "draw" && drawingState.isDrawing) {
+        setDrawingState((prev) => ({
+          ...prev,
+          currentX: coords.x,
+          currentY: coords.y,
+        }))
       }
-    } else if (activeTool === "draw" && selectedFigure) {
-      setDrawingState({
-        isDrawing: true,
-        startX: coords.x,
-        startY: coords.y,
-        currentX: coords.x,
-        currentY: coords.y,
-      })
-    }
-  }
+    },
+    [
+      isPanning,
+      panStart.x,
+      panStart.y,
+      onCanvasPositionChange,
+      getCanvasCoordinates,
+      activeTool,
+      selectedAnnotation,
+      annotations,
+      isDragging,
+      dragOffset,
+      onUpdateAnnotation,
+      isResizing,
+      resizeHandle,
+      drawingState.isDrawing,
+    ],
+  )
 
-  const handleMouseMove = (event: React.MouseEvent<HTMLCanvasElement>) => {
-    if (isPanning) {
-      onCanvasPositionChange({
-        x: event.clientX - panStart.x,
-        y: event.clientY - panStart.y,
-      })
-      return
-    }
-
-    const coords = getCanvasCoordinates(event)
-
-    if (activeTool === "select" && selectedAnnotation) {
-      const annotation = annotations.find((a) => a.id === selectedAnnotation)
-      if (!annotation) return
-
-      if (isDragging) {
-        const newX = coords.x - dragOffset.x
-        const newY = coords.y - dragOffset.y
-        onUpdateAnnotation(selectedAnnotation, { x: newX, y: newY })
-      } else if (isResizing && resizeHandle) {
-        let newX = annotation.x
-        let newY = annotation.y
-        let newWidth = annotation.width
-        let newHeight = annotation.height
-
-        switch (resizeHandle) {
-          case "nw":
-            newWidth = annotation.width + (annotation.x - coords.x)
-            newHeight = annotation.height + (annotation.y - coords.y)
-            newX = coords.x
-            newY = coords.y
-            break
-          case "ne":
-            newWidth = coords.x - annotation.x
-            newHeight = annotation.height + (annotation.y - coords.y)
-            newY = coords.y
-            break
-          case "sw":
-            newWidth = annotation.width + (annotation.x - coords.x)
-            newHeight = coords.y - annotation.y
-            newX = coords.x
-            break
-          case "se":
-            newWidth = coords.x - annotation.x
-            newHeight = coords.y - annotation.y
-            break
-          case "n":
-            newHeight = annotation.height + (annotation.y - coords.y)
-            newY = coords.y
-            break
-          case "s":
-            newHeight = coords.y - annotation.y
-            break
-          case "w":
-            newWidth = annotation.width + (annotation.x - coords.x)
-            newX = coords.x
-            break
-          case "e":
-            newWidth = coords.x - annotation.x
-            break
-        }
-
-        if (newWidth > 10 && newHeight > 10) {
-          onUpdateAnnotation(selectedAnnotation, {
-            x: newX,
-            y: newY,
-            width: newWidth,
-            height: newHeight,
-          })
-        }
-      }
-    } else if (activeTool === "draw" && drawingState.isDrawing) {
-      setDrawingState((prev) => ({
-        ...prev,
-        currentX: coords.x,
-        currentY: coords.y,
-      }))
-    }
-  }
-
-  const handleMouseUp = () => {
+  const handleMouseUp = useCallback(() => {
     setIsPanning(false)
 
     if (activeTool === "select") {
@@ -439,9 +494,9 @@ export function AnnotationCanvas({
         currentY: 0,
       })
     }
-  }
+  }, [activeTool, drawingState, selectedFigure])
 
-  const handleSaveAnnotation = () => {
+  const handleSaveAnnotation = useCallback(() => {
     if (pendingAnnotation) {
       onAddAnnotation({
         ...pendingAnnotation,
@@ -451,9 +506,9 @@ export function AnnotationCanvas({
       setAnnotationText("")
       setShowAnnotationDialog(false)
     }
-  }
+  }, [pendingAnnotation, annotationText, onAddAnnotation])
 
-  const exportImage = () => {
+  const exportImage = useCallback(() => {
     const canvas = canvasRef.current
     if (!canvas) return
 
@@ -461,9 +516,9 @@ export function AnnotationCanvas({
     link.download = "imagem-anotada.png"
     link.href = canvas.toDataURL()
     link.click()
-  }
+  }, [])
 
-  const getCursorStyle = () => {
+  const getCursorStyle = useCallback(() => {
     switch (activeTool) {
       case "draw":
         return "cursor-crosshair"
@@ -474,7 +529,7 @@ export function AnnotationCanvas({
       default:
         return "cursor-pointer"
     }
-  }
+  }, [activeTool, isPanning])
 
   return (
     <div className="h-full flex flex-col">
