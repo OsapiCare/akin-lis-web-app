@@ -21,7 +21,7 @@ export function CompletedScheduleCard({ schedule, onViewDetails, onViewReport }:
     if (!schedule.Paciente?.data_nascimento) return "N/A";
     const birthDate = new Date(schedule.Paciente.data_nascimento);
     const age = new Date().getFullYear() - birthDate.getFullYear();
-    return `${age} anos`;
+    return `${age} ${age > 1 ? "anos" : "ano"}`;
   };
 
   const getPatientInitials = () => {
