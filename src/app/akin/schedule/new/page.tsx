@@ -28,14 +28,12 @@ export default function New() {
   const [resetPatient, setResetPatient] = useState(false);
   const unit_health = getAllDataInCookies().userdata.health_unit_ref || 1;
 
-  /** Atualiza paciente selecionado quando muda o ID */
   useEffect(() => {
     if (selectedPatientId) {
       setSelectedPatient(availablePatients.find((p) => p.id === selectedPatientId));
     }
   }, [selectedPatientId, availablePatients]);
 
-  /** Busca pacientes e exames */
   const fetchPatientsAndExams = async () => {
     try {
       const patientsResponse = await patientRoutes.getAllPacients();
@@ -46,8 +44,9 @@ export default function New() {
       setAvailableExams(examsResponse.data.data);
 
       ___showSuccessToastNotification({ message: "Dados obtidos com sucesso!" });
-    } catch (error) {
-      ___showErrorToastNotification({ message: "Erro ao buscar dados. Contate o suporte." });
+    } catch (error: any) {
+      const msg = error?.response?.data?.message || "Erro ao buscar dados. Contate o suporte.";
+      ___showErrorToastNotification({ message: msg });
     } finally {
       setIsLoading(false);
     }
@@ -63,7 +62,6 @@ export default function New() {
     setSelectedPatient(patient);
   };
 
-  /** Calcula idade em anos, meses ou dias */
   const getPatientAge = (birthDate: string) => {
     const birth = new Date(birthDate);
     const today = new Date();
@@ -76,31 +74,25 @@ export default function New() {
     return `${ageDays} dia${ageDays > 1 ? "s" : ""}`;
   };
 
-  /** Validação detalhada de cada agendamento */
+  /** Validação detalhada com mensagens específicas por exame */
   const validateSchedule = () => {
     const errors: string[] = [];
     const today = new Date();
 
-    schedules.forEach((schedule, index) => {
-      if (!schedule.exam) {
-        errors.push(`Exame não selecionado para o agendamento ${index + 1}`);
-      }
-
-      if (!schedule.date || !schedule.time) {
-        errors.push(`Data ou hora não preenchida no agendamento ${index + 1}`);
-      }
-
-      if (schedule.date && schedule.time) {
-        const scheduleDateTime = new Date(`${schedule.date}T${schedule.time}`);
-        if (scheduleDateTime < today) {
-          errors.push(`A data e hora do agendamento ${index + 1} devem ser futuras.`);
-        }
-      }
-    });
-
     if (!selectedPatient) {
       errors.push("Nenhum paciente selecionado.");
     }
+
+    schedules.forEach((schedule, index) => {
+      if (!schedule.exam) errors.push(`Agendamento ${index + 1}: Exame não selecionado.`);
+      if (!schedule.date) errors.push(`Agendamento ${index + 1}: Data não preenchida.`);
+      if (!schedule.time) errors.push(`Agendamento ${index + 1}: Hora não preenchida.`);
+
+      if (schedule.date && schedule.time) {
+        const scheduleDateTime = new Date(`${schedule.date}T${schedule.time}`);
+        if (scheduleDateTime < today) errors.push(`Agendamento ${index + 1}: Data e hora devem ser futuras.`);
+      }
+    });
 
     if (errors.length > 0) {
       ___showErrorToastNotification({ messages: errors });
@@ -132,16 +124,21 @@ export default function New() {
       const response = await _axios.post("/schedulings/set-schedule", validation.data);
       if (response.status === 201) {
         ___showSuccessToastNotification({ message: "Agendamento marcado com sucesso" });
+        setSchedules([{ exam: null, date: null, time: "" }]);
+        setSelectedPatient(undefined);
+        setSelectedPatientId("");
+        resetInputs();
+        setResetPatient(true);
       }
-      setSchedules([{ exam: null, date: null, time: "" }]);
-      setSelectedPatient(undefined);
-      setSelectedPatientId("");
-      resetInputs();
-      setResetPatient(true);
     } catch (error: any) {
-      // Tenta extrair erro detalhado do backend
-      const msg = error?.response?.data?.message || "Erro ao marcar agendamento. Contate o suporte.";
-      ___showErrorToastNotification({ message: msg });
+      // Tratamento detalhado de erro do backend por exame
+      if (error?.response?.data?.errors) {
+        const backendErrors = error.response.data.errors.map((e: any, i: number) => `Agendamento ${i + 1}: ${e.message}`);
+        ___showErrorToastNotification({ messages: backendErrors });
+      } else {
+        const msg = error?.response?.data?.message || "Erro ao marcar agendamento. Contate o suporte.";
+        ___showErrorToastNotification({ message: msg });
+      }
       setResetPatient(false);
     } finally {
       setIsSaving(false);
@@ -150,12 +147,10 @@ export default function New() {
 
   return (
     <div className="min-h-screen px-6 py-2 pb-5 overflow-x-hidden">
-      {/* Cabeçalho */}
       <div className="flex flex-col md:flex-row justify-between pr-3 mb-4">
         <ModalNewPatient onPatientSaved={handleSavePatient} />
       </div>
 
-      {/* Formulário */}
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -163,7 +158,6 @@ export default function New() {
         }}
         className="flex flex-col gap-6 w-full"
       >
-        {/* Detalhes do paciente */}
         <div className="flex flex-col gap-6 w-full">
           <div className="p-4 bg-gray-100 rounded-lg border w-full">
             <PatientDetails
@@ -172,11 +166,10 @@ export default function New() {
               autoCompleteData={patientAutoComplete}
               onPatientSelect={(patientId) => setSelectedPatientId(patientId)}
               resetPatient={resetPatient}
-              getPatientAge={getPatientAge} // <-- Idade detalhada
+              getPatientAge={getPatientAge}
             />
           </div>
 
-          {/* Detalhes dos exames */}
           <div className="p-4 bg-gray-100 rounded-lg border flex flex-col">
             <ScheduleDetails isLoading={isLoading} exams={availableExams} schedules={schedules} onChange={setSchedules} />
           </div>
