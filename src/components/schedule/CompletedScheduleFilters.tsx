@@ -36,7 +36,9 @@ interface CompletedScheduleFiltersProps {
 export function CompletedScheduleFilters({ onSearch, onFilterChange, onClearFilters, filters, totalSchedules, filteredCount }: CompletedScheduleFiltersProps) {
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const { role } = useAuthRoleStore();
-  const isChefeLaboratorio = role === "CHEFE";
+
+  // Filter should only be visible for lab chiefs
+  const isLabChief = role === "CHEFE";
 
   const handleSearchChange = (value: string) => {
     onSearch(value);
@@ -223,8 +225,8 @@ export function CompletedScheduleFilters({ onSearch, onFilterChange, onClearFilt
                   </Select>
                 </div>
 
-                {/* Technician Filter */}
-                {isChefeLaboratorio && (
+                {/* Technician Filter (only for lab chiefs) */}
+                {isLabChief && (
                   <div className="space-y-2 md:col-span-2 lg:col-span-1">
                     <Label className="flex items-center gap-1">
                       <UserCheck className="w-4 h-4" />
@@ -253,9 +255,11 @@ export function CompletedScheduleFilters({ onSearch, onFilterChange, onClearFilt
                 <Button variant="outline" size="sm" onClick={() => handleFilterChange("paymentStatus", "PENDENTE")} className="text-xs">
                   <DollarSign className="w-3 h-3 mr-1" /> Pagamentos Pendentes
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => handleFilterChange("technicianFilter", "NAO_ALOCADO")} className="text-xs">
-                  <AlertCircle className="w-3 h-3 mr-1" /> Sem Técnico
-                </Button>
+                {isLabChief && (
+                  <Button variant="outline" size="sm" onClick={() => handleFilterChange("technicianFilter", "NAO_ALOCADO")} className="text-xs">
+                    <AlertCircle className="w-3 h-3 mr-1" /> Sem Técnico
+                  </Button>
+                )}
               </div>
             </div>
           )}
