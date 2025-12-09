@@ -83,17 +83,18 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
 
   if (!schedule) return null;
 
-  // 🔹 Função para calcular idade em anos, meses ou dias
+  // Filtra exames pendentes ou não concluídos para só exibir agendamentos ativos
+  const activeExams = schedule.Exame?.filter(exam => exam.status !== "CONCLUIDO") || [];
+  if (activeExams.length === 0) return null; // Se todos os exames concluídos, não mostrar o bloco
+
   const getPatientAge = () => {
     if (!schedule.Paciente?.data_nascimento) return "N/A";
     const birthDate = new Date(schedule.Paciente.data_nascimento);
     const now = new Date();
-
     const diffTime = now.getTime() - birthDate.getTime();
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
     const diffMonths = (now.getFullYear() - birthDate.getFullYear()) * 12 + now.getMonth() - birthDate.getMonth();
     const diffYears = now.getFullYear() - birthDate.getFullYear();
-
     if (diffYears > 0) return `${diffYears} ano${diffYears > 1 ? "s" : ""}`;
     if (diffMonths > 0) return `${diffMonths} mês${diffMonths > 1 ? "es" : ""}`;
     return `${diffDays} dia${diffDays > 1 ? "s" : ""}`;
@@ -107,13 +108,13 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
       .toUpperCase();
 
   const getExamStatusBadge = (status: string) => {
+    if (status === "CONCLUIDO") return null; // Não mostrar badge concluído
     const mapping = {
-      CONCLUIDO: { text: "Concluído", color: "green" },
       PENDENTE: { text: "Pendente", color: "yellow" },
       CANCELADO: { text: "Cancelado", color: "red" },
     } as any;
     const info = mapping[status] || { text: status, color: "gray" };
-    const Icon = status === "CONCLUIDO" ? CheckCircle : status === "PENDENTE" ? AlertCircle : XCircle;
+    const Icon = status === "PENDENTE" ? AlertCircle : XCircle;
     return (
       <Badge variant="default" className={`bg-${info.color}-100 text-${info.color}-800 border-${info.color}-200 flex items-center gap-1`}>
         <Icon className="w-3 h-3" /> {info.text}
@@ -131,7 +132,7 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
     return labChiefs.find((c) => c.id === id)?.nome || "Chefe não encontrado";
   };
 
-  const totalValue = schedule.Exame?.reduce((acc, exam) => acc + (exam.Tipo_Exame?.preco || 0), 0) || 0;
+  const totalValue = activeExams?.reduce((acc, exam) => acc + (exam.Tipo_Exame?.preco || 0), 0) || 0;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -207,7 +208,7 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <Label>Status</Label>
-                    <div className="mt-1">{getExamStatusBadge(schedule.status)}</div>
+                    <div className="mt-1">{/* Status removido do bloco */}</div>
                   </div>
                   <div>
                     <Label>Data de Criação</Label>
@@ -221,7 +222,7 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
               </CardContent>
             </Card>
 
-            {/* Chefe alocado (Recepcionista) */}
+            {/* Chefe alocado */}
             {isReceptionist && (
               <Card>
                 <CardHeader>
@@ -257,15 +258,15 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
               </Card>
             )}
 
-            {/* Exames */}
+            {/* Exames ativos */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Stethoscope className="w-4 h-4" /> Exames ({schedule.Exame?.length || 0})
+                  <Stethoscope className="w-4 h-4" /> Exames ({activeExams.length})
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {schedule.Exame?.map((exam, index) => (
+                {activeExams.map((exam, index) => (
                   <div key={exam.id} className="border rounded-lg p-4">
                     <div className="flex items-center justify-between mb-3">
                       <h4 className="font-semibold text-lg">{exam.Tipo_Exame?.nome || "Exame não especificado"}</h4>
@@ -329,7 +330,7 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
                       </div>
                     )}
 
-                    {index < (schedule.Exame?.length || 0) - 1 && <Separator className="mt-4" />}
+                    {index < activeExams.length - 1 && <Separator className="mt-4" />}
                   </div>
                 ))}
               </CardContent>
