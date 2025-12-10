@@ -12,7 +12,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { CalendarDays, Clock, User, Phone, Stethoscope, CheckCircle, XCircle, AlertCircle, Edit3, Mail, Calendar, Users, Save, X, X as CloseIcon, CalendarOff } from "lucide-react";
+import { CalendarDays, Clock, User, Phone, Stethoscope, CheckCircle, XCircle, AlertCircle, Edit3, Mail, Calendar, Users, Save, X, X as CloseIcon, CalendarOff, FileText } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { _axios } from "@/Api/axios.config";
@@ -33,8 +33,16 @@ interface EditableExam {
   data_agendamento: string;
   hora_agendamento: string;
   status: string;
+  id_tipo_exame?: number;
   observacoes?: string;
   id_tecnico_alocado?: string | null;
+}
+
+interface ExamType {
+  id: number;
+  nome: string;
+  preco: number;
+  descricao?: string;
 }
 
 export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: CompletedScheduleDetailsModalProps) {
@@ -62,6 +70,15 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
     enabled: isReceptionist,
   });
 
+  const { data: examTypesResponse } = useQuery({
+    queryKey: ["exam-types"],
+    queryFn: async () => await examRoutes.getExamTypes(),
+    enabled: isReceptionist || isLabChief || isLabTechnician,
+  });
+
+  // Extrai o array de tipos de exame da resposta
+  const examTypes = examTypesResponse?.data || [];
+
   // Atualiza os exames locais quando o schedule muda
   useEffect(() => {
     if (schedule?.Exame) {
@@ -74,65 +91,73 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
   const updateExamMutation = useMutation({
     mutationFn: async (data: { examId: number; updates: Partial<EditableExam> }) => {
       const updatePayload: any = { ...data.updates };
-      
+
       // Se o usuário é recepcionista, não pode marcar como CONCLUIDO
       if (isReceptionist && updatePayload.status === "CONCLUIDO") {
-        ___showErrorToastNotification({ 
-          message: "Recepcionistas não podem marcar exames como concluídos." 
+        ___showErrorToastNotification({
+          message: "Recepcionistas não podem marcar exames como concluídos.",
         });
         throw new Error("Recepcionistas não podem marcar exames como concluídos.");
       }
-      
+
       return await examRoutes.editExam(data.examId, updatePayload);
     },
     onSuccess: (response, variables) => {
       ___showSuccessToastNotification({ message: "Exame atualizado com sucesso!" });
-      
+
       // Atualiza o cache do React Query
       queryClient.invalidateQueries({ queryKey: ["completed-schedules"] });
-      
+
       // Atualiza o estado local imediatamente
-      setLocalExams(prev => prev.map(exam => 
-        exam.id === variables.examId 
-          ? { ...exam, ...variables.updates }
-          : exam
-      ));
-      
+      setLocalExams((prev) =>
+        prev.map((exam) => {
+          if (exam.id === variables.examId) {
+            const updatedExam = { ...exam, ...variables.updates };
+
+            // Atualiza o tipo de exame se foi alterado
+            if (variables.updates.id_tipo_exame && examTypes) {
+              const newExamType = examTypes.find((et: ExamType) => et.id === variables.updates.id_tipo_exame);
+              if (newExamType) {
+                updatedExam.Tipo_Exame = newExamType;
+                updatedExam.id_tipo_exame = newExamType.id;
+              }
+            }
+
+            return updatedExam;
+          }
+          return exam;
+        })
+      );
+
       setEditingExam(null);
       setEditedExam(null);
     },
     onError: (error: any) => {
       console.error("Update exam error:", error);
-      ___showErrorToastNotification({ 
-        message: error.response?.data?.message || "Erro ao atualizar exame." 
+      ___showErrorToastNotification({
+        message: error.response?.data?.message || "Erro ao atualizar exame.",
       });
     },
   });
 
   const allocateTechnicianMutation = useMutation({
-    mutationFn: async (data: { examId: number; technicianId: string }) => 
-      (await _axios.patch(`/exams/${data.examId}`, { id_tecnico_alocado: data.technicianId })).data,
+    mutationFn: async (data: { examId: number; technicianId: string }) => (await _axios.patch(`/exams/${data.examId}`, { id_tecnico_alocado: data.technicianId })).data,
     onSuccess: (response, variables) => {
       ___showSuccessToastNotification({ message: "Técnico alocado com sucesso!" });
-      
+
       // Atualiza o cache
       queryClient.invalidateQueries({ queryKey: ["completed-schedules"] });
-      
+
       // Atualiza o estado local
-      setLocalExams(prev => prev.map(exam => 
-        exam.id === variables.examId 
-          ? { ...exam, id_tecnico_alocado: variables.technicianId }
-          : exam
-      ));
-      
+      setLocalExams((prev) => prev.map((exam) => (exam.id === variables.examId ? { ...exam, id_tecnico_alocado: variables.technicianId } : exam)));
+
       setSelectedTechnician(null);
     },
     onError: () => ___showErrorToastNotification({ message: "Erro ao alocar técnico." }),
   });
 
   const allocateChiefMutation = useMutation({
-    mutationFn: async (data: { scheduleId: number; chiefId: string }) => 
-      labChiefRoutes.allocateLabChief(data.scheduleId, data.chiefId),
+    mutationFn: async (data: { scheduleId: number; chiefId: string }) => labChiefRoutes.allocateLabChief(data.scheduleId, data.chiefId),
     onSuccess: () => {
       ___showSuccessToastNotification({ message: "Chefe alocado com sucesso!" });
       queryClient.invalidateQueries({ queryKey: ["completed-schedules"] });
@@ -144,41 +169,40 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
   if (!schedule) return null;
 
   // Verifica se há pagamento pendente (regra 02)
-  const hasPendingPayment = schedule.Exame?.some(exam => exam.status_pagamento === "PENDENTE");
+  const hasPendingPayment = schedule.Exame?.some((exam) => exam.status_pagamento === "PENDENTE");
 
   // Calcula o status geral do bloco (conforme regras)
   const calculateOverallScheduleStatus = () => {
     const exams = schedule.Exame || [];
-    
+
     // Regra: Se pelo menos um exame está pendente, status geral é pendente
-    if (exams.some(exam => exam.status === "PENDENTE")) {
+    if (exams.some((exam) => exam.status === "PENDENTE")) {
       return "PENDENTE";
     }
-    
+
     // Regra: Se todos os exames são concluídos, status geral é concluído
-    if (exams.every(exam => exam.status === "CONCLUIDO")) {
+    if (exams.every((exam) => exam.status === "CONCLUIDO")) {
       return "CONCLUIDO";
     }
-    
+
     // Regra: Se há exame "POR_REAGENDAR" e outros "CANCELADO" ou "CONCLUIDO", status é "POR_REAGENDAR"
-    if (exams.some(exam => exam.status === "POR_REAGENDAR")) {
+    if (exams.some((exam) => exam.status === "POR_REAGENDAR")) {
       return "POR_REAGENDAR";
     }
-    
+
     // Regra: Se todos os exames são cancelados, status geral é cancelado
-    if (exams.every(exam => exam.status === "CANCELADO")) {
+    if (exams.every((exam) => exam.status === "CANCELADO")) {
       return "CANCELADO";
     }
-    
+
     return "PENDENTE"; // default
   };
 
   const overallStatus = calculateOverallScheduleStatus();
 
   // Usa os exames locais (que podem ter sido atualizados) ou os originais do schedule
-  const activeExams = localExams.length > 0 ? localExams : 
-    (schedule.Exame?.filter((exam) => exam.status !== "CONCLUIDO") || []);
-  
+  const activeExams = localExams.length > 0 ? localExams : schedule.Exame?.filter((exam) => exam.status !== "CONCLUIDO") || [];
+
   // Se todos os exames estão concluídos, não mostrar (regra 1)
   if (overallStatus === "CONCLUIDO") return null;
 
@@ -210,10 +234,10 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
       EM_ANDAMENTO: { text: "Em Andamento", color: "blue", icon: Clock },
       CONCLUIDO: { text: "Concluído", color: "green", icon: CheckCircle },
     } as any;
-    
+
     const info = mapping[status] || { text: status, color: "gray", icon: AlertCircle };
     const Icon = info.icon;
-    
+
     return (
       <Badge variant="default" className={`bg-${info.color}-100 text-${info.color}-800 border-${info.color}-200 flex items-center gap-1`}>
         <Icon className="w-3 h-3" /> {info.text}
@@ -240,21 +264,25 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
       data_agendamento: exam.data_agendamento,
       hora_agendamento: exam.hora_agendamento,
       status: exam.status,
+      id_tipo_exame: exam.id_tipo_exame || exam.Tipo_Exame?.id,
+      // observacoes: exam.observacoes,
       id_tecnico_alocado: exam.id_tecnico_alocado || null,
     });
   };
 
   const handleSaveExam = () => {
     if (!editedExam) return;
-    
+
     updateExamMutation.mutate({
       examId: editedExam.id,
       updates: {
         data_agendamento: editedExam.data_agendamento,
         hora_agendamento: editedExam.hora_agendamento,
         status: editedExam.status,
+        id_tipo_exame: editedExam.id_tipo_exame,
+        // observacoes: editedExam.observacoes,
         id_tecnico_alocado: editedExam.id_tecnico_alocado,
-      }
+      },
     });
   };
 
@@ -265,6 +293,34 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
 
   const handleExamFieldChange = (field: keyof EditableExam, value: any) => {
     if (!editedExam) return;
+
+    // Se está mudando o tipo de exame, atualiza também o preço no estado local
+    if (field === "id_tipo_exame" && Array.isArray(examTypes)) {
+      const selectedExamType = examTypes.find((et: ExamType) => et.id === parseInt(value));
+      if (selectedExamType) {
+        setEditedExam({
+          ...editedExam,
+          [field]: value,
+        });
+
+        // Atualiza o exame local com o novo tipo
+        setLocalExams((prev) =>
+          prev.map((exam) => {
+            if (exam.id === editedExam.id) {
+              return {
+                ...exam,
+                Tipo_Exame: selectedExamType,
+                id_tipo_exame: selectedExamType.id,
+              };
+            }
+            return exam;
+          })
+        );
+
+        return;
+      }
+    }
+
     setEditedExam({ ...editedExam, [field]: value });
   };
 
@@ -282,11 +338,9 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
           <DialogTitle className="flex items-center gap-2">
             <User className="w-5 h-5" />
             Detalhes do Agendamento #{schedule.id}
-            <span className="ml-2">
-              {getExamStatusBadge(overallStatus)}
-            </span>
+            <span className="ml-2">{getExamStatusBadge(overallStatus)}</span>
           </DialogTitle>
-          
+
           {/* Botão de fechar no canto superior direito */}
           <DialogClose className="absolute right-4 -top-2 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
             <CloseIcon className="h-4 w-4" />
@@ -302,22 +356,18 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <Label>Status do Bloco</Label>
-                    <div className="mt-1">
-                      {getExamStatusBadge(overallStatus)}
-                    </div>
+                    <div className="mt-1">{getExamStatusBadge(overallStatus)}</div>
                   </div>
                   <div>
                     <Label>Pagamento</Label>
-                    <div className={`text-sm mt-1 font-semibold ${hasPendingPayment ? 'text-yellow-600' : 'text-green-600'}`}>
-                      {hasPendingPayment ? 'Pendente' : 'Pago'}
-                    </div>
+                    <div className={`text-sm mt-1 font-semibold ${hasPendingPayment ? "text-yellow-600" : "text-green-600"}`}>{hasPendingPayment ? "Pendente" : "Pago"}</div>
                   </div>
                   <div>
                     <Label>Pode Inicializar Exames</Label>
-                    <div className={`text-sm mt-1 font-semibold ${!hasPendingPayment && (isLabChief || isLabTechnician) ? 'text-green-600' : 'text-red-600'}`}>
-                      {!hasPendingPayment && (isLabChief || isLabTechnician) ? 'Sim' : 'Não'}
-                      {hasPendingPayment && ' (Aguardando pagamento)'}
-                      {!hasPendingPayment && !isLabChief && !isLabTechnician && ' (Apenas chefe/técnico)'}
+                    <div className={`text-sm mt-1 font-semibold ${!hasPendingPayment && (isLabChief || isLabTechnician) ? "text-green-600" : "text-red-600"}`}>
+                      {!hasPendingPayment && (isLabChief || isLabTechnician) ? "Sim" : "Não"}
+                      {hasPendingPayment && " (Aguardando pagamento)"}
+                      {!hasPendingPayment && !isLabChief && !isLabTechnician && " (Apenas chefe/técnico)"}
                     </div>
                   </div>
                 </div>
@@ -416,17 +466,15 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
                           <SelectValue placeholder="Selecionar novo chefe" />
                         </SelectTrigger>
                         <SelectContent>
-                          {labChiefs?.map((chief) => (
-                            <SelectItem key={chief.id} value={chief.id}>
-                              {chief.nome} - {chief.tipo}
-                            </SelectItem>
-                          ))}
+                          {Array.isArray(labChiefs) &&
+                            labChiefs.map((chief) => (
+                              <SelectItem key={chief.id} value={chief.id}>
+                                {chief.nome} - {chief.tipo}
+                              </SelectItem>
+                            ))}
                         </SelectContent>
                       </Select>
-                      <Button 
-                        onClick={() => selectedChief && allocateChiefMutation.mutate({ scheduleId: schedule.id, chiefId: selectedChief })} 
-                        disabled={!selectedChief || allocateChiefMutation.isPending}
-                      >
+                      <Button onClick={() => selectedChief && allocateChiefMutation.mutate({ scheduleId: schedule.id, chiefId: selectedChief })} disabled={!selectedChief || allocateChiefMutation.isPending}>
                         {allocateChiefMutation.isPending ? "Alocando..." : "Alocar"}
                       </Button>
                     </div>
@@ -443,158 +491,155 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {activeExams.map((exam, index) => (
-                  <div key={exam.id} className="border rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <h4 className="font-semibold text-lg">{exam.Tipo_Exame?.nome || "Exame não especificado"}</h4>
-                      <div className="flex gap-2 items-center">
-                        {getExamStatusBadge(exam.status)}
-                        {editingExam === exam.id ? (
-                          <div className="flex gap-2">
+                {activeExams.map((exam, index) => {
+                  // Encontra o preço atual do exame (do estado local ou original)
+                  const currentPrice = exam.Tipo_Exame?.preco || 0;
+
+                  return (
+                    <div key={exam.id} className="border rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="font-semibold text-lg">{exam.Tipo_Exame?.nome || "Exame não especificado"}</h4>
+                        <div className="flex gap-2 items-center">
+                          {getExamStatusBadge(exam.status)}
+                          {editingExam === exam.id ? (
+                            <div className="flex gap-2">
+                              <Button variant="default" size="sm" onClick={handleSaveExam} disabled={updateExamMutation.isPending}>
+                                <Save className="w-3 h-3 mr-1" />
+                                {updateExamMutation.isPending ? "Salvando..." : "Salvar"}
+                              </Button>
+                              <Button variant="outline" size="sm" onClick={handleCancelEdit} disabled={updateExamMutation.isPending}>
+                                <X className="w-3 h-3 mr-1" /> Cancelar
+                              </Button>
+                            </div>
+                          ) : (
+                            <Button variant="outline" size="sm" onClick={() => handleEditExam(exam)}>
+                              <Edit3 className="w-3 h-3 mr-1" /> Editar
+                            </Button>
+                          )}
+
+                          {/* Botão para inicializar exame (apenas chefe/técnico com pagamento pago) */}
+                          {(isLabChief || isLabTechnician) && canInitializeExam(exam) && (
                             <Button
                               variant="default"
                               size="sm"
-                              onClick={handleSaveExam}
-                              disabled={updateExamMutation.isPending}
+                              className="bg-green-600 hover:bg-green-700"
+                              onClick={() => {
+                                // Aqui você implementaria a lógica para inicializar o exame
+                                console.log("Inicializar exame:", exam.id);
+                              }}
                             >
-                              <Save className="w-3 h-3 mr-1" /> 
-                              {updateExamMutation.isPending ? "Salvando..." : "Salvar"}
+                              <Clock className="w-3 h-3 mr-1" /> Inicializar
                             </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={handleCancelEdit}
-                              disabled={updateExamMutation.isPending}
-                            >
-                              <X className="w-3 h-3 mr-1" /> Cancelar
-                            </Button>
-                          </div>
-                        ) : (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleEditExam(exam)}
-                          >
-                            <Edit3 className="w-3 h-3 mr-1" /> Editar
-                          </Button>
-                        )}
-                        
-                        {/* Botão para inicializar exame (apenas chefe/técnico com pagamento pago) */}
-                        {(isLabChief || isLabTechnician) && canInitializeExam(exam) && (
-                          <Button
-                            variant="default"
-                            size="sm"
-                            className="bg-green-600 hover:bg-green-700"
-                            onClick={() => {
-                              // Aqui você implementaria a lógica para inicializar o exame
-                              console.log("Inicializar exame:", exam.id);
-                            }}
-                          >
-                            <Clock className="w-3 h-3 mr-1" /> Inicializar
-                          </Button>
-                        )}
+                          )}
+                        </div>
                       </div>
-                    </div>
 
-                    {editingExam === exam.id && editedExam ? (
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
-                        <div>
-                          <Label>Data</Label>
-                          <Input
-                            type="date"
-                            value={editedExam.data_agendamento}
-                            onChange={(e) => handleExamFieldChange("data_agendamento", e.target.value)}
-                          />
-                        </div>
-                        <div>
-                          <Label>Hora</Label>
-                          <Input
-                            type="time"
-                            value={editedExam.hora_agendamento}
-                            onChange={(e) => handleExamFieldChange("hora_agendamento", e.target.value)}
-                          />
-                        </div>
-                        <div>
-                          <Label>Status</Label>
-                          <Select
-                            value={editedExam.status}
-                            onValueChange={(value) => handleExamFieldChange("status", value)}
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="PENDENTE">Pendente</SelectItem>
-                              <SelectItem value="CANCELADO">Cancelado</SelectItem>
-                              {!isReceptionist && (
-                                <SelectItem value="CONCLUIDO">Concluído</SelectItem>
-                              )}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
-                        <div>
-                          <Label>Data e Hora</Label>
-                          <p className="font-medium flex items-center gap-1">
-                            <CalendarDays className="w-3 h-3" />
-                            {format(new Date(exam.data_agendamento), "dd/MM/yyyy", { locale: ptBR })}
-                            <Clock className="w-3 h-3 ml-2" />
-                            {exam.hora_agendamento}
-                          </p>
-                        </div>
-                        <div>
-                          <Label className="font-semibold">Preço</Label>
-                          <p className="font-medium text-green-600">{new Intl.NumberFormat("pt-AO", { style: "currency", currency: "AOA" }).format(exam.Tipo_Exame?.preco || 0)}</p>
-                        </div>
-                        <div>
-                          <Label className="font-semibold">Pagamento</Label>
-                          <p className={`font-medium ${exam.status_pagamento === 'PAGO' ? 'text-green-600' : 'text-yellow-600'}`}>
-                            {exam.status_pagamento === 'PAGO' ? 'Pago' : 'Pendente'}
-                          </p>
-                        </div>
-                        {(isLabChief || isLabTechnician) && (
+                      {editingExam === exam.id && editedExam ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
                           <div>
-                            <Label>Técnico Alocado</Label>
-                            <p className="font-medium">{getTechnicianName(exam.id_tecnico_alocado)}</p>
+                            <Label>Tipo de Exame</Label>
+                            <Select value={editedExam.id_tipo_exame?.toString() || ""} onValueChange={(value) => handleExamFieldChange("id_tipo_exame", parseInt(value))}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecionar tipo de exame" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {Array.isArray(examTypes) &&
+                                  examTypes.map((examType: ExamType) => (
+                                    <SelectItem key={examType.id} value={examType.id.toString()}>
+                                      {examType.nome} - {new Intl.NumberFormat("pt-AO", { style: "currency", currency: "AOA" }).format(examType.preco)}
+                                    </SelectItem>
+                                  ))}
+                              </SelectContent>
+                            </Select>
                           </div>
-                        )}
-                      </div>
-                    )}
-
-                    {isLabChief && editingExam !== exam.id && (
-                      <div className="mt-4 pt-4 border-t">
-                        <Label>Alocar Técnico</Label>
-                        <div className="flex gap-2">
-                          <Select value={selectedTechnician || ""} onValueChange={setSelectedTechnician}>
-                            <SelectTrigger className="flex-1">
-                              <SelectValue placeholder="Selecionar técnico" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {technicians?.map((t) => (
-                                <SelectItem key={t.id} value={t.id}>
-                                  {t.nome} - {t.tipo}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <Button 
-                            onClick={() => selectedTechnician && allocateTechnicianMutation.mutate({ examId: exam.id, technicianId: selectedTechnician })} 
-                            disabled={!selectedTechnician || allocateTechnicianMutation.isPending}
-                          >
-                            {allocateTechnicianMutation.isPending ? "Alocando..." : "Alocar"}
-                          </Button>
+                          <div>
+                            <Label>Data</Label>
+                            <Input type="date" value={editedExam.data_agendamento} onChange={(e) => handleExamFieldChange("data_agendamento", e.target.value)} />
+                          </div>
+                          <div>
+                            <Label>Hora</Label>
+                            <Input type="time" value={editedExam.hora_agendamento} onChange={(e) => handleExamFieldChange("hora_agendamento", e.target.value)} />
+                          </div>
+                          <div>
+                            <Label>Status</Label>
+                            <Select value={editedExam.status} onValueChange={(value) => handleExamFieldChange("status", value)}>
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="PENDENTE">Pendente</SelectItem>
+                                <SelectItem value="CANCELADO">Cancelado</SelectItem>
+                                {!isReceptionist && <SelectItem value="CONCLUIDO">Concluído</SelectItem>}
+                              </SelectContent>
+                            </Select>
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
+                          <div>
+                            <Label>Tipo de Exame</Label>
+                            <p className="font-medium flex items-center gap-1">
+                              <FileText className="w-3 h-3" />
+                              {exam.Tipo_Exame?.nome || "Não especificado"}
+                            </p>
+                          </div>
+                          <div>
+                            <Label>Data e Hora</Label>
+                            <p className="font-medium flex items-center gap-1">
+                              <CalendarDays className="w-3 h-3" />
+                              {format(new Date(exam.data_agendamento), "dd/MM/yyyy", { locale: ptBR })}
+                              <Clock className="w-3 h-3 ml-2" />
+                              {exam.hora_agendamento}
+                            </p>
+                          </div>
+                          <div>
+                            <Label>Preço</Label>
+                            <p className="font-medium text-green-600">{new Intl.NumberFormat("pt-AO", { style: "currency", currency: "AOA" }).format(currentPrice)}</p>
+                          </div>
+                          <div>
+                            <Label>Pagamento</Label>
+                            <p className={`font-medium ${exam.status_pagamento === "PAGO" ? "text-green-600" : "text-yellow-600"}`}>{exam.status_pagamento === "PAGO" ? "Pago" : "Pendente"}</p>
+                          </div>
+                          {(isLabChief || isLabTechnician) && (
+                            <div>
+                              <Label>Técnico Alocado</Label>
+                              <p className="font-medium">{getTechnicianName(exam.id_tecnico_alocado)}</p>
+                            </div>
+                          )}
+                        </div>
+                      )}
 
-                    {index < activeExams.length - 1 && <Separator className="mt-4" />}
-                  </div>
-                ))}
+                      {isLabChief && editingExam !== exam.id && (
+                        <div className="mt-4 pt-4 border-t">
+                          <Label>Alocar Técnico</Label>
+                          <div className="flex gap-2">
+                            <Select value={selectedTechnician || ""} onValueChange={setSelectedTechnician}>
+                              <SelectTrigger className="flex-1">
+                                <SelectValue placeholder="Selecionar técnico" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {Array.isArray(technicians) &&
+                                  technicians.map((t) => (
+                                    <SelectItem key={t.id} value={t.id}>
+                                      {t.nome} - {t.tipo}
+                                    </SelectItem>
+                                  ))}
+                              </SelectContent>
+                            </Select>
+                            <Button onClick={() => selectedTechnician && allocateTechnicianMutation.mutate({ examId: exam.id, technicianId: selectedTechnician })} disabled={!selectedTechnician || allocateTechnicianMutation.isPending}>
+                              {allocateTechnicianMutation.isPending ? "Alocando..." : "Alocar"}
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+
+                      {index < activeExams.length - 1 && <Separator className="mt-4" />}
+                    </div>
+                  );
+                })}
               </CardContent>
             </Card>
-            
+
             {/* Botão de fechar na parte inferior (opcional) */}
             <div className="flex justify-end pt-4 border-t">
               <Button variant="outline" onClick={onClose}>
