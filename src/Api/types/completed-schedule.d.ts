@@ -13,7 +13,7 @@ interface CompletedScheduleType extends ScheduleType {
 }
 
 interface CompletedExamType extends ExamsType {
-  status: "PENDENTE" | "CANCELADO" | "CONCLUIDO";
+  status: "PENDENTE" | "CANCELADO" | "CONCLUIDO" | "POR_REAGENDAR";
   duracao?: number | null;
   status_pagamento: "PENDENTE" | "PAGO" | "CANCELADO";
   id_tecnico_alocado: string | null;

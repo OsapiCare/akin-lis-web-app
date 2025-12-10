@@ -12,7 +12,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { CalendarDays, Clock, User, Phone, Stethoscope, CheckCircle, XCircle, AlertCircle, Edit3, Mail, Calendar, Users, Save, X, X as CloseIcon } from "lucide-react";
+import { CalendarDays, Clock, User, Phone, Stethoscope, CheckCircle, XCircle, AlertCircle, Edit3, Mail, Calendar, Users, Save, X, X as CloseIcon, CalendarOff } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { _axios } from "@/Api/axios.config";
@@ -48,11 +48,12 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
   const userRole = getAllDataInCookies().userRole;
   const isReceptionist = userRole === "RECEPCIONISTA";
   const isLabChief = userRole === "CHEFE";
+  const isLabTechnician = userRole === "TECNICO";
 
   const { data: technicians } = useQuery({
     queryKey: ["lab-technicians"],
     queryFn: async () => (await labTechniciansRoutes.getAllLabTechnicians()).data,
-    enabled: isLabChief,
+    enabled: isLabChief || isLabTechnician,
   });
 
   const { data: labChiefs } = useQuery({
@@ -64,6 +65,7 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
   // Atualiza os exames locais quando o schedule muda
   useEffect(() => {
     if (schedule?.Exame) {
+      // Filtra exames que não estão concluídos (conforme regra 1)
       const activeExams = schedule.Exame.filter((exam) => exam.status !== "CONCLUIDO");
       setLocalExams(activeExams);
     }
@@ -72,6 +74,15 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
   const updateExamMutation = useMutation({
     mutationFn: async (data: { examId: number; updates: Partial<EditableExam> }) => {
       const updatePayload: any = { ...data.updates };
+      
+      // Se o usuário é recepcionista, não pode marcar como CONCLUIDO
+      if (isReceptionist && updatePayload.status === "CONCLUIDO") {
+        ___showErrorToastNotification({ 
+          message: "Recepcionistas não podem marcar exames como concluídos." 
+        });
+        throw new Error("Recepcionistas não podem marcar exames como concluídos.");
+      }
+      
       return await examRoutes.editExam(data.examId, updatePayload);
     },
     onSuccess: (response, variables) => {
@@ -132,11 +143,44 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
 
   if (!schedule) return null;
 
+  // Verifica se há pagamento pendente (regra 02)
+  const hasPendingPayment = schedule.Exame?.some(exam => exam.status_pagamento === "PENDENTE");
+
+  // Calcula o status geral do bloco (conforme regras)
+  const calculateOverallScheduleStatus = () => {
+    const exams = schedule.Exame || [];
+    
+    // Regra: Se pelo menos um exame está pendente, status geral é pendente
+    if (exams.some(exam => exam.status === "PENDENTE")) {
+      return "PENDENTE";
+    }
+    
+    // Regra: Se todos os exames são concluídos, status geral é concluído
+    if (exams.every(exam => exam.status === "CONCLUIDO")) {
+      return "CONCLUIDO";
+    }
+    
+    // Regra: Se há exame "POR_REAGENDAR" e outros "CANCELADO" ou "CONCLUIDO", status é "POR_REAGENDAR"
+    if (exams.some(exam => exam.status === "POR_REAGENDAR")) {
+      return "POR_REAGENDAR";
+    }
+    
+    // Regra: Se todos os exames são cancelados, status geral é cancelado
+    if (exams.every(exam => exam.status === "CANCELADO")) {
+      return "CANCELADO";
+    }
+    
+    return "PENDENTE"; // default
+  };
+
+  const overallStatus = calculateOverallScheduleStatus();
+
   // Usa os exames locais (que podem ter sido atualizados) ou os originais do schedule
   const activeExams = localExams.length > 0 ? localExams : 
     (schedule.Exame?.filter((exam) => exam.status !== "CONCLUIDO") || []);
   
-  if (activeExams.length === 0) return null; // Se todos os exames concluídos, não mostrar o bloco
+  // Se todos os exames estão concluídos, não mostrar (regra 1)
+  if (overallStatus === "CONCLUIDO") return null;
 
   const getPatientAge = () => {
     if (!schedule.Paciente?.data_nascimento) return "N/A";
@@ -159,14 +203,17 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
       .toUpperCase();
 
   const getExamStatusBadge = (status: string) => {
-    if (status === "CONCLUIDO") return null; // Não mostrar badge concluído
     const mapping = {
-      PENDENTE: { text: "Pendente", color: "yellow" },
-      CANCELADO: { text: "Cancelado", color: "red" },
-      EM_ANDAMENTO: { text: "Em Andamento", color: "blue" },
+      PENDENTE: { text: "Pendente", color: "yellow", icon: AlertCircle },
+      CANCELADO: { text: "Cancelado", color: "red", icon: XCircle },
+      POR_REAGENDAR: { text: "Por Reagendar", color: "orange", icon: CalendarOff },
+      EM_ANDAMENTO: { text: "Em Andamento", color: "blue", icon: Clock },
+      CONCLUIDO: { text: "Concluído", color: "green", icon: CheckCircle },
     } as any;
-    const info = mapping[status] || { text: status, color: "gray" };
-    const Icon = status === "PENDENTE" ? AlertCircle : status === "CANCELADO" ? XCircle : Clock;
+    
+    const info = mapping[status] || { text: status, color: "gray", icon: AlertCircle };
+    const Icon = info.icon;
+    
     return (
       <Badge variant="default" className={`bg-${info.color}-100 text-${info.color}-800 border-${info.color}-200 flex items-center gap-1`}>
         <Icon className="w-3 h-3" /> {info.text}
@@ -221,6 +268,13 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
     setEditedExam({ ...editedExam, [field]: value });
   };
 
+  // Função para verificar se pode inicializar exame (regra 02)
+  const canInitializeExam = (exam: any) => {
+    if (exam.status_pagamento !== "PAGO") return false;
+    if (!isLabChief && !isLabTechnician) return false;
+    return true;
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
@@ -228,6 +282,9 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
           <DialogTitle className="flex items-center gap-2">
             <User className="w-5 h-5" />
             Detalhes do Agendamento #{schedule.id}
+            <span className="ml-2">
+              {getExamStatusBadge(overallStatus)}
+            </span>
           </DialogTitle>
           
           {/* Botão de fechar no canto superior direito */}
@@ -239,6 +296,34 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
 
         <ScrollArea className="max-h-[calc(90vh-120px)] pr-4">
           <div className="space-y-6">
+            {/* Status do Bloco */}
+            <Card className="bg-gray-50">
+              <CardContent className="pt-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <Label>Status do Bloco</Label>
+                    <div className="mt-1">
+                      {getExamStatusBadge(overallStatus)}
+                    </div>
+                  </div>
+                  <div>
+                    <Label>Pagamento</Label>
+                    <div className={`text-sm mt-1 font-semibold ${hasPendingPayment ? 'text-yellow-600' : 'text-green-600'}`}>
+                      {hasPendingPayment ? 'Pendente' : 'Pago'}
+                    </div>
+                  </div>
+                  <div>
+                    <Label>Pode Inicializar Exames</Label>
+                    <div className={`text-sm mt-1 font-semibold ${!hasPendingPayment && (isLabChief || isLabTechnician) ? 'text-green-600' : 'text-red-600'}`}>
+                      {!hasPendingPayment && (isLabChief || isLabTechnician) ? 'Sim' : 'Não'}
+                      {hasPendingPayment && ' (Aguardando pagamento)'}
+                      {!hasPendingPayment && !isLabChief && !isLabTechnician && ' (Apenas chefe/técnico)'}
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Paciente */}
             <Card>
               <CardHeader>
@@ -393,6 +478,21 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
                             <Edit3 className="w-3 h-3 mr-1" /> Editar
                           </Button>
                         )}
+                        
+                        {/* Botão para inicializar exame (apenas chefe/técnico com pagamento pago) */}
+                        {(isLabChief || isLabTechnician) && canInitializeExam(exam) && (
+                          <Button
+                            variant="default"
+                            size="sm"
+                            className="bg-green-600 hover:bg-green-700"
+                            onClick={() => {
+                              // Aqui você implementaria a lógica para inicializar o exame
+                              console.log("Inicializar exame:", exam.id);
+                            }}
+                          >
+                            <Clock className="w-3 h-3 mr-1" /> Inicializar
+                          </Button>
+                        )}
                       </div>
                     </div>
 
@@ -426,13 +526,15 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
                             <SelectContent>
                               <SelectItem value="PENDENTE">Pendente</SelectItem>
                               <SelectItem value="CANCELADO">Cancelado</SelectItem>
-                              <SelectItem value="CONCLUIDO">Concluído</SelectItem>
+                              {!isReceptionist && (
+                                <SelectItem value="CONCLUIDO">Concluído</SelectItem>
+                              )}
                             </SelectContent>
                           </Select>
                         </div>
                       </div>
                     ) : (
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
                         <div>
                           <Label>Data e Hora</Label>
                           <p className="font-medium flex items-center gap-1">
@@ -443,10 +545,16 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
                           </p>
                         </div>
                         <div>
-                          <Label>Preço</Label>
+                          <Label className="font-semibold">Preço</Label>
                           <p className="font-medium text-green-600">{new Intl.NumberFormat("pt-AO", { style: "currency", currency: "AOA" }).format(exam.Tipo_Exame?.preco || 0)}</p>
                         </div>
-                        {isLabChief && (
+                        <div>
+                          <Label className="font-semibold">Pagamento</Label>
+                          <p className={`font-medium ${exam.status_pagamento === 'PAGO' ? 'text-green-600' : 'text-yellow-600'}`}>
+                            {exam.status_pagamento === 'PAGO' ? 'Pago' : 'Pendente'}
+                          </p>
+                        </div>
+                        {(isLabChief || isLabTechnician) && (
                           <div>
                             <Label>Técnico Alocado</Label>
                             <p className="font-medium">{getTechnicianName(exam.id_tecnico_alocado)}</p>
