@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,7 +12,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { CalendarDays, Clock, User, Phone, Stethoscope, CheckCircle, XCircle, AlertCircle, Edit3, Mail, Calendar, Users, Save, X } from "lucide-react";
+import { CalendarDays, Clock, User, Phone, Stethoscope, CheckCircle, XCircle, AlertCircle, Edit3, Mail, Calendar, Users, Save, X, X as CloseIcon } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { _axios } from "@/Api/axios.config";
@@ -76,42 +76,52 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
     },
     onSuccess: (response, variables) => {
       ___showSuccessToastNotification({ message: "Exame atualizado com sucesso!" });
-
+      
       // Atualiza o cache do React Query
       queryClient.invalidateQueries({ queryKey: ["completed-schedules"] });
-
+      
       // Atualiza o estado local imediatamente
-      setLocalExams((prev) => prev.map((exam) => (exam.id === variables.examId ? { ...exam, ...variables.updates } : exam)));
-
+      setLocalExams(prev => prev.map(exam => 
+        exam.id === variables.examId 
+          ? { ...exam, ...variables.updates }
+          : exam
+      ));
+      
       setEditingExam(null);
       setEditedExam(null);
     },
     onError: (error: any) => {
       console.error("Update exam error:", error);
-      ___showErrorToastNotification({
-        message: error.response?.data?.message || "Erro ao atualizar exame.",
+      ___showErrorToastNotification({ 
+        message: error.response?.data?.message || "Erro ao atualizar exame." 
       });
     },
   });
 
   const allocateTechnicianMutation = useMutation({
-    mutationFn: async (data: { examId: number; technicianId: string }) => (await _axios.patch(`/exams/${data.examId}`, { id_tecnico_alocado: data.technicianId })).data,
+    mutationFn: async (data: { examId: number; technicianId: string }) => 
+      (await _axios.patch(`/exams/${data.examId}`, { id_tecnico_alocado: data.technicianId })).data,
     onSuccess: (response, variables) => {
       ___showSuccessToastNotification({ message: "Técnico alocado com sucesso!" });
-
+      
       // Atualiza o cache
       queryClient.invalidateQueries({ queryKey: ["completed-schedules"] });
-
+      
       // Atualiza o estado local
-      setLocalExams((prev) => prev.map((exam) => (exam.id === variables.examId ? { ...exam, id_tecnico_alocado: variables.technicianId } : exam)));
-
+      setLocalExams(prev => prev.map(exam => 
+        exam.id === variables.examId 
+          ? { ...exam, id_tecnico_alocado: variables.technicianId }
+          : exam
+      ));
+      
       setSelectedTechnician(null);
     },
     onError: () => ___showErrorToastNotification({ message: "Erro ao alocar técnico." }),
   });
 
   const allocateChiefMutation = useMutation({
-    mutationFn: async (data: { scheduleId: number; chiefId: string }) => labChiefRoutes.allocateLabChief(data.scheduleId, data.chiefId),
+    mutationFn: async (data: { scheduleId: number; chiefId: string }) => 
+      labChiefRoutes.allocateLabChief(data.scheduleId, data.chiefId),
     onSuccess: () => {
       ___showSuccessToastNotification({ message: "Chefe alocado com sucesso!" });
       queryClient.invalidateQueries({ queryKey: ["completed-schedules"] });
@@ -123,8 +133,9 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
   if (!schedule) return null;
 
   // Usa os exames locais (que podem ter sido atualizados) ou os originais do schedule
-  const activeExams = localExams.length > 0 ? localExams : schedule.Exame?.filter((exam) => exam.status !== "CONCLUIDO") || [];
-
+  const activeExams = localExams.length > 0 ? localExams : 
+    (schedule.Exame?.filter((exam) => exam.status !== "CONCLUIDO") || []);
+  
   if (activeExams.length === 0) return null; // Se todos os exames concluídos, não mostrar o bloco
 
   const getPatientAge = () => {
@@ -188,7 +199,7 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
 
   const handleSaveExam = () => {
     if (!editedExam) return;
-
+    
     updateExamMutation.mutate({
       examId: editedExam.id,
       updates: {
@@ -196,7 +207,7 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
         hora_agendamento: editedExam.hora_agendamento,
         status: editedExam.status,
         id_tecnico_alocado: editedExam.id_tecnico_alocado,
-      },
+      }
     });
   };
 
@@ -213,11 +224,17 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
-        <DialogHeader>
+        <DialogHeader className="relative">
           <DialogTitle className="flex items-center gap-2">
             <User className="w-5 h-5" />
             Detalhes do Agendamento #{schedule.id}
           </DialogTitle>
+          
+          {/* Botão de fechar no canto superior direito */}
+          <DialogClose className="absolute right-4 -top-2 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
+            <CloseIcon className="h-4 w-4" />
+            <span className="sr-only">Fechar</span>
+          </DialogClose>
         </DialogHeader>
 
         <ScrollArea className="max-h-[calc(90vh-120px)] pr-4">
@@ -321,7 +338,10 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
                           ))}
                         </SelectContent>
                       </Select>
-                      <Button onClick={() => selectedChief && allocateChiefMutation.mutate({ scheduleId: schedule.id, chiefId: selectedChief })} disabled={!selectedChief || allocateChiefMutation.isPending}>
+                      <Button 
+                        onClick={() => selectedChief && allocateChiefMutation.mutate({ scheduleId: schedule.id, chiefId: selectedChief })} 
+                        disabled={!selectedChief || allocateChiefMutation.isPending}
+                      >
                         {allocateChiefMutation.isPending ? "Alocando..." : "Alocar"}
                       </Button>
                     </div>
@@ -346,16 +366,30 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
                         {getExamStatusBadge(exam.status)}
                         {editingExam === exam.id ? (
                           <div className="flex gap-2">
-                            <Button variant="default" size="sm" onClick={handleSaveExam} disabled={updateExamMutation.isPending}>
-                              <Save className="w-3 h-3 mr-1" />
+                            <Button
+                              variant="default"
+                              size="sm"
+                              onClick={handleSaveExam}
+                              disabled={updateExamMutation.isPending}
+                            >
+                              <Save className="w-3 h-3 mr-1" /> 
                               {updateExamMutation.isPending ? "Salvando..." : "Salvar"}
                             </Button>
-                            <Button variant="outline" size="sm" onClick={handleCancelEdit} disabled={updateExamMutation.isPending}>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={handleCancelEdit}
+                              disabled={updateExamMutation.isPending}
+                            >
                               <X className="w-3 h-3 mr-1" /> Cancelar
                             </Button>
                           </div>
                         ) : (
-                          <Button variant="outline" size="sm" onClick={() => handleEditExam(exam)}>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEditExam(exam)}
+                          >
                             <Edit3 className="w-3 h-3 mr-1" /> Editar
                           </Button>
                         )}
@@ -366,15 +400,26 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
                         <div>
                           <Label>Data</Label>
-                          <Input type="date" value={editedExam.data_agendamento} onChange={(e) => handleExamFieldChange("data_agendamento", e.target.value)} />
+                          <Input
+                            type="date"
+                            value={editedExam.data_agendamento}
+                            onChange={(e) => handleExamFieldChange("data_agendamento", e.target.value)}
+                          />
                         </div>
                         <div>
                           <Label>Hora</Label>
-                          <Input type="time" value={editedExam.hora_agendamento} onChange={(e) => handleExamFieldChange("hora_agendamento", e.target.value)} />
+                          <Input
+                            type="time"
+                            value={editedExam.hora_agendamento}
+                            onChange={(e) => handleExamFieldChange("hora_agendamento", e.target.value)}
+                          />
                         </div>
                         <div>
                           <Label>Status</Label>
-                          <Select value={editedExam.status} onValueChange={(value) => handleExamFieldChange("status", value)}>
+                          <Select
+                            value={editedExam.status}
+                            onValueChange={(value) => handleExamFieldChange("status", value)}
+                          >
                             <SelectTrigger>
                               <SelectValue />
                             </SelectTrigger>
@@ -426,7 +471,10 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
                               ))}
                             </SelectContent>
                           </Select>
-                          <Button onClick={() => selectedTechnician && allocateTechnicianMutation.mutate({ examId: exam.id, technicianId: selectedTechnician })} disabled={!selectedTechnician || allocateTechnicianMutation.isPending}>
+                          <Button 
+                            onClick={() => selectedTechnician && allocateTechnicianMutation.mutate({ examId: exam.id, technicianId: selectedTechnician })} 
+                            disabled={!selectedTechnician || allocateTechnicianMutation.isPending}
+                          >
                             {allocateTechnicianMutation.isPending ? "Alocando..." : "Alocar"}
                           </Button>
                         </div>
@@ -438,6 +486,13 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
                 ))}
               </CardContent>
             </Card>
+            
+            {/* Botão de fechar na parte inferior (opcional) */}
+            <div className="flex justify-end pt-4 border-t">
+              <Button variant="outline" onClick={onClose}>
+                Fechar
+              </Button>
+            </div>
           </div>
         </ScrollArea>
       </DialogContent>
