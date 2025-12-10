@@ -12,8 +12,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { CalendarDays, Clock, User, Phone, Stethoscope, CheckCircle, XCircle, AlertCircle, Edit3, Mail, Calendar, Users, Save, X, X as CloseIcon, CalendarOff, FileText } from "lucide-react";
-import { format } from "date-fns";
+import { CalendarDays, Clock, User, Phone, Stethoscope, CheckCircle, XCircle, AlertCircle, Edit3, Mail, Calendar, Users, Save, X, X as CloseIcon, CalendarOff, FileText, ChevronLeft, ChevronRight } from "lucide-react";
+import { format, addDays, subDays, isToday, isTomorrow, isYesterday, parseISO, isAfter, isBefore, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { _axios } from "@/Api/axios.config";
 import { ___showSuccessToastNotification, ___showErrorToastNotification } from "@/lib/sonner";
@@ -43,6 +43,175 @@ interface ExamType {
   nome: string;
   preco: number;
   descricao?: string;
+}
+
+interface TimeSlot {
+  time: string;
+  formattedTime: string;
+  period: "manhã" | "tarde" | "noite";
+}
+
+// Componente para o carrossel de datas
+function DateCarousel({ selectedDate, onDateSelect }: { selectedDate: string; onDateSelect: (date: string) => void }) {
+  const [dates, setDates] = useState<Array<{ date: Date; formattedDate: string; label: string }>>([]);
+  
+  useEffect(() => {
+    const today = startOfDay(new Date());
+    const dateList = [];
+    
+    // Gera 14 dias (2 semanas) - 7 dias antes e 7 dias depois
+    for (let i = -7; i <= 7; i++) {
+      const date = addDays(today, i);
+      const formattedDate = format(date, "yyyy-MM-dd");
+      
+      let label = format(date, "dd/MM");
+      if (isToday(date)) label = "Hoje";
+      else if (isTomorrow(date)) label = "Amanhã";
+      else if (isYesterday(date)) label = "Ontem";
+      else if (i === -2) label = "Anteontem";
+      else if (date.getDay() === 0) label = format(date, "dd/MM") + " Dom";
+      else if (date.getDay() === 6) label = format(date, "dd/MM") + " Sáb";
+      
+      dateList.push({
+        date,
+        formattedDate,
+        label
+      });
+    }
+    
+    setDates(dateList);
+  }, []);
+
+  return (
+    <div className="relative">
+      <div className="flex overflow-x-auto py-2 space-x-2 scrollbar-hide">
+        {dates.map((dateItem) => {
+          const isSelected = selectedDate === dateItem.formattedDate;
+          const isWeekend = dateItem.date.getDay() === 0 || dateItem.date.getDay() === 6;
+          
+          return (
+            <button
+              key={dateItem.formattedDate}
+              onClick={() => onDateSelect(dateItem.formattedDate)}
+              className={`
+                flex-shrink-0 w-20 px-3 py-2 rounded-lg border transition-all duration-200
+                ${isSelected 
+                  ? 'bg-blue-600 text-white border-blue-600' 
+                  : isWeekend
+                    ? 'bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100'
+                    : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'
+                }
+              `}
+            >
+              <div className="text-center">
+                <div className={`text-xs font-medium ${isSelected ? 'text-white' : 'text-gray-500'}`}>
+                  {format(dateItem.date, 'EEE', { locale: ptBR })}
+                </div>
+                <div className={`text-lg font-bold ${isSelected ? 'text-white' : 'text-gray-900'}`}>
+                  {dateItem.label.split(' ')[0]}
+                </div>
+                {dateItem.label.includes(' ') && (
+                  <div className={`text-xs ${isSelected ? 'text-blue-100' : 'text-gray-500'}`}>
+                    {dateItem.label.split(' ')[1]}
+                  </div>
+                )}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// Componente para o carrossel de horários
+function TimeCarousel({ selectedTime, onTimeSelect }: { selectedTime: string; onTimeSelect: (time: string) => void }) {
+  const timeSlots: TimeSlot[] = [
+    // Manhã
+    { time: "08:00", formattedTime: "08:00", period: "manhã" },
+    { time: "08:30", formattedTime: "08:30", period: "manhã" },
+    { time: "09:00", formattedTime: "09:00", period: "manhã" },
+    { time: "09:30", formattedTime: "09:30", period: "manhã" },
+    { time: "10:00", formattedTime: "10:00", period: "manhã" },
+    { time: "10:30", formattedTime: "10:30", period: "manhã" },
+    { time: "11:00", formattedTime: "11:00", period: "manhã" },
+    { time: "11:30", formattedTime: "11:30", period: "manhã" },
+    // Tarde
+    { time: "13:00", formattedTime: "13:00", period: "tarde" },
+    { time: "13:30", formattedTime: "13:30", period: "tarde" },
+    { time: "14:00", formattedTime: "14:00", period: "tarde" },
+    { time: "14:30", formattedTime: "14:30", period: "tarde" },
+    { time: "15:00", formattedTime: "15:00", period: "tarde" },
+    { time: "15:30", formattedTime: "15:30", period: "tarde" },
+    { time: "16:00", formattedTime: "16:00", period: "tarde" },
+    { time: "16:30", formattedTime: "16:30", period: "tarde" },
+    { time: "17:00", formattedTime: "17:00", period: "tarde" },
+    { time: "17:30", formattedTime: "17:30", period: "tarde" },
+  ];
+
+  const [selectedPeriod, setSelectedPeriod] = useState<"manhã" | "tarde" | "todos">("manhã");
+
+  const filteredTimeSlots = timeSlots.filter(
+    slot => selectedPeriod === "todos" || slot.period === selectedPeriod
+  );
+
+  return (
+    <div className="space-y-3">
+      <div className="flex gap-2">
+        <Button
+          variant={selectedPeriod === "manhã" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setSelectedPeriod("manhã")}
+          className="text-xs"
+        >
+          Manhã (08:00-12:00)
+        </Button>
+        <Button
+          variant={selectedPeriod === "tarde" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setSelectedPeriod("tarde")}
+          className="text-xs"
+        >
+          Tarde (13:00-18:00)
+        </Button>
+        <Button
+          variant={selectedPeriod === "todos" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setSelectedPeriod("todos")}
+          className="text-xs"
+        >
+          Todos
+        </Button>
+      </div>
+      
+      <div className="flex overflow-x-auto py-2 space-x-2 scrollbar-hide">
+        {filteredTimeSlots.map((slot) => {
+          const isSelected = selectedTime === slot.time;
+          
+          return (
+            <button
+              key={slot.time}
+              onClick={() => onTimeSelect(slot.time)}
+              className={`
+                flex-shrink-0 px-4 py-2 rounded-lg border transition-all duration-200
+                ${isSelected 
+                  ? 'bg-green-600 text-white border-green-600' 
+                  : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'
+                }
+              `}
+            >
+              <div className="text-center">
+                <div className="text-sm font-medium">{slot.formattedTime}</div>
+                <div className={`text-xs ${isSelected ? 'text-green-100' : 'text-gray-500'}`}>
+                  {slot.period}
+                </div>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
 export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: CompletedScheduleDetailsModalProps) {
@@ -265,7 +434,6 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
       hora_agendamento: exam.hora_agendamento,
       status: exam.status,
       id_tipo_exame: exam.id_tipo_exame || exam.Tipo_Exame?.id,
-      // observacoes: exam.observacoes,
       id_tecnico_alocado: exam.id_tecnico_alocado || null,
     });
   };
@@ -280,7 +448,6 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
         hora_agendamento: editedExam.hora_agendamento,
         status: editedExam.status,
         id_tipo_exame: editedExam.id_tipo_exame,
-        // observacoes: editedExam.observacoes,
         id_tecnico_alocado: editedExam.id_tecnico_alocado,
       },
     });
@@ -322,6 +489,19 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
     }
 
     setEditedExam({ ...editedExam, [field]: value });
+  };
+
+  // Funções para o carrossel
+  const handleDateSelect = (date: string) => {
+    if (editedExam) {
+      setEditedExam({ ...editedExam, data_agendamento: date });
+    }
+  };
+
+  const handleTimeSelect = (time: string) => {
+    if (editedExam) {
+      setEditedExam({ ...editedExam, hora_agendamento: time });
+    }
   };
 
   // Função para verificar se pode inicializar exame (regra 02)
@@ -535,7 +715,8 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
                       </div>
 
                       {editingExam === exam.id && editedExam ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
+                        <div className="space-y-4">
+                          {/* Tipo de Exame */}
                           <div>
                             <Label>Tipo de Exame</Label>
                             <Select value={editedExam.id_tipo_exame?.toString() || ""} onValueChange={(value) => handleExamFieldChange("id_tipo_exame", parseInt(value))}>
@@ -552,14 +733,8 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
                               </SelectContent>
                             </Select>
                           </div>
-                          <div>
-                            <Label>Data</Label>
-                            <Input type="date" value={editedExam.data_agendamento} onChange={(e) => handleExamFieldChange("data_agendamento", e.target.value)} />
-                          </div>
-                          <div>
-                            <Label>Hora</Label>
-                            <Input type="time" value={editedExam.hora_agendamento} onChange={(e) => handleExamFieldChange("hora_agendamento", e.target.value)} />
-                          </div>
+
+                          {/* Status */}
                           <div>
                             <Label>Status</Label>
                             <Select value={editedExam.status} onValueChange={(value) => handleExamFieldChange("status", value)}>
@@ -572,6 +747,57 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
                                 {!isReceptionist && <SelectItem value="CONCLUIDO">Concluído</SelectItem>}
                               </SelectContent>
                             </Select>
+                          </div>
+
+                          {/* Carrossel de Datas */}
+                          <div>
+                            <Label>Selecione a Data</Label>
+                            <div className="mt-2">
+                              <DateCarousel 
+                                selectedDate={editedExam.data_agendamento} 
+                                onDateSelect={handleDateSelect} 
+                              />
+                            </div>
+                            <div className="mt-2 text-sm text-gray-500 flex items-center gap-1">
+                              <CalendarDays className="w-3 h-3" />
+                              {editedExam.data_agendamento && format(new Date(editedExam.data_agendamento), "EEEE, dd 'de' MMMM", { locale: ptBR })}
+                            </div>
+                          </div>
+
+                          {/* Carrossel de Horários */}
+                          <div>
+                            <Label>Selecione o Horário</Label>
+                            <div className="mt-2">
+                              <TimeCarousel 
+                                selectedTime={editedExam.hora_agendamento} 
+                                onTimeSelect={handleTimeSelect} 
+                              />
+                            </div>
+                            <div className="mt-2 text-sm text-gray-500 flex items-center gap-1">
+                              <Clock className="w-3 h-3" />
+                              {editedExam.hora_agendamento && `Horário selecionado: ${editedExam.hora_agendamento}`}
+                            </div>
+                          </div>
+
+                          {/* Input manual para data/hora (fallback) */}
+                          <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
+                            <div>
+                              <Label>Data (manual)</Label>
+                              <Input
+                              className="w-44"
+                                type="date"
+                                value={editedExam.data_agendamento}
+                                onChange={(e) => handleExamFieldChange("data_agendamento", e.target.value)}
+                              />
+                            </div>
+                            <div>
+                              <Label>Hora (manual)</Label>
+                              <Input
+                                type="time"
+                                value={editedExam.hora_agendamento}
+                                onChange={(e) => handleExamFieldChange("hora_agendamento", e.target.value)}
+                              />
+                            </div>
                           </div>
                         </div>
                       ) : (
