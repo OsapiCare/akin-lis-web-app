@@ -12,7 +12,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { CalendarDays, Clock, User, Phone, Stethoscope, CheckCircle, XCircle, AlertCircle, Edit3, Mail, Calendar, Users, Save, X, X as CloseIcon, CalendarOff, FileText, ChevronLeft, ChevronRight } from "lucide-react";
+import { CalendarDays, Clock, User, Phone, Stethoscope, CheckCircle, XCircle, AlertCircle, Edit3, Mail, Calendar, Users, Save, X, FileText, DollarSign, CreditCard, Shield } from "lucide-react";
 import { format, addDays, subDays, isToday, isTomorrow, isYesterday, parseISO, isAfter, isBefore, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { _axios } from "@/Api/axios.config";
@@ -51,70 +51,56 @@ interface TimeSlot {
   period: "manhã" | "tarde" | "noite";
 }
 
-// Componente para o carrossel de datas
+// Componente para o carrossel de datas (versão compacta)
 function DateCarousel({ selectedDate, onDateSelect }: { selectedDate: string; onDateSelect: (date: string) => void }) {
   const [dates, setDates] = useState<Array<{ date: Date; formattedDate: string; label: string }>>([]);
-  
+
   useEffect(() => {
     const today = startOfDay(new Date());
     const dateList = [];
-    
-    // Gera 14 dias (2 semanas) - 7 dias antes e 7 dias depois
-    for (let i = -7; i <= 7; i++) {
+
+    // Gera 10 dias (5 antes, 5 depois) para ser mais compacto
+    for (let i = -5; i <= 5; i++) {
       const date = addDays(today, i);
       const formattedDate = format(date, "yyyy-MM-dd");
-      
+
       let label = format(date, "dd/MM");
       if (isToday(date)) label = "Hoje";
       else if (isTomorrow(date)) label = "Amanhã";
       else if (isYesterday(date)) label = "Ontem";
       else if (i === -2) label = "Anteontem";
-      else if (date.getDay() === 0) label = format(date, "dd/MM") + " Dom";
-      else if (date.getDay() === 6) label = format(date, "dd/MM") + " Sáb";
-      
+
       dateList.push({
         date,
         formattedDate,
-        label
+        label,
       });
     }
-    
+
     setDates(dateList);
   }, []);
 
   return (
     <div className="relative">
-      <div className="flex overflow-x-auto py-2 space-x-2 scrollbar-hide">
+      <div className="flex overflow-x-auto py-1 space-x-1.5 scrollbar-hide">
         {dates.map((dateItem) => {
           const isSelected = selectedDate === dateItem.formattedDate;
           const isWeekend = dateItem.date.getDay() === 0 || dateItem.date.getDay() === 6;
-          
+
           return (
             <button
               key={dateItem.formattedDate}
               onClick={() => onDateSelect(dateItem.formattedDate)}
               className={`
-                flex-shrink-0 w-20 px-3 py-2 rounded-lg border transition-all duration-200
-                ${isSelected 
-                  ? 'bg-blue-600 text-white border-blue-600' 
-                  : isWeekend
-                    ? 'bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100'
-                    : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'
-                }
+                flex-shrink-0 w-16 px-2 py-1.5 rounded-md border transition-all duration-200 text-xs
+                ${isSelected ? "bg-blue-600 text-white border-blue-600" : isWeekend ? "bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100" : "bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100"}
               `}
             >
               <div className="text-center">
-                <div className={`text-xs font-medium ${isSelected ? 'text-white' : 'text-gray-500'}`}>
-                  {format(dateItem.date, 'EEE', { locale: ptBR })}
+                <div className={`text-[10px] font-medium ${isSelected ? "text-white" : "text-gray-500"}`}>
+                  {format(dateItem.date, "EEE", { locale: ptBR }).slice(0, 3)}
                 </div>
-                <div className={`text-lg font-bold ${isSelected ? 'text-white' : 'text-gray-900'}`}>
-                  {dateItem.label.split(' ')[0]}
-                </div>
-                {dateItem.label.includes(' ') && (
-                  <div className={`text-xs ${isSelected ? 'text-blue-100' : 'text-gray-500'}`}>
-                    {dateItem.label.split(' ')[1]}
-                  </div>
-                )}
+                <div className={`text-sm font-bold ${isSelected ? "text-white" : "text-gray-900"}`}>{dateItem.label}</div>
               </div>
             </button>
           );
@@ -124,7 +110,7 @@ function DateCarousel({ selectedDate, onDateSelect }: { selectedDate: string; on
   );
 }
 
-// Componente para o carrossel de horários
+// Componente para o carrossel de horários (versão compacta)
 function TimeCarousel({ selectedTime, onTimeSelect }: { selectedTime: string; onTimeSelect: (time: string) => void }) {
   const timeSlots: TimeSlot[] = [
     // Manhã
@@ -151,60 +137,52 @@ function TimeCarousel({ selectedTime, onTimeSelect }: { selectedTime: string; on
 
   const [selectedPeriod, setSelectedPeriod] = useState<"manhã" | "tarde" | "todos">("manhã");
 
-  const filteredTimeSlots = timeSlots.filter(
-    slot => selectedPeriod === "todos" || slot.period === selectedPeriod
-  );
+  const filteredTimeSlots = timeSlots.filter((slot) => selectedPeriod === "todos" || slot.period === selectedPeriod);
 
   return (
-    <div className="space-y-3">
-      <div className="flex gap-2">
+    <div className="space-y-2">
+      <div className="flex gap-1.5 flex-wrap">
         <Button
           variant={selectedPeriod === "manhã" ? "default" : "outline"}
           size="sm"
           onClick={() => setSelectedPeriod("manhã")}
-          className="text-xs"
+          className="text-xs h-7 px-2"
         >
-          Manhã (08:00-12:00)
+          Manhã
         </Button>
         <Button
           variant={selectedPeriod === "tarde" ? "default" : "outline"}
           size="sm"
           onClick={() => setSelectedPeriod("tarde")}
-          className="text-xs"
+          className="text-xs h-7 px-2"
         >
-          Tarde (13:00-18:00)
+          Tarde
         </Button>
         <Button
           variant={selectedPeriod === "todos" ? "default" : "outline"}
           size="sm"
           onClick={() => setSelectedPeriod("todos")}
-          className="text-xs"
+          className="text-xs h-7 px-2"
         >
           Todos
         </Button>
       </div>
-      
-      <div className="flex overflow-x-auto py-2 space-x-2 scrollbar-hide">
+
+      <div className="flex overflow-x-auto py-1 space-x-1.5 scrollbar-hide">
         {filteredTimeSlots.map((slot) => {
           const isSelected = selectedTime === slot.time;
-          
+
           return (
             <button
               key={slot.time}
               onClick={() => onTimeSelect(slot.time)}
               className={`
-                flex-shrink-0 px-4 py-2 rounded-lg border transition-all duration-200
-                ${isSelected 
-                  ? 'bg-green-600 text-white border-green-600' 
-                  : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'
-                }
+                flex-shrink-0 px-2.5 py-1.5 rounded-md border transition-all duration-200 text-xs
+                ${isSelected ? "bg-green-600 text-white border-green-600" : "bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100"}
               `}
             >
               <div className="text-center">
-                <div className="text-sm font-medium">{slot.formattedTime}</div>
-                <div className={`text-xs ${isSelected ? 'text-green-100' : 'text-gray-500'}`}>
-                  {slot.period}
-                </div>
+                <div className="font-medium">{slot.formattedTime}</div>
               </div>
             </button>
           );
@@ -399,7 +377,7 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
     const mapping = {
       PENDENTE: { text: "Pendente", color: "yellow", icon: AlertCircle },
       CANCELADO: { text: "Cancelado", color: "red", icon: XCircle },
-      POR_REAGENDAR: { text: "Por Reagendar", color: "orange", icon: CalendarOff },
+      POR_REAGENDAR: { text: "Por Reagendar", color: "orange", icon: CalendarDays },
       EM_ANDAMENTO: { text: "Em Andamento", color: "blue", icon: Clock },
       CONCLUIDO: { text: "Concluído", color: "green", icon: CheckCircle },
     } as any;
@@ -408,7 +386,7 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
     const Icon = info.icon;
 
     return (
-      <Badge variant="default" className={`bg-${info.color}-100 text-${info.color}-800 border-${info.color}-200 flex items-center gap-1`}>
+      <Badge variant="default" className={`bg-${info.color}-100 text-${info.color}-800 border-${info.color}-200 flex items-center gap-1 text-xs px-2 py-0.5`}>
         <Icon className="w-3 h-3" /> {info.text}
       </Badge>
     );
@@ -513,134 +491,149 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
-        <DialogHeader className="relative">
-          <DialogTitle className="flex items-center gap-2">
-            <User className="w-5 h-5" />
-            Detalhes do Agendamento #{schedule.id}
-            <span className="ml-2">{getExamStatusBadge(overallStatus)}</span>
-          </DialogTitle>
-
-          {/* Botão de fechar no canto superior direito */}
-          <DialogClose className="absolute right-4 -top-2 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
-            <CloseIcon className="h-4 w-4" />
-            <span className="sr-only">Fechar</span>
-          </DialogClose>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden p-0">
+        <DialogHeader className="sticky top-0 bg-white z-10 px-6 py-4 border-b">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-100">
+                <User className="w-4 h-4 text-blue-600" />
+              </div>
+              <div>
+                <DialogTitle className="text-lg font-semibold">Agendamento #{schedule.id}</DialogTitle>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-sm text-gray-500">Paciente: {schedule.Paciente?.nome_completo}</span>
+                  <span className="text-gray-300">•</span>
+                  <span className="text-sm text-gray-500">{getPatientAge()}</span>
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {getExamStatusBadge(overallStatus)}
+              <DialogClose className="rounded-full p-1.5 hover:bg-gray-100 transition-colors">
+                <X className="w-4 h-4" />
+              </DialogClose>
+            </div>
+          </div>
         </DialogHeader>
 
-        <ScrollArea className="max-h-[calc(90vh-120px)] pr-4">
-          <div className="space-y-6">
-            {/* Status do Bloco */}
-            <Card className="bg-gray-50">
-              <CardContent className="pt-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <Label>Status do Bloco</Label>
-                    <div className="mt-1">{getExamStatusBadge(overallStatus)}</div>
+        <ScrollArea className="h-[calc(90vh-120px)]">
+          <div className="px-6 py-4 space-y-4">
+            {/* Status Overview Card */}
+            <Card className="border shadow-sm">
+              <CardContent className="p-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <Shield className="w-4 h-4" />
+                      Status do Bloco
+                    </div>
+                    <div className="font-medium">{getExamStatusBadge(overallStatus)}</div>
                   </div>
-                  <div>
-                    <Label>Pagamento</Label>
-                    <div className={`text-sm mt-1 font-semibold ${hasPendingPayment ? "text-yellow-600" : "text-green-600"}`}>{hasPendingPayment ? "Pendente" : "Pago"}</div>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <CreditCard className="w-4 h-4" />
+                      Status do Pagamento
+                    </div>
+                    <div className={`font-medium ${hasPendingPayment ? "text-amber-600" : "text-green-600"}`}>
+                      {hasPendingPayment ? "Pendente" : "Pago"}
+                    </div>
                   </div>
-                  <div>
-                    <Label>Pode Inicializar Exames</Label>
-                    <div className={`text-sm mt-1 font-semibold ${!hasPendingPayment && (isLabChief || isLabTechnician) ? "text-green-600" : "text-red-600"}`}>
-                      {!hasPendingPayment && (isLabChief || isLabTechnician) ? "Sim" : "Não"}
-                      {hasPendingPayment && " (Aguardando pagamento)"}
-                      {!hasPendingPayment && !isLabChief && !isLabTechnician && " (Apenas chefe/técnico)"}
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <Calendar className="w-4 h-4" />
+                      Data de Criação
+                    </div>
+                    <div className="font-medium text-sm">
+                      {format(new Date(schedule.criado_aos), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <DollarSign className="w-4 h-4" />
+                      Valor Total
+                    </div>
+                    <div className="font-medium text-green-600 text-sm">
+                      {new Intl.NumberFormat("pt-AO", { style: "currency", currency: "AOA" }).format(totalValue)}
                     </div>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Paciente */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <User className="w-4 h-4" /> Paciente
+            {/* Informações do Paciente */}
+            <Card className="border shadow-sm">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <User className="w-4 h-4" />
+                  Informações do Paciente
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="flex gap-4 items-start">
-                  <Avatar className="w-16 h-16">
-                    <AvatarImage src="" alt={schedule.Paciente?.nome_completo} />
-                    <AvatarFallback className="bg-blue-100 text-blue-600 text-lg">{getPatientInitials()}</AvatarFallback>
-                  </Avatar>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1">
+              <CardContent className="pb-4">
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <div className="flex-shrink-0 flex justify-center sm:justify-start">
+                    <Avatar className="w-16 h-16">
+                      <AvatarImage src="" alt={schedule.Paciente?.nome_completo} />
+                      <AvatarFallback className="bg-blue-100 text-blue-600 text-lg">
+                        {getPatientInitials()}
+                      </AvatarFallback>
+                    </Avatar>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 flex-1">
                     <div>
-                      <Label>Nome</Label>
-                      <p className="font-semibold">{schedule.Paciente?.nome_completo}</p>
+                      <Label className="text-xs text-gray-500">Nome Completo</Label>
+                      <p className="font-medium mt-1">{schedule.Paciente?.nome_completo}</p>
                     </div>
                     <div>
-                      <Label>Idade</Label>
-                      <p className="font-semibold">{getPatientAge()}</p>
+                      <Label className="text-xs text-gray-500">Idade</Label>
+                      <p className="font-medium mt-1">{getPatientAge()}</p>
                     </div>
                     <div>
-                      <Label>BI</Label>
-                      <p className="font-semibold">{schedule.Paciente?.numero_identificacao}</p>
-                    </div>
-                    <div>
-                      <Label>Telefone</Label>
-                      <p className="font-semibold flex items-center gap-1">
-                        <Phone className="w-3 h-3" />
-                        {schedule.Paciente?.contacto_telefonico}
+                      <Label className="text-xs text-gray-500">BI/Identificação</Label>
+                      <p className="font-medium mt-1 text-sm">
+                        {schedule.Paciente?.numero_identificacao || "Não informado"}
                       </p>
                     </div>
+                    <div>
+                      <Label className="text-xs text-gray-500">Telefone</Label>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Phone className="w-3 h-3 text-gray-500" />
+                        <span className="font-medium">{schedule.Paciente?.contacto_telefonico}</span>
+                      </div>
+                    </div>
                     {schedule.Paciente?.email && (
-                      <div>
-                        <Label>Email</Label>
-                        <p className="font-semibold flex items-center gap-1">
-                          <Mail className="w-3 h-3" />
-                          {schedule.Paciente.email}
-                        </p>
+                      <div className="sm:col-span-2">
+                        <Label className="text-xs text-gray-500">Email</Label>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Mail className="w-3 h-3 text-gray-500" />
+                          <span className="font-medium text-sm truncate">{schedule.Paciente.email}</span>
+                        </div>
                       </div>
                     )}
                     <div>
-                      <Label>Sexo</Label>
-                      <p className="font-semibold">{schedule.Paciente?.sexo?.nome}</p>
+                      <Label className="text-xs text-gray-500">Sexo</Label>
+                      <p className="font-medium mt-1">{schedule.Paciente?.sexo?.nome || "Não informado"}</p>
                     </div>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Agendamento */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4" /> Agendamento
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <Label>Data de Criação</Label>
-                    <p className="font-semibold">{format(new Date(schedule.criado_aos), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</p>
-                  </div>
-                  <div>
-                    <Label>Valor Total</Label>
-                    <p className="font-semibold text-green-600">{new Intl.NumberFormat("pt-AO", { style: "currency", currency: "AOA" }).format(totalValue)}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Chefe alocado */}
+            {/* Chefe alocado (apenas para recepcionistas) */}
             {isReceptionist && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Users className="w-4 h-4" /> Chefe de Laboratório Alocado
+              <Card className="border shadow-sm">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Users className="w-4 h-4" />
+                    Chefe de Laboratório
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
+                <CardContent className="pb-4">
+                  <div className="space-y-3">
                     <div>
-                      <Label>Chefe Atual</Label>
-                      <p className="font-semibold">{getChiefName(schedule.id_chefe_alocado || null)}</p>
+                      <Label className="text-sm">Chefe Atual</Label>
+                      <p className="font-medium mt-1">{getChiefName(schedule.id_chefe_alocado || null)}</p>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex flex-col sm:flex-row gap-2">
                       <Select value={selectedChief || ""} onValueChange={setSelectedChief}>
                         <SelectTrigger className="flex-1">
                           <SelectValue placeholder="Selecionar novo chefe" />
@@ -654,7 +647,11 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
                             ))}
                         </SelectContent>
                       </Select>
-                      <Button onClick={() => selectedChief && allocateChiefMutation.mutate({ scheduleId: schedule.id, chiefId: selectedChief })} disabled={!selectedChief || allocateChiefMutation.isPending}>
+                      <Button
+                        onClick={() => selectedChief && allocateChiefMutation.mutate({ scheduleId: schedule.id, chiefId: selectedChief })}
+                        disabled={!selectedChief || allocateChiefMutation.isPending}
+                        className="sm:w-auto"
+                      >
                         {allocateChiefMutation.isPending ? "Alocando..." : "Alocar"}
                       </Button>
                     </div>
@@ -664,181 +661,173 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
             )}
 
             {/* Exames ativos */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Stethoscope className="w-4 h-4" /> Exames ({activeExams.length})
+            <Card className="border shadow-sm">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Stethoscope className="w-4 h-4" />
+                  Exames ({activeExams.length})
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 {activeExams.map((exam, index) => {
-                  // Encontra o preço atual do exame (do estado local ou original)
                   const currentPrice = exam.Tipo_Exame?.preco || 0;
 
                   return (
-                    <div key={exam.id} className="border rounded-lg p-4">
-                      <div className="flex items-center justify-between mb-3">
-                        <h4 className="font-semibold text-lg">{exam.Tipo_Exame?.nome || "Exame não especificado"}</h4>
-                        <div className="flex gap-2 items-center">
-                          {getExamStatusBadge(exam.status)}
+                    <div key={exam.id} className="border rounded-lg p-4 space-y-3">
+                      {/* Cabeçalho do exame */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div>
+                          <h4 className="font-semibold">{exam.Tipo_Exame?.nome || "Exame não especificado"}</h4>
+                          <div className="flex items-center gap-2 mt-1">
+                            {getExamStatusBadge(exam.status)}
+                            <span className={`text-xs px-2 py-0.5 rounded-full ${exam.status_pagamento === "PAGO" ? "bg-green-100 text-green-800" : "bg-amber-100 text-amber-800"}`}>
+                              {exam.status_pagamento === "PAGO" ? "Pago" : "Pendente"}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
                           {editingExam === exam.id ? (
                             <div className="flex gap-2">
                               <Button variant="default" size="sm" onClick={handleSaveExam} disabled={updateExamMutation.isPending}>
                                 <Save className="w-3 h-3 mr-1" />
-                                {updateExamMutation.isPending ? "Salvando..." : "Salvar"}
+                                Salvar
                               </Button>
                               <Button variant="outline" size="sm" onClick={handleCancelEdit} disabled={updateExamMutation.isPending}>
-                                <X className="w-3 h-3 mr-1" /> Cancelar
+                                <X className="w-3 h-3 mr-1" />
+                                Cancelar
                               </Button>
                             </div>
                           ) : (
                             <Button variant="outline" size="sm" onClick={() => handleEditExam(exam)}>
-                              <Edit3 className="w-3 h-3 mr-1" /> Editar
+                              <Edit3 className="w-3 h-3 mr-1" />
+                              Editar
                             </Button>
                           )}
 
-                          {/* Botão para inicializar exame (apenas chefe/técnico com pagamento pago) */}
+                          {/* Botão para inicializar exame */}
                           {(isLabChief || isLabTechnician) && canInitializeExam(exam) && (
                             <Button
                               variant="default"
                               size="sm"
                               className="bg-green-600 hover:bg-green-700"
                               onClick={() => {
-                                // Aqui você implementaria a lógica para inicializar o exame
                                 console.log("Inicializar exame:", exam.id);
                               }}
                             >
-                              <Clock className="w-3 h-3 mr-1" /> Inicializar
+                              <Clock className="w-3 h-3 mr-1" />
+                              Iniciar
                             </Button>
                           )}
                         </div>
                       </div>
 
                       {editingExam === exam.id && editedExam ? (
-                        <div className="space-y-4">
-                          {/* Tipo de Exame */}
-                          <div>
-                            <Label>Tipo de Exame</Label>
-                            <Select value={editedExam.id_tipo_exame?.toString() || ""} onValueChange={(value) => handleExamFieldChange("id_tipo_exame", parseInt(value))}>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Selecionar tipo de exame" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {Array.isArray(examTypes) &&
-                                  examTypes.map((examType: ExamType) => (
-                                    <SelectItem key={examType.id} value={examType.id.toString()}>
-                                      {examType.nome} - {new Intl.NumberFormat("pt-AO", { style: "currency", currency: "AOA" }).format(examType.preco)}
-                                    </SelectItem>
-                                  ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-
-                          {/* Status */}
-                          <div>
-                            <Label>Status</Label>
-                            <Select value={editedExam.status} onValueChange={(value) => handleExamFieldChange("status", value)}>
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="PENDENTE">Pendente</SelectItem>
-                                <SelectItem value="CANCELADO">Cancelado</SelectItem>
-                                {!isReceptionist && <SelectItem value="CONCLUIDO">Concluído</SelectItem>}
-                              </SelectContent>
-                            </Select>
+                        <div className="space-y-4 pt-3 border-t">
+                          {/* Tipo de Exame e Status */}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                              <Label className="text-sm">Tipo de Exame</Label>
+                              <Select value={editedExam.id_tipo_exame?.toString() || ""} onValueChange={(value) => handleExamFieldChange("id_tipo_exame", parseInt(value))}>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Selecionar tipo" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {Array.isArray(examTypes) &&
+                                    examTypes.map((examType: ExamType) => (
+                                      <SelectItem key={examType.id} value={examType.id.toString()}>
+                                        {examType.nome} - {new Intl.NumberFormat("pt-AO", { style: "currency", currency: "AOA" }).format(examType.preco)}
+                                      </SelectItem>
+                                    ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div>
+                              <Label className="text-sm">Status</Label>
+                              <Select value={editedExam.status} onValueChange={(value) => handleExamFieldChange("status", value)}>
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="PENDENTE">Pendente</SelectItem>
+                                  <SelectItem value="CANCELADO">Cancelado</SelectItem>
+                                  {!isReceptionist && <SelectItem value="CONCLUIDO">Concluído</SelectItem>}
+                                </SelectContent>
+                              </Select>
+                            </div>
                           </div>
 
                           {/* Carrossel de Datas */}
                           <div>
-                            <Label>Selecione a Data</Label>
+                            <Label className="text-sm">Selecione a Data</Label>
                             <div className="mt-2">
-                              <DateCarousel 
-                                selectedDate={editedExam.data_agendamento} 
-                                onDateSelect={handleDateSelect} 
-                              />
-                            </div>
-                            <div className="mt-2 text-sm text-gray-500 flex items-center gap-1">
-                              <CalendarDays className="w-3 h-3" />
-                              {editedExam.data_agendamento && format(new Date(editedExam.data_agendamento), "EEEE, dd 'de' MMMM", { locale: ptBR })}
+                              <DateCarousel selectedDate={editedExam.data_agendamento} onDateSelect={handleDateSelect} />
                             </div>
                           </div>
 
                           {/* Carrossel de Horários */}
                           <div>
-                            <Label>Selecione o Horário</Label>
+                            <Label className="text-sm">Selecione o Horário</Label>
                             <div className="mt-2">
-                              <TimeCarousel 
-                                selectedTime={editedExam.hora_agendamento} 
-                                onTimeSelect={handleTimeSelect} 
-                              />
-                            </div>
-                            <div className="mt-2 text-sm text-gray-500 flex items-center gap-1">
-                              <Clock className="w-3 h-3" />
-                              {editedExam.hora_agendamento && `Horário selecionado: ${editedExam.hora_agendamento}`}
+                              <TimeCarousel selectedTime={editedExam.hora_agendamento} onTimeSelect={handleTimeSelect} />
                             </div>
                           </div>
 
-                          {/* Input manual para data/hora (fallback) */}
-                          <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
+                          {/* Inputs manuais */}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
-                              <Label>Data (manual)</Label>
+                              <Label className="text-sm">Data</Label>
                               <Input
-                              className="w-44"
                                 type="date"
                                 value={editedExam.data_agendamento}
                                 onChange={(e) => handleExamFieldChange("data_agendamento", e.target.value)}
+                                className="w-full"
                               />
                             </div>
                             <div>
-                              <Label>Hora (manual)</Label>
+                              <Label className="text-sm">Hora</Label>
                               <Input
                                 type="time"
                                 value={editedExam.hora_agendamento}
                                 onChange={(e) => handleExamFieldChange("hora_agendamento", e.target.value)}
+                                className="w-full"
                               />
                             </div>
                           </div>
                         </div>
                       ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-sm pt-3 border-t">
                           <div>
-                            <Label>Tipo de Exame</Label>
-                            <p className="font-medium flex items-center gap-1">
-                              <FileText className="w-3 h-3" />
-                              {exam.Tipo_Exame?.nome || "Não especificado"}
-                            </p>
+                            <Label className="text-xs text-gray-500">Data e Hora</Label>
+                            <div className="flex items-center gap-2 mt-1">
+                              <CalendarDays className="w-3 h-3 text-gray-500" />
+                              <span className="font-medium">
+                                {format(new Date(exam.data_agendamento), "dd/MM/yyyy", { locale: ptBR })} às {exam.hora_agendamento}
+                              </span>
+                            </div>
                           </div>
                           <div>
-                            <Label>Data e Hora</Label>
-                            <p className="font-medium flex items-center gap-1">
-                              <CalendarDays className="w-3 h-3" />
-                              {format(new Date(exam.data_agendamento), "dd/MM/yyyy", { locale: ptBR })}
-                              <Clock className="w-3 h-3 ml-2" />
-                              {exam.hora_agendamento}
-                            </p>
-                          </div>
-                          <div>
-                            <Label>Preço</Label>
-                            <p className="font-medium text-green-600">{new Intl.NumberFormat("pt-AO", { style: "currency", currency: "AOA" }).format(currentPrice)}</p>
-                          </div>
-                          <div>
-                            <Label>Pagamento</Label>
-                            <p className={`font-medium ${exam.status_pagamento === "PAGO" ? "text-green-600" : "text-yellow-600"}`}>{exam.status_pagamento === "PAGO" ? "Pago" : "Pendente"}</p>
+                            <Label className="text-xs text-gray-500">Preço</Label>
+                            <div className="flex items-center gap-2 mt-1">
+                              <DollarSign className="w-3 h-3 text-gray-500" />
+                              <span className="font-medium text-green-600">
+                                {new Intl.NumberFormat("pt-AO", { style: "currency", currency: "AOA" }).format(currentPrice)}
+                              </span>
+                            </div>
                           </div>
                           {(isLabChief || isLabTechnician) && (
                             <div>
-                              <Label>Técnico Alocado</Label>
-                              <p className="font-medium">{getTechnicianName(exam.id_tecnico_alocado)}</p>
+                              <Label className="text-xs text-gray-500">Técnico Alocado</Label>
+                              <p className="font-medium mt-1">{getTechnicianName(exam.id_tecnico_alocado)}</p>
                             </div>
                           )}
                         </div>
                       )}
 
+                      {/* Alocação de técnico (apenas para chefe) */}
                       {isLabChief && editingExam !== exam.id && (
-                        <div className="mt-4 pt-4 border-t">
-                          <Label>Alocar Técnico</Label>
-                          <div className="flex gap-2">
+                        <div className="pt-3 border-t">
+                          <Label className="text-sm">Alocar Técnico</Label>
+                          <div className="flex flex-col sm:flex-row gap-2 mt-2">
                             <Select value={selectedTechnician || ""} onValueChange={setSelectedTechnician}>
                               <SelectTrigger className="flex-1">
                                 <SelectValue placeholder="Selecionar técnico" />
@@ -852,26 +841,21 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
                                   ))}
                               </SelectContent>
                             </Select>
-                            <Button onClick={() => selectedTechnician && allocateTechnicianMutation.mutate({ examId: exam.id, technicianId: selectedTechnician })} disabled={!selectedTechnician || allocateTechnicianMutation.isPending}>
+                            <Button
+                              onClick={() => selectedTechnician && allocateTechnicianMutation.mutate({ examId: exam.id, technicianId: selectedTechnician })}
+                              disabled={!selectedTechnician || allocateTechnicianMutation.isPending}
+                              className="sm:w-auto"
+                            >
                               {allocateTechnicianMutation.isPending ? "Alocando..." : "Alocar"}
                             </Button>
                           </div>
                         </div>
                       )}
-
-                      {index < activeExams.length - 1 && <Separator className="mt-4" />}
                     </div>
                   );
                 })}
               </CardContent>
             </Card>
-
-            {/* Botão de fechar na parte inferior (opcional) */}
-            <div className="flex justify-end pt-4 border-t">
-              <Button variant="outline" onClick={onClose}>
-                Fechar
-              </Button>
-            </div>
           </div>
         </ScrollArea>
       </DialogContent>
