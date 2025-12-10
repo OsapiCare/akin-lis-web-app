@@ -13,7 +13,7 @@ import { Search, Filter, CalendarIcon, X, Users, Clock, DollarSign, CheckCircle,
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import { useAuthRoleStore } from "@/utils/zustand-store/userRoleStore";
+import { getCookieByName } from "@/utils/get-data-in-cookies";
 
 export interface CompletedScheduleFilters {
   searchQuery?: string;
@@ -35,10 +35,8 @@ interface CompletedScheduleFiltersProps {
 
 export function CompletedScheduleFilters({ onSearch, onFilterChange, onClearFilters, filters, totalSchedules, filteredCount }: CompletedScheduleFiltersProps) {
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
-  const { role } = useAuthRoleStore();
-
-  // Filter should only be visible for lab chiefs
-  const isLabChief = role === "CHEFE";
+  const userRole = getCookieByName("akin-role");
+  const isLabChief = userRole === "CHEFE";
 
   const handleSearchChange = (value: string) => {
     onSearch(value);
@@ -140,7 +138,7 @@ export function CompletedScheduleFilters({ onSearch, onFilterChange, onClearFilt
             )}
             {filters.technicianFilter && filters.technicianFilter !== "TODOS" && (
               <Badge variant="outline">
-                Técnico: {filters.technicianFilter} <X className="inline w-3 h-3 ml-1 cursor-pointer" onClick={() => onClearFilters("technicianFilter")} />
+                Chefe: {filters.technicianFilter} <X className="inline w-3 h-3 ml-1 cursor-pointer" onClick={() => onClearFilters("technicianFilter")} />
               </Badge>
             )}
           </div>
@@ -226,11 +224,11 @@ export function CompletedScheduleFilters({ onSearch, onFilterChange, onClearFilt
                 </div>
 
                 {/* Technician Filter (only for lab chiefs) */}
-                {isLabChief && (
+                {!isLabChief && (
                   <div className="space-y-2 md:col-span-2 lg:col-span-1">
                     <Label className="flex items-center gap-1">
                       <UserCheck className="w-4 h-4" />
-                      Técnico
+                      Chefe de Laboratório
                     </Label>
                     <Select value={filters.technicianFilter || "TODOS"} onValueChange={(value) => handleFilterChange("technicianFilter", value)}>
                       <SelectTrigger>
@@ -238,8 +236,8 @@ export function CompletedScheduleFilters({ onSearch, onFilterChange, onClearFilt
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="TODOS">Todos</SelectItem>
-                        <SelectItem value="ALOCADO">Com técnico alocado</SelectItem>
-                        <SelectItem value="NAO_ALOCADO">Sem técnico alocado</SelectItem>
+                        <SelectItem value="ALOCADO">Com chefe  alocado</SelectItem>
+                        <SelectItem value="NAO_ALOCADO">Sem chefe alocado</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -256,8 +254,8 @@ export function CompletedScheduleFilters({ onSearch, onFilterChange, onClearFilt
                   <DollarSign className="w-3 h-3 mr-1" /> Pagamentos Pendentes
                 </Button>
                 {isLabChief && (
-                  <Button variant="outline" size="sm" onClick={() => handleFilterChange("technicianFilter", "NAO_ALOCADO")} className="text-xs">
-                    <AlertCircle className="w-3 h-3 mr-1" /> Sem Técnico
+                  <Button variant="outline" size="sm" onClick={() => handleFilterChange("technicianFilter", "CHEFE")} className="text-xs">
+                    <AlertCircle className="w-3 h-3 mr-1" /> Chefe de Laboratório
                   </Button>
                 )}
               </div>
