@@ -265,7 +265,6 @@ export default function ExamsHistory() {
                 />
               </div>
             </div>
-
             {/* Date Range Filter */}
             <div className="space-y-2">
               <Label>Data</Label>
@@ -284,7 +283,6 @@ export default function ExamsHistory() {
                 // date={filters.selectedDateRange}
               />
             </div>
-
             {/* Status Filter */}
             <div className="space-y-2">
               <Label>Status</Label>
