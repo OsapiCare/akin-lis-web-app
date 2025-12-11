@@ -28,12 +28,12 @@ export function NavUser({}: {}) {
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton size="lg" className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground">
               <Avatar className="h-8 w-8 rounded-lg">
-                <AvatarImage src={"/image/avatar.png"} alt={loggedUser?.data.nome} />
-                <AvatarFallback className="rounded-lg text-black">{loggedUser?.data.nome.slice(0, 2).charAt(0)}</AvatarFallback>
+                <AvatarImage src={"/image/avatar.png"} alt={loggedUser?.data?.nome} />
+                <AvatarFallback className="rounded-lg text-black">{loggedUser?.data?.nome.slice(0, 2).charAt(0)}</AvatarFallback>
               </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-semibold">{loggedUser?.data.nome}</span>
-                <span className="truncate text-xs">{loggedUser?.data.email}</span>
+                <span className="truncate font-semibold">{loggedUser?.data?.nome}</span>
+                <span className="truncate text-xs">{loggedUser?.data?.email}</span>
               </div>
               <ChevronsUpDown className="ml-auto size-4" />
             </SidebarMenuButton>
@@ -42,12 +42,12 @@ export function NavUser({}: {}) {
             <DropdownMenuLabel className="p-0 font-normal">
               <Link href={"/akin/profile"} className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                 <Avatar className="h-8 w-8 rounded-lg">
-                  <AvatarImage src={""} alt={loggedUser?.data.nome} />
-                  <AvatarFallback className="rounded-lg">{loggedUser?.data.nome.slice(0, 2).charAt(0)}</AvatarFallback>
+                  <AvatarImage src={""} alt={loggedUser?.data?.nome} />
+                  <AvatarFallback className="rounded-lg">{loggedUser?.data?.nome.slice(0, 2).charAt(0)}</AvatarFallback>
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-semibold">{loggedUser?.data.nome}</span>
-                  <span className="truncate text-xs">{loggedUser?.data.email}</span>
+                  <span className="truncate font-semibold">{loggedUser?.data?.nome}</span>
+                  <span className="truncate text-xs">{loggedUser?.data?.email}</span>
                 </div>
               </Link>
             </DropdownMenuLabel>

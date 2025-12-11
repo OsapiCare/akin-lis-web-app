@@ -19,6 +19,7 @@ export interface ResponseData {
       preco: number; // currency value
       status: string;
     };
+    id_chefe_alocado?:string;
     atualizado_aos: string; // ISO date string
     criado_aos: string; // ISO date string
     data_agendamento: string; // Date in "YYYY-MM-DD" format
