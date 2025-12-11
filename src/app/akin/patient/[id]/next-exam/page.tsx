@@ -1,48 +1,37 @@
 "use client";
 
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useParams } from 'next/navigation';
-import React, { useState } from 'react';
-import { ResponseData } from '../next-exam/types';
-import { _axios } from '@/Api/axios.config';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Toggle } from '@/components/ui/toggle';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Separator } from '@/components/ui/separator';
-import {
-  Calendar,
-  Clock,
-  DollarSign,
-  User,
-  UserCheck,
-  Pencil,
-  Play,
-  Search,
-  Grid3X3,
-  List,
-  BadgeIcon
-} from 'lucide-react';
-import { useAuthStore } from '@/utils/zustand-store/authStore';
-import { UserData } from '@/app/akin/profile/page';
-import { AlerDialogNextExam } from './_alertDialog';
-import { MedicalMaterialsModal } from './_materialModal';
-import { EditScheduleFormModal } from '@/app/akin/schedule/editScheduleData';
-import { formatCurrency } from '@/utils/formartCurrency';
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useParams } from "next/navigation";
+import React, { useState } from "react";
+import { ResponseData } from "../next-exam/types";
+import { _axios } from "@/Api/axios.config";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Toggle } from "@/components/ui/toggle";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Separator } from "@/components/ui/separator";
+import { Calendar, Clock, DollarSign, User, UserCheck, Pencil, Play, Search, Grid3X3, List, BadgeIcon } from "lucide-react";
+import { useAuthStore } from "@/utils/zustand-store/authStore";
+import { UserData } from "@/app/akin/profile/page";
+import { AlerDialogNextExam } from "./_alertDialog";
+import { MedicalMaterialsModal } from "./_materialModal";
+import { EditScheduleFormModal } from "@/app/akin/schedule/editScheduleData";
+import { formatCurrency } from "@/utils/formartCurrency";
+import { toast } from "sonner";
 
 // Função auxiliar para formatar status em português
 const getStatusInPortuguese = (status: string) => {
   const statusMap: { [key: string]: string } = {
-    'PENDENTE': 'Pendente',
-    'EM_ANDAMENTO': 'Em Andamento',
-    'CONCLUIDO': 'Concluído',
-    'CANCELADO': 'Cancelado',
-    'PAGO': 'Pago',
-    'NAO_PAGO': 'Não Pago'
+    PENDENTE: "Pendente",
+    EM_ANDAMENTO: "Em Andamento",
+    CONCLUIDO: "Concluído",
+    CANCELADO: "Cancelado",
+    PAGO: "Pago",
+    NAO_PAGO: "Não Pago",
   };
   return statusMap[status.toUpperCase()] || status;
 };
@@ -51,10 +40,18 @@ const getStatusInPortuguese = (status: string) => {
 const formatDate = (dateString: string) => {
   try {
     const date = new Date(dateString);
-    return date.toLocaleDateString('pt-BR');
+    return date.toLocaleDateString("pt-BR");
   } catch {
     return dateString;
   }
+};
+
+// Função para verificar se o usuário pode ver informações técnicas
+const canViewTechnicalInfo = (userType: string | undefined) => {
+  // Recepcionistas não podem ver informações técnicas
+  if (userType === "RECEPCIONISTA") return false;
+  // Técnicos, chefes e administradores podem ver
+  return ["TECNICO", "CHEFE_LABORATORIO", "ADMIN"].includes(userType || "");
 };
 
 const SkeletonCard = () => (
@@ -113,6 +110,7 @@ const ExamCardModern = ({
   isLoadingTechData = false,
   patientName,
   onExamSaved,
+  canViewTechnicalInfo = false, // Nova prop
 }: {
   exam: any;
   onEdit: (exam: any) => void;
@@ -123,6 +121,7 @@ const ExamCardModern = ({
   isLoadingTechData?: boolean;
   patientName: string;
   onExamSaved?: () => void;
+  canViewTechnicalInfo?: boolean; // Nova prop
 }) => {
   const [isNextExamOpen, setIsNextExamOpen] = useState(false);
   const [isMaterialsModalOpen, setIsMaterialsModalOpen] = useState(false);
@@ -181,8 +180,6 @@ const ExamCardModern = ({
     }
   };
 
-  console.log("Pagameto",exam)
-
   return (
     <>
       <Card className="mb-4 hover:shadow-md transition-shadow">
@@ -190,14 +187,15 @@ const ExamCardModern = ({
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <h3 className="text-lg font-semibold text-gray-900">{exam.Tipo_Exame.nome}</h3>
-              <div className="relative group">
-                <Button variant="ghost" size="sm" onClick={handleEditClick} className="h-8 w-8 p-0">
-                  <Pencil className="h-4 w-4" />
-                </Button>
-                <span className="absolute cursor-pointer -left-8 top-8 mt-0 px-2 py-1 text-xs text-white bg-black rounded opacity-0 group-hover:opacity-100 transition-opacity">
-                  Editar
-                </span>
-              </div>
+              {/* Recepcionistas não podem editar agendamentos técnicos */}
+              {canViewTechnicalInfo && (
+                <div className="relative group">
+                  <Button variant="ghost" size="sm" onClick={handleEditClick} className="h-8 w-8 p-0">
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <span className="absolute cursor-pointer -left-8 top-8 mt-0 px-2 py-1 text-xs text-white bg-black rounded opacity-0 group-hover:opacity-100 transition-opacity">Editar</span>
+                </div>
+              )}
             </div>
             <Badge className={getStatusColor(exam.status)}>{getStatusInPortuguese(exam.status)}</Badge>
           </div>
@@ -218,9 +216,7 @@ const ExamCardModern = ({
               <div className="flex items-center space-x-2 text-sm">
                 <DollarSign className="h-4 w-4 text-gray-500" />
                 <span className="font-medium">Preço:</span>
-                <span className="font-semibold">
-                  {formatCurrency(exam.Tipo_Exame.preco)}
-                </span>
+                <span className="font-semibold">{formatCurrency(exam.Tipo_Exame.preco)}</span>
               </div>
             </div>
             <div className="space-y-3">
@@ -231,24 +227,22 @@ const ExamCardModern = ({
                   {getStatusInPortuguese(exam.status_pagamento)}
                 </Badge>
               </div>
-              <div className="flex items-center space-x-2 text-sm">
-                <UserCheck className="h-4 w-4 text-gray-500" />
-                <span className="font-medium">Chefe:</span>
-                {isLoadingTechData ? (
-                  <Skeleton className="h-4 w-24" />
-                ) : (
-                  <span className="truncate">{chiefName}</span>
-                )}
-              </div>
-              <div className="flex items-center space-x-2 text-sm">
-                <User className="h-4 w-4 text-gray-500" />
-                <span className="font-medium">Técnico:</span>
-                {isLoadingTechData ? (
-                  <Skeleton className="h-4 w-24" />
-                ) : (
-                  <span className="truncate">{techName}</span>
-                )}
-              </div>
+
+              {/* Apenas usuários autorizados podem ver informações técnicas */}
+              {canViewTechnicalInfo && (
+                <>
+                  <div className="flex items-center space-x-2 text-sm">
+                    <UserCheck className="h-4 w-4 text-gray-500" />
+                    <span className="font-medium">Chefe:</span>
+                    {isLoadingTechData ? <Skeleton className="h-4 w-24" /> : <span className="truncate">{chiefName}</span>}
+                  </div>
+                  <div className="flex items-center space-x-2 text-sm">
+                    <User className="h-4 w-4 text-gray-500" />
+                    <span className="font-medium">Técnico:</span>
+                    {isLoadingTechData ? <Skeleton className="h-4 w-24" /> : <span className="truncate">{techName}</span>}
+                  </div>
+                </>
+              )}
             </div>
           </div>
 
@@ -256,7 +250,7 @@ const ExamCardModern = ({
 
           <div className="flex justify-end">
             {canStart && (
-              <Button disabled = {exam.status_pagamento.toLowerCase()!=="pago"} onClick={handleStartExam} className="bg-teal-600 hover:bg-teal-700">
+              <Button disabled={exam.status_pagamento.toLowerCase() !== "pago"} onClick={handleStartExam} className="bg-teal-600 hover:bg-teal-700">
                 <Play className="h-4 w-4 mr-2" />
                 Começar
               </Button>
@@ -266,41 +260,34 @@ const ExamCardModern = ({
       </Card>
 
       {/* Modais */}
-      <AlerDialogNextExam
-        isOpen={isNextExamOpen}
-        onClose={() => setIsNextExamOpen(false)}
-        onIgnore={handleIgnoreProtocol}
-      />
+      <AlerDialogNextExam isOpen={isNextExamOpen} onClose={() => setIsNextExamOpen(false)} onIgnore={handleIgnoreProtocol} />
 
-      <MedicalMaterialsModal
-        isOpen={isMaterialsModalOpen}
-        onClose={() => setIsMaterialsModalOpen(false)}
-        exam_id={String(exam.id_tipo_exame)}
-        patient_name={patientName}
-        exam_name={exam.Tipo_Exame.nome}
-      />
+      <MedicalMaterialsModal isOpen={isMaterialsModalOpen} onClose={() => setIsMaterialsModalOpen(false)} exam_id={String(exam.id_tipo_exame)} patient_name={patientName} exam_name={exam.Tipo_Exame.nome} />
 
-      <EditScheduleFormModal
-        open={isEditModalOpen}
-        exam={{
-          id: exam.id,
-          name: exam.Tipo_Exame?.nome,
-          date: exam.data_agendamento,
-          time: exam.hora_agendamento,
-          technicianId: exam.id_tecnico_alocado,
-          chiefId: exam.Agendamento?.id_chefe_alocado,
-          status: exam.status,
-        }}
-        examId={exam.id}
-        techName={techName}
-        chiefName={chiefName}
-        onClose={() => setIsEditModalOpen(false)}
-        onSave={() => {
-          setIsEditModalOpen(false);
-          onExamSaved?.();
-        }}
-        active
-      />
+      {/* Apenas usuários autorizados podem acessar o modal de edição */}
+      {canViewTechnicalInfo && (
+        <EditScheduleFormModal
+          open={isEditModalOpen}
+          exam={{
+            id: exam.id,
+            name: exam.Tipo_Exame?.nome,
+            date: exam.data_agendamento,
+            time: exam.hora_agendamento,
+            technicianId: exam.id_tecnico_alocado,
+            chiefId: exam.Agendamento?.id_chefe_alocado,
+            status: exam.status,
+          }}
+          examId={exam.id}
+          techName={techName}
+          chiefName={chiefName}
+          onClose={() => setIsEditModalOpen(false)}
+          onSave={() => {
+            setIsEditModalOpen(false);
+            onExamSaved?.();
+          }}
+          active
+        />
+      )}
     </>
   );
 };
@@ -315,6 +302,7 @@ const ExamListItem = ({
   isLoadingTechData = false,
   patientName,
   onExamSaved,
+  canViewTechnicalInfo = false, // Nova prop
 }: {
   exam: any;
   onEdit: (exam: any) => void;
@@ -325,6 +313,7 @@ const ExamListItem = ({
   isLoadingTechData?: boolean;
   patientName: string;
   onExamSaved?: () => void;
+  canViewTechnicalInfo?: boolean; // Nova prop
 }) => {
   const [isNextExamOpen, setIsNextExamOpen] = useState(false);
   const [isMaterialsModalOpen, setIsMaterialsModalOpen] = useState(false);
@@ -391,14 +380,15 @@ const ExamListItem = ({
             </div>
             <div className="flex items-center space-x-2">
               <Badge className={getStatusColor(exam.status)}>{getStatusInPortuguese(exam.status)}</Badge>
-              <div className="relative group">
-                <Button variant="ghost" size="sm" onClick={handleEditClick} className="h-8 w-8 p-0">
-                  <Pencil className="h-4 w-4" />
-                </Button>
-                <span className="absolute cursor-pointer -left-8 top-8 mt-0 px-2 py-1 text-xs text-white bg-black rounded opacity-0 group-hover:opacity-100 transition-opacity">
-                  Editar
-                </span>
-              </div>
+              {/* Recepcionistas não podem editar agendamentos técnicos */}
+              {canViewTechnicalInfo && (
+                <div className="relative group">
+                  <Button variant="ghost" size="sm" onClick={handleEditClick} className="h-8 w-8 p-0">
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <span className="absolute cursor-pointer -left-8 top-8 mt-0 px-2 py-1 text-xs text-white bg-black rounded opacity-0 group-hover:opacity-100 transition-opacity">Editar</span>
+                </div>
+              )}
               {canStart && (
                 <Button disabled={false} size="sm" onClick={handleStartExam} className="bg-teal-600 hover:bg-teal-700">
                   <Play className="h-4 w-4 mr-1" />
@@ -411,41 +401,34 @@ const ExamListItem = ({
       </Card>
 
       {/* Modais */}
-      <AlerDialogNextExam
-        isOpen={isNextExamOpen}
-        onClose={() => setIsNextExamOpen(false)}
-        onIgnore={handleIgnoreProtocol}
-      />
+      <AlerDialogNextExam isOpen={isNextExamOpen} onClose={() => setIsNextExamOpen(false)} onIgnore={handleIgnoreProtocol} />
 
-      <MedicalMaterialsModal
-        isOpen={isMaterialsModalOpen}
-        onClose={() => setIsMaterialsModalOpen(false)}
-        exam_id={String(exam.id_tipo_exame)}
-        patient_name={patientName}
-        exam_name={exam.Tipo_Exame.nome}
-      />
+      <MedicalMaterialsModal isOpen={isMaterialsModalOpen} onClose={() => setIsMaterialsModalOpen(false)} exam_id={String(exam.id_tipo_exame)} patient_name={patientName} exam_name={exam.Tipo_Exame.nome} />
 
-      <EditScheduleFormModal
-        open={isEditModalOpen}
-        exam={{
-          id: exam.id,
-          name: exam.Tipo_Exame?.nome,
-          date: exam.data_agendamento,
-          time: exam.hora_agendamento,
-          technicianId: exam.id_tecnico_alocado,
-          chiefId: exam.Agendamento?.id_chefe_alocado,
-          status: exam.status,
-        }}
-        examId={exam.id}
-        techName={techName}
-        chiefName={chiefName}
-        onClose={() => setIsEditModalOpen(false)}
-        onSave={() => {
-          setIsEditModalOpen(false);
-          onExamSaved?.();
-        }}
-        active
-      />
+      {/* Apenas usuários autorizados podem acessar o modal de edição */}
+      {canViewTechnicalInfo && (
+        <EditScheduleFormModal
+          open={isEditModalOpen}
+          exam={{
+            id: exam.id,
+            name: exam.Tipo_Exame?.nome,
+            date: exam.data_agendamento,
+            time: exam.hora_agendamento,
+            technicianId: exam.id_tecnico_alocado,
+            chiefId: exam.Agendamento?.id_chefe_alocado,
+            status: exam.status,
+          }}
+          examId={exam.id}
+          techName={techName}
+          chiefName={chiefName}
+          onClose={() => setIsEditModalOpen(false)}
+          onSave={() => {
+            setIsEditModalOpen(false);
+            onExamSaved?.();
+          }}
+          active
+        />
+      )}
     </>
   );
 };
@@ -453,27 +436,31 @@ const ExamListItem = ({
 const UpcomingExams = () => {
   //@ts-ignore
   const { id } = useParams();
-  const [filter, setFilter] = useState('');
+  const [filter, setFilter] = useState("");
   const [viewMode, setViewMode] = useState<"card" | "list">("card");
   const { user } = useAuthStore();
+  const [, setIsProcessing] = useState(false);
+  const [, setIsExamSaved] = useState(false);
+  const [, setIsEditModalOpen] = useState(false);
+  const [, setSelectedExam] = useState<any>(null);
   const queryClient = useQueryClient();
 
   const { data, isPending } = useQuery({
     queryKey: ["next-exam"],
     queryFn: async () => {
       return await _axios.get<ResponseData>(`/exams/next/${id}`);
-    }
+    },
   });
 
   const userName = useQuery({
     queryKey: ["user-name"],
     queryFn: async () => {
       return await _axios.get(`/pacients/${id}`);
-    }
+    },
   });
 
   const { data: userData } = useQuery({
-    queryKey: ['user-data'],
+    queryKey: ["user-data"],
     queryFn: async () => {
       return await _axios.get<UserData>(`/users/${user?.id}`);
     },
@@ -483,32 +470,201 @@ const UpcomingExams = () => {
     queryKey: ["tech-lab"],
     queryFn: async () => {
       return await _axios.get<ILabTechnician[]>("/lab-technicians");
-    }
+    },
   });
 
   const getNameTech = (id: string | null) => {
-    if (id === null) return 'Não atribuído';
+    if (!id) return "Não atribuído";
     const tech = techLab.data?.data.find((tech) => tech.id === id);
-    return tech?.nome || 'Nome não encontrado';
+    return tech?.nome || "Nome não encontrado";
   };
 
-  const filteredData = filter
-    ? data?.data.data.filter((exam) =>
-      exam.Tipo_Exame.nome.toLowerCase().includes(filter.toLowerCase())
-    )
-    : data?.data.data;
+  const filteredData = filter ? data?.data.data.filter((exam) => exam.Tipo_Exame.nome.toLowerCase().includes(filter.toLowerCase())) : data?.data.data;
 
-  console.log("Filtered Data:", filteredData);
-
-  const handleEdit = (exam: any) => {
+  const handleEdit = async (exam: any) => {
     console.log("Edit exam:", exam);
     // Aqui você pode implementar a lógica de edição
-    // O modal será aberto pelos componentes individuais
+    try {
+      setIsProcessing(true);
+
+      const updateData = {
+        id: exam.id,
+        name: exam.name,
+        date: exam.date,
+        time: exam.time,
+        technicianId: exam.technicianId,
+        chiefId: exam.chiefId,
+        status: exam.status,
+        status_pagamento: exam.status_pagamento,
+      };
+      // O modal será aberto pelos componentes individuais
+      const response = await _axios.put(`/exams/${exam.id}`, updateData);
+      if (response.status === 200) {
+        toast.success("Exame atualizado com sucesso!");
+        handleExamSaved();
+      }
+    } catch (error: any) {
+      console.error("Erro ao editar exame:", error);
+      toast.error(error.response?.data?.message || "Erro ao atualizar exame");
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handleStart = (examId: string) => {
     console.log("Start exam:", examId);
     // Aqui você pode implementar a lógica para começar o exame
+  };
+
+  const handleEditField = async (examId: number, field: string, value: any) => {
+    try {
+      const updateData = {
+        [field]: value,
+      };
+
+      const response = await _axios.patch(`/exams/${examId}`, updateData);
+
+      if (response.status === 200) {
+        toast.success(`${field.replace("_", " ")} atualizado com sucesso!`);
+        queryClient.invalidateQueries({ queryKey: ["next-exam"] });
+        return true;
+      }
+    } catch (error: any) {
+      console.error(`Erro ao atualizar ${field}:`, error);
+      toast.error(error.response?.data?.message || `Erro ao atualizar ${field}`);
+      return false;
+    }
+  };
+
+  // Para editar o técnico alocado:
+  const handleEditTechnician = async (examId: number, technicianId: string | null) => {
+    return handleEditField(examId, "id_tecnico_alocado", technicianId);
+  };
+
+  // Para editar o chefe alocado:
+  const handleEditChief = async (examId: number, chiefId: string | null) => {
+    return handleEditField(examId, "id_chefe_alocado", chiefId);
+  };
+
+  // Para editar o status do exame:
+  const handleEditStatus = async (examId: number, status: string) => {
+    const statusMap: Record<string, string> = {
+      pendente: "PENDENTE",
+      em_andamento: "EM_ANDAMENTO",
+      concluido: "CONCLUIDO",
+      cancelado: "CANCELADO",
+    };
+
+    const normalizedStatus = statusMap[status.toLowerCase()] || status;
+    return handleEditField(examId, "status", normalizedStatus);
+  };
+
+  // Para editar o status de pagamento:
+  const handleEditPaymentStatus = async (examId: number, paymentStatus: string) => {
+    const paymentMap: Record<string, string> = {
+      pago: "PAGO",
+      pendente: "PENDENTE",
+      nao_pago: "NAO_PAGO",
+    };
+
+    const normalizedPayment = paymentMap[paymentStatus.toLowerCase()] || paymentStatus;
+    return handleEditField(examId, "status_pagamento", normalizedPayment);
+  };
+
+  // Para editar data e hora:
+  const handleEditDateTime = async (examId: number, date: string, time: string) => {
+    try {
+      const updateData = {
+        data_agendamento: date,
+        hora_agendamento: time,
+      };
+
+      const response = await _axios.patch(`/exams/${examId}`, updateData);
+
+      if (response.status === 200) {
+        toast.success("Data e hora atualizadas com sucesso!");
+        queryClient.invalidateQueries({ queryKey: ["next-exam"] });
+        return true;
+      }
+    } catch (error: any) {
+      console.error("Erro ao atualizar data/hora:", error);
+      toast.error(error.response?.data?.message || "Erro ao atualizar agendamento");
+      return false;
+    }
+  };
+
+  // Função de callback quando o modal é salvo (para usar no EditScheduleFormModal)
+  const handleModalSave = async (examData: any) => {
+    try {
+      console.log("Saving exam data:", examData);
+
+      // Atualizar múltiplos campos
+      const updatePromises = [];
+
+      if (examData.technicianId !== undefined) {
+        updatePromises.push(handleEditTechnician(examData.id, examData.technicianId));
+      }
+
+      if (examData.chiefId !== undefined) {
+        updatePromises.push(handleEditChief(examData.id, examData.chiefId));
+      }
+
+      if (examData.status !== undefined) {
+        updatePromises.push(handleEditStatus(examData.id, examData.status));
+      }
+
+      if (examData.date && examData.time) {
+        updatePromises.push(handleEditDateTime(examData.id, examData.date, examData.time));
+      }
+
+      // Executar todas as atualizações
+      await Promise.all(updatePromises);
+
+      // Se houver um callback de sucesso
+      handleExamSaved();
+      toast.success("Exame atualizado com sucesso!");
+
+      return true;
+    } catch (error) {
+      console.error("Erro ao salvar alterações:", error);
+      return false;
+    }
+  };
+
+  // Versão simplificada se você só precisa da função básica
+  const handleEditSimple = async (examId: number, updatedFields: Record<string, any>) => {
+    try {
+      const response = await _axios.patch(`/exams/${examId}`, updatedFields);
+
+      if (response.status === 200) {
+        toast.success("Exame atualizado com sucesso!");
+        queryClient.invalidateQueries({ queryKey: ["next-exam"] });
+        return true;
+      }
+    } catch (error: any) {
+      console.error("Erro ao editar exame:", error);
+      toast.error(error.response?.data?.message || "Erro ao atualizar exame");
+      return false;
+    }
+  };
+
+  // Exemplo de uso no seu componente:
+  const handleEditClick = (exam: any) => {
+    // Preparar dados para o modal
+    const examData = {
+      id: exam.id,
+      name: exam.Tipo_Exame?.nome,
+      date: exam.data_agendamento,
+      time: exam.hora_agendamento,
+      technicianId: exam.id_tecnico_alocado,
+      chiefId: exam.Agendamento?.id_chefe_alocado,
+      status: exam.status,
+      status_pagamento: exam.status_pagamento,
+    };
+
+    // Abrir modal ou processar diretamente
+    setIsEditModalOpen(true);
+    setSelectedExam(examData);
   };
 
   const handleExamSaved = () => {
@@ -528,8 +684,12 @@ const UpcomingExams = () => {
   };
 
   const canUserStartExam = () => {
-    return userData?.data?.tipo !== 'TECNICO' && userData?.data?.tipo !== 'RECEPCIONISTA';
+    if (userData?.data?.tipo === "RECEPCIONISTA") return false;
+    return userData?.data?.tipo !== "TECNICO";
   };
+
+  // Verifica se o usuário pode ver informações técnicas
+  const userCanViewTechnicalInfo = canViewTechnicalInfo(userData?.data?.tipo);
 
   return (
     <div className="min-h-screen bg-gray-50 p-4">
@@ -542,19 +702,11 @@ const UpcomingExams = () => {
               <div className="flex items-center space-x-4">
                 <Avatar className="h-12 w-12">
                   <AvatarImage src="/placeholder-user.jpg" />
-                  <AvatarFallback className="bg-teal-100 text-teal-700">
-                    {getInitials(userName.data?.data.nome_completo || "")}
-                  </AvatarFallback>
+                  <AvatarFallback className="bg-teal-100 text-teal-700">{getInitials(userName.data?.data.nome_completo || "")}</AvatarFallback>
                 </Avatar>
                 <div>
                   <Label className="text-sm font-medium text-gray-600">Paciente</Label>
-                  <p className="text-lg font-semibold text-gray-900">
-                    {userName.isLoading ? (
-                      <Skeleton className="h-6 w-48" />
-                    ) : (
-                      userName.data?.data.nome_completo || "Nome não encontrado"
-                    )}
-                  </p>
+                  <p className="text-lg font-semibold text-gray-900">{userName.isLoading ? <Skeleton className="h-6 w-48" /> : userName.data?.data.nome_completo || "Nome não encontrado"}</p>
                 </div>
               </div>
 
@@ -562,28 +714,14 @@ const UpcomingExams = () => {
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-3 sm:space-y-0 sm:space-x-4">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <Input
-                    type="text"
-                    placeholder="Buscar exames..."
-                    className="pl-10 w-full sm:w-64"
-                    value={filter}
-                    onChange={(e) => setFilter(e.target.value)}
-                  />
+                  <Input type="text" placeholder="Buscar exames..." className="pl-10 w-full sm:w-64" value={filter} onChange={(e) => setFilter(e.target.value)} />
                 </div>
 
                 <div className="flex items-center space-x-2 bg-gray-100 rounded-lg p-1">
-                  <Toggle
-                    pressed={viewMode === "card"}
-                    onPressedChange={() => setViewMode("card")}
-                    className="data-[state=on]:bg-white data-[state=on]:shadow-sm"
-                  >
+                  <Toggle pressed={viewMode === "card"} onPressedChange={() => setViewMode("card")} className="data-[state=on]:bg-white data-[state=on]:shadow-sm">
                     <Grid3X3 className="h-4 w-4" />
                   </Toggle>
-                  <Toggle
-                    pressed={viewMode === "list"}
-                    onPressedChange={() => setViewMode("list")}
-                    className="data-[state=on]:bg-white data-[state=on]:shadow-sm"
-                  >
+                  <Toggle pressed={viewMode === "list"} onPressedChange={() => setViewMode("list")} className="data-[state=on]:bg-white data-[state=on]:shadow-sm">
                     <List className="h-4 w-4" />
                   </Toggle>
                 </div>
@@ -602,11 +740,7 @@ const UpcomingExams = () => {
           </div>
 
           {isPending ? (
-            <div className="space-y-4">
-              {[...Array(3)].map((_, i) => (
-                viewMode === "card" ? <SkeletonCard key={i} /> : <SkeletonList key={i} />
-              ))}
-            </div>
+            <div className="space-y-4">{[...Array(3)].map((_, i) => (viewMode === "card" ? <SkeletonCard key={i} /> : <SkeletonList key={i} />))}</div>
           ) : (
             <div className="space-y-2">
               {filteredData?.map((exam) =>
@@ -622,6 +756,7 @@ const UpcomingExams = () => {
                     isLoadingTechData={techLab.isLoading}
                     patientName={userName.data?.data.nome_completo || ""}
                     onExamSaved={handleExamSaved}
+                    canViewTechnicalInfo={userCanViewTechnicalInfo} // Passa a informação
                   />
                 ) : (
                   <ExamListItem
@@ -635,8 +770,9 @@ const UpcomingExams = () => {
                     isLoadingTechData={techLab.isLoading}
                     patientName={userName.data?.data.nome_completo || ""}
                     onExamSaved={handleExamSaved}
+                    canViewTechnicalInfo={userCanViewTechnicalInfo} // Passa a informação
                   />
-                ),
+                )
               )}
             </div>
           )}
@@ -646,9 +782,7 @@ const UpcomingExams = () => {
               <CardContent className="py-12 text-center">
                 <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum exame encontrado</h3>
-                <p className="text-gray-600">
-                  {filter ? "Tente ajustar os filtros de busca." : "Não há exames agendados para este paciente."}
-                </p>
+                <p className="text-gray-600">{filter ? "Tente ajustar os filtros de busca." : "Não há exames agendados para este paciente."}</p>
               </CardContent>
             </Card>
           )}
