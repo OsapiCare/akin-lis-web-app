@@ -9,7 +9,6 @@ interface PatientStatsProps {
 }
 
 export function PatientStats({ patient, totalExams = 0, pendingExams = 0 }: PatientStatsProps) {
-  console.log("Data: ", patient);
   const calculateDaysSinceLastVisit = (date: string) => {
     if (!date) return 0; // Retorna 0 se a data não estiver definida
     const lastVisit = new Date(date);
