@@ -17,7 +17,7 @@ interface ExamsType {
 }
 
 interface Tipo_Exame {
-  id: number;
+  id: string;
   nome: string;
   preco: number;
 }

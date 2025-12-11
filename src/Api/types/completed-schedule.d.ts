@@ -1,7 +1,7 @@
 interface CompletedScheduleType extends ScheduleType {
   status: "CONCLUIDO";
   id_recepcionista?: string | null;
-  id_chefe_alocado?: string | null;
+  id_chefe_alocado?: string | undefined;
   criado_aos: string;
   atualizado_aos: string;
   Paciente: PatientType & {
@@ -10,13 +10,14 @@ interface CompletedScheduleType extends ScheduleType {
     };
   };
   Exame: CompletedExamType[];
+  status_pagamento: "PENDENTE" | "PAGO" | "CANCELADO";  
 }
 
 interface CompletedExamType extends ExamsType {
   status: "PENDENTE" | "CANCELADO" | "CONCLUIDO" | "POR_REAGENDAR";
   duracao?: number | null;
   status_pagamento: "PENDENTE" | "PAGO" | "CANCELADO";
-  id_tecnico_alocado: string | null;
+  id_tecnico_alocado: string | undefined;
 }
 
 interface CompletedScheduleFilters {

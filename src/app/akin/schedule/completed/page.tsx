@@ -250,12 +250,6 @@ export default function CompletedSchedulesPage() {
                   <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                       <tr className="w-full">
-                        {/* <th className="w-12 px-4 py-3">
-                          <Checkbox
-                            checked={selectedSchedules.length === filteredSchedules.length}
-                            onCheckedChange={handleSelectAll}
-                          />
-                        </th> */}
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           <div className="flex items-center gap-1">
                             <User className="w-3 h-3" />
