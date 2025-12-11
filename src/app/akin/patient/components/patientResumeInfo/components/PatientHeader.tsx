@@ -56,7 +56,7 @@ export function PatientHeader({ patient, personalInfo, canEdit, onEdit }: Patien
               </div>
               <div className="flex items-center gap-2 text-sm text-gray-600">
                 <Calendar className="w-4 h-4" />
-                <span>Última visita: {new Date(patient.data_ultima_visita).toLocaleDateString("pt-BR")}</span>
+                <span>Última visita: {patient.data_ultima_visita ?? new Date(patient.data_ultima_visita).toLocaleDateString("pt-BR")}</span>
               </div>
             </div>
           </div>

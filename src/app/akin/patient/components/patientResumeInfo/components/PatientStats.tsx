@@ -9,7 +9,7 @@ interface PatientStatsProps {
 }
 
 export function PatientStats({ patient, totalExams = 0, pendingExams = 0 }: PatientStatsProps) {
-  console.log("patient",patient)
+  console.log("Data: ", patient);
   const calculateDaysSinceLastVisit = (date: string) => {
     if (!date) return 0; // Retorna 0 se a data não estiver definida
     const lastVisit = new Date(date);
@@ -27,7 +27,8 @@ export function PatientStats({ patient, totalExams = 0, pendingExams = 0 }: Pati
     return diffDays;
   };
 
-  const daysSinceLastVisit = calculateDaysSinceLastVisit(patient.data_ultima_visita);
+  const daysSinceLastVisit = patient.dias_desde_ultima_visita;
+  const dateSinceLastVisit = calculateDaysSinceLastVisit(patient.data_ultima_visita);
   const daysSinceRegistration = calculateDaysSinceRegistration(patient.criado_aos.toString());
 
   const stats = [
