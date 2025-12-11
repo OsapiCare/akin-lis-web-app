@@ -10,7 +10,7 @@ import { ExamCard } from "../utils/exam-history/exam-card";
 import { PatientByIdProfileSkeleton } from "../utils/exam-history/patientByIdProfileSkeleton";
 import { useQuery } from "@tanstack/react-query";
 import { DatePickerWithRange } from "@/components/ui/date-picker";
-import { isWithinInterval, startOfDay, endOfDay } from "date-fns";
+import { isWithinInterval } from "date-fns";
 import "react-day-picker/dist/style.css";
 import { _axios } from "@/Api/axios.config";
 import { IExamProps } from "@/module/types";
@@ -81,10 +81,7 @@ export default function ExamsHistory() {
 
     const fetchData = async () => {
       try {
-        const [patientData, examTypes] = await Promise.all([
-          _axios.get(`/pacients/${id}`),
-          _axios.get("/exam-types")
-        ]);
+        const [patientData, examTypes] = await Promise.all([_axios.get(`/pacients/${id}`), _axios.get("/exam-types")]);
 
         setNamePatient(patientData.data.nome_completo);
         setExams(examTypes.data.data);
@@ -101,34 +98,21 @@ export default function ExamsHistory() {
     if (!historyExams.data?.data) return;
 
     const filtered = historyExams.data.data.filter((exam) => {
-      // Se o filtro de data não está habilitado, inclui todos os exames
-      if (!filters.isDateFilterEnabled) {
-        return true;
-      }
+      const isWithinDateRange =
+        !filters.isDateFilterEnabled ||
+        (filters.selectedDateRange &&
+          filters.selectedDateRange.from &&
+          filters.selectedDateRange.to &&
+          isWithinInterval(new Date(exam.data_agendamento), {
+            start: filters.selectedDateRange.from,
+            end: new Date(filters.selectedDateRange.to.setHours(23, 59, 59, 999)),
+          }));
 
-      // Se não há intervalo de datas definido, inclui todos os exames
-      if (!filters.selectedDateRange || 
-          !filters.selectedDateRange.from || 
-          !filters.selectedDateRange.to) {
-        return true;
-      }
-
-      // Normaliza as datas para comparar apenas o dia (ignorando hora)
-      const examDate = new Date(exam.data_agendamento);
-      const examDateOnly = startOfDay(examDate); // Início do dia do exame
-      
-      const filterStartDate = startOfDay(filters.selectedDateRange.from);
-      const filterEndDate = endOfDay(filters.selectedDateRange.to); // Fim do dia do filtro
-
-      // Verifica se a data do exame está dentro do intervalo
-      const isWithinDateRange = examDateOnly >= filterStartDate && examDateOnly <= filterEndDate;
-
-      // Verifica outros filtros
       const matchesType = !filters.selectedExam || exam.Tipo_Exame.nome === filters.selectedExam.nome;
+
       const matchesStatus = !filters.statusFilter || exam.status.toLowerCase() === filters.statusFilter.toLowerCase();
-      const matchesSearch = !filters.searchTerm || 
-        exam.Tipo_Exame.nome.toLowerCase().includes(filters.searchTerm.toLowerCase()) || 
-        exam.status.toLowerCase().includes(filters.searchTerm.toLowerCase());
+
+      const matchesSearch = !filters.searchTerm || exam.Tipo_Exame.nome.toLowerCase().includes(filters.searchTerm.toLowerCase()) || exam.status.toLowerCase().includes(filters.searchTerm.toLowerCase());
 
       return isWithinDateRange && matchesType && matchesStatus && matchesSearch;
     });
@@ -138,49 +122,36 @@ export default function ExamsHistory() {
 
   // Filter handlers
   const handleDateChange = (date: Date | DateRange | undefined) => {
-    if (!date) {
-      setFilters(prev => ({
-        ...prev,
-        selectedDateRange: undefined,
-        isDateFilterEnabled: false
-      }));
-      return;
-    }
+    if (!date) return;
 
     if ((date as DateRange).from && (date as DateRange).to) {
       const range = date as DateRange;
-      setFilters(prev => ({
+      setFilters((prev) => ({
         ...prev,
-        selectedDateRange: {
-          from: range.from,
-          to: range.to
-        },
-        isDateFilterEnabled: true
+        startDate: range.from,
+        endDate: range.to,
       }));
     }
 
     if (date instanceof Date) {
-      setFilters(prev => ({
+      setFilters((prev) => ({
         ...prev,
-        selectedDateRange: {
-          from: date,
-          to: date
-        },
-        isDateFilterEnabled: true
+        startDate: date,
+        endDate: date,
       }));
     }
   };
 
   const handleExamSelect = (exam: IExamProps | null) => {
-    setFilters(prev => ({ ...prev, selectedExam: exam }));
+    setFilters((prev) => ({ ...prev, selectedExam: exam }));
   };
 
   const handleStatusChange = (status: string | null) => {
-    setFilters(prev => ({ ...prev, statusFilter: status }));
+    setFilters((prev) => ({ ...prev, statusFilter: status }));
   };
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFilters(prev => ({ ...prev, searchTerm: e.target.value }));
+    setFilters((prev) => ({ ...prev, searchTerm: e.target.value }));
   };
 
   const clearAllFilters = () => {
@@ -214,9 +185,7 @@ export default function ExamsHistory() {
         <Card className="w-full max-w-md">
           <CardHeader>
             <CardTitle className="text-destructive">Erro</CardTitle>
-            <CardDescription>
-              Ocorreu um erro ao carregar os dados do histórico de exames.
-            </CardDescription>
+            <CardDescription>Ocorreu um erro ao carregar os dados do histórico de exames.</CardDescription>
           </CardHeader>
         </Card>
       </View.Vertical>
@@ -256,67 +225,32 @@ export default function ExamsHistory() {
               <Label htmlFor="search">Buscar</Label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  id="search"
-                  placeholder="Buscar por exame ou status..."
-                  value={filters.searchTerm}
-                  onChange={handleSearchChange}
-                  className="pl-9"
-                />
+                <Input id="search" placeholder="Buscar por exame ou status..." value={filters.searchTerm} onChange={handleSearchChange} className="pl-9" />
               </div>
             </div>
+
             {/* Date Range Filter */}
             <div className="space-y-2">
               <Label>Data</Label>
-              <DatePickerWithRange
-                enableRange={true}
-                enableDateFilter={filters.isDateFilterEnabled}
-                onDateChange={handleDateChange}
-                setEnableDateFilter={(enable) => 
-                  setFilters(prev => ({ 
-                    ...prev, 
-                    isDateFilterEnabled: enable,
-                    // selectedDateRange: enable ? prev.selectedDateRange : undefined
-                  }))
-                }
-                placeholderText="Selecionar período"
-                // date={filters.selectedDateRange}
-              />
+              <DatePickerWithRange enableRange={true} enableDateFilter={true} onDateChange={handleDateChange} setEnableDateFilter={(enable) => setFilters((prev) => ({ ...prev, isDateFilterEnabled: enable }))} placeholderText="Selecionar período" />
             </div>
+
             {/* Status Filter */}
             <div className="space-y-2">
               <Label>Status</Label>
-              <Combobox
-                data={statusOptions}
-                displayKey="label"
-                onSelect={(item) => handleStatusChange(item?.value || null)}
-                selectedValue={statusOptions.find(opt => opt.value === filters.statusFilter) || null}
-                placeholder="Filtrar por status"
-                clearLabel="Limpar"
-              />
+              <Combobox data={statusOptions} displayKey="label" onSelect={(item) => handleStatusChange(item?.value || null)} selectedValue={statusOptions.find((opt) => opt.value === filters.statusFilter) || null} placeholder="Filtrar por status" clearLabel="Limpar" />
             </div>
 
             {/* Exam Type Filter */}
             <div className="space-y-2">
               <Label>Tipo de Exame</Label>
-              <Combobox
-                data={exams}
-                displayKey="nome"
-                onSelect={handleExamSelect}
-                selectedValue={filters.selectedExam}
-                placeholder="Selecionar exame"
-                clearLabel="Limpar"
-              />
+              <Combobox data={exams} displayKey="nome" onSelect={handleExamSelect} selectedValue={filters.selectedExam} placeholder="Selecionar exame" clearLabel="Limpar" />
             </div>
           </div>
 
           {/* Clear Filters Button */}
           <div className="mt-4 flex justify-end">
-            <Button
-              variant="outline"
-              onClick={clearAllFilters}
-              className="flex items-center gap-2"
-            >
+            <Button variant="outline" onClick={clearAllFilters} className="flex items-center gap-2">
               <Filter className="h-4 w-4" />
               Limpar Filtros
             </Button>
@@ -345,12 +279,8 @@ export default function ExamsHistory() {
           ) : (
             <div className="text-center py-12">
               <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-600 text-lg font-medium">
-                Nenhum exame encontrado
-              </p>
-              <p className="text-gray-500 text-sm mt-2">
-                Ajuste os filtros para encontrar os exames desejados
-              </p>
+              <p className="text-gray-600 text-lg font-medium">Nenhum exame encontrado</p>
+              <p className="text-gray-500 text-sm mt-2">Ajuste os filtros para encontrar os exames desejados</p>
             </div>
           )}
         </CardContent>

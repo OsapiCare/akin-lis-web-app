@@ -14,16 +14,17 @@ interface DatePickerWithRangeProps extends React.HTMLAttributes<HTMLDivElement> 
   dateFormat?: string;
   placeholderText?: string;
   enableRange?: boolean;
-  onDateChange?: (date: Date | DateRange | undefined) => void;
+  onDateChange?: (date:Date | DateRange | undefined) => void;
   enableDateFilter?: boolean;
   setEnableDateFilter?: (enable: boolean) => void;
+  showClearButton?: boolean;
+  value?: DateRange; // Nova prop para controle externo
 }
 
 export type SelectedRange = {
   from?: Date;
   to?: Date;
 };
-
 
 export function DatePickerWithRange({
   className,
@@ -34,32 +35,39 @@ export function DatePickerWithRange({
   onDateChange,
   enableDateFilter = true,
   setEnableDateFilter,
+  showClearButton = true,
+  value, // Nova prop
 }: DatePickerWithRangeProps) {
-  const [singleDate, setSingleDate] = React.useState<Date | undefined>(
-    !enableRange && defaultDate instanceof Date ? defaultDate : undefined
-  );
+  // Se value for fornecido, use-o; caso contrário, use estado interno
+  const [internalDate, setInternalDate] = React.useState<Date | undefined>(!enableRange && defaultDate instanceof Date ? defaultDate : undefined);
 
-  const [rangeDate, setRangeDate] = React.useState<DateRange | undefined>(
-    enableRange && defaultDate && "from" in (defaultDate as DateRange)
-      ? (defaultDate as DateRange)
-      : undefined
-  );
+  const [internalRangeDate, setInternalRangeDate] = React.useState<DateRange | undefined>(enableRange && defaultDate && "from" in (defaultDate as DateRange) ? (defaultDate as DateRange) : undefined);
+
+  // Usar valor externo se fornecido, caso contrário usar estado interno
+  const singleDate = value && "from" in value ? undefined : (value as any) || internalDate;
+  const rangeDate = value && "from" in value ? (value as DateRange) : internalRangeDate;
 
   const handleSingleDateChange = (date: Date | undefined) => {
-    setSingleDate(date);
+    if (!value) {
+      setInternalDate(date);
+    }
     onDateChange?.(date);
     if (date && setEnableDateFilter) setEnableDateFilter(true);
   };
 
   const handleRangeDateChange = (range: DateRange | undefined) => {
-    setRangeDate(range);
+    if (!value) {
+      setInternalRangeDate(range);
+    }
     onDateChange?.(range);
     if (setEnableDateFilter) setEnableDateFilter(!!range);
   };
 
   const clearDates = () => {
-    setSingleDate(undefined);
-    setRangeDate(undefined);
+    if (!value) {
+      setInternalDate(undefined);
+      setInternalRangeDate(undefined);
+    }
     onDateChange?.(undefined);
     if (setEnableDateFilter) setEnableDateFilter(false);
   };
@@ -78,13 +86,7 @@ export function DatePickerWithRange({
     <div className={cn("grid gap-2 w-full", className)}>
       <Popover>
         <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            className={cn(
-              "w-full justify-start text-left font-normal",
-              !singleDate && !rangeDate && "text-muted-foreground"
-            )}
-          >
+          <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !singleDate && !rangeDate && "text-muted-foreground")}>
             <CalendarIcon className="mr-2 h-4 w-4" />
             {displayText}
           </Button>
@@ -94,31 +96,17 @@ export function DatePickerWithRange({
           {enableDateFilter && (
             <>
               {enableRange ? (
-                <Calendar
-                  initialFocus
-                  mode="range"
-                  defaultMonth={rangeDate?.from || new Date()}
-                  selected={rangeDate}
-                  onSelect={handleRangeDateChange}
-                  numberOfMonths={2}
-                  className="w-full"
-                />
+                <Calendar initialFocus mode="range" defaultMonth={rangeDate?.from || new Date()} selected={rangeDate} onSelect={handleRangeDateChange} numberOfMonths={2} className="w-full" />
               ) : (
-                <Calendar
-                  initialFocus
-                  mode="single"
-                  defaultMonth={singleDate || new Date()}
-                  selected={singleDate}
-                  onSelect={handleSingleDateChange}
-                  numberOfMonths={1}
-                  className="w-full"
-                />
+                <Calendar initialFocus mode="single" defaultMonth={singleDate || new Date()} selected={singleDate} onSelect={handleSingleDateChange} numberOfMonths={1} className="w-full" />
               )}
             </>
           )}
-          <Button variant="outline" className="w-full mt-2" onClick={clearDates}>
-            Limpar Datas
-          </Button>
+          {showClearButton && (
+            <Button variant="outline" className="w-full mt-2" onClick={clearDates}>
+              Limpar Datas
+            </Button>
+          )}
         </PopoverContent>
       </Popover>
     </div>

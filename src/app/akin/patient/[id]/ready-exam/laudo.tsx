@@ -245,12 +245,12 @@ export const LaudoModal = ({ laudoModalOpen, setLaudoModalOpen }: LaudoModalProp
       alert('Link copiado para a área de transferência!');
     },
     whatsapp: () => {
-      const mensagem = encodeURIComponent(`Confira o laudo de ${reportData.patient.name}: https://meuslaudos.com/laudo/${reportData.patient.id}`);
+      const mensagem = encodeURIComponent(`Confira o laudo de ${reportData.patient.name}: https://meuslaudos.com/${reportData.patient.id}`);
       window.open(`https://wa.me/?text=${mensagem}`, '_blank');
     },
     email: () => {
       const assunto = encodeURIComponent('Laudo Médico');
-      const corpo = encodeURIComponent(`Segue o laudo de ${reportData.patient.name}: https://meuslaudos.com/laudo/${reportData.patient.id}`);
+      const corpo = encodeURIComponent(`Segue o laudo de ${reportData.patient.name}: https://meuslaudos.com/${reportData.patient.id}`);
       window.location.href = `mailto:?subject=${assunto}&body=${corpo}`;
     }
   };

@@ -11,7 +11,7 @@ import AutomatedAnalysis from "../modalAutomatiImage";
 import { ManualExam } from "../manualExam";
 import { ImageModal, Shape } from "../components/selectedCaptureImages";
 import { CapturedImages } from "../components/listCaptureImages";
-import { LaudoModal } from "../laudo";
+import { LaudoModal } from "..";
 import { _axios } from "@/Api/axios.config";
 import {
   User,
