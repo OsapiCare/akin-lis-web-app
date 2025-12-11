@@ -17,7 +17,7 @@ interface PatientSelectionModalProps {
   isLoading: boolean;
 }
 
-export async function PatientSelectionModal({
+export function PatientSelectionModal({
   isOpen,
   onClose,
   onPatientSelected,
@@ -25,12 +25,32 @@ export async function PatientSelectionModal({
   isLoading
 }: PatientSelectionModalProps) {
   const [searchTerm, setSearchTerm] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
 
+  // Remove the async function or move it to useEffect
+  useEffect(() => {
+    const allPatients = async () => {
+      setIsSaving(true);
+      try {
+        const patient = await _axios.get("/pacients");
+        console.log("Pacientes: ", patient.data);
+      } catch (error) {
+        toast.error("Erro ao buscar pacientes");
+        console.error("Erro ao buscar pacientes:", error);
+      } finally {
+        setIsSaving(false);
+      }
+    };
+    
+    // Call if needed
+    // allPatients();
+  }, []);
 
   const filteredPatients = patients?.filter((p: any) =>
     p.nome_completo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     p.numero_identificacao?.toLowerCase().includes(searchTerm.toLowerCase())
   );
+  
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-3xl">
@@ -82,7 +102,7 @@ export async function PatientSelectionModal({
                         </p>
                       </div>
                     </div>
-                    <Badge  className="ml-2">
+                    <Badge className="ml-2">
                       Selecionar
                     </Badge>
                   </button>
