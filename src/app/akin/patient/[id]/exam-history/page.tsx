@@ -4,25 +4,23 @@ import { useParams } from "next/navigation";
 import { View } from "@/components/view";
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { DatePickerWithRange } from "@/components/ui/date-picker";
 import { isWithinInterval } from "date-fns";
 import { _axios } from "@/Api/axios.config";
 import { IExamProps } from "@/module/types";
-import { ExamCard } from "@/app/akin/patient/[id]/utils/exam-history/exam-card";
-import { PatientByIdProfileSkeleton } from "@/app/akin/patient/[id]/utils/exam-history/patientByIdProfileSkeleton";
+import { DatePickerWithRange } from "@/components/ui/date-picker";
 import { Combobox } from "@/components/combobox/comboboxExam";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 import { Calendar, Filter, Search, User } from "lucide-react";
+import { ExamCard } from "@/app/akin/patient/[id]/utils/exam-history/exam-card";
+import { PatientByIdProfileSkeleton } from "@/app/akin/patient/[id]/utils/exam-history/patientByIdProfileSkeleton";
 
-// Tipos
-type DateRange = {
-  from?: Date;
-  to?: Date;
-};
+// --- Types ---
+type DateRange = { from?: Date; to?: Date };
 
 interface ExamData {
   id: number;
@@ -30,15 +28,8 @@ interface ExamData {
   hora_agendamento: string;
   status: string;
   status_pagamento: string;
-  Tipo_Exame: {
-    nome: string;
-    descricao: string;
-    preco: number;
-  };
-  Agendamento: {
-    id_unidade_de_saude: number;
-    id_tecnico_alocado: string | null;
-  };
+  Tipo_Exame: { nome: string; descricao: string; preco: number };
+  Agendamento: { id_unidade_de_saude: number; id_tecnico_alocado: string | null };
 }
 
 interface ExamHistoryFilters {
@@ -49,6 +40,7 @@ interface ExamHistoryFilters {
   searchTerm: string;
 }
 
+// --- Component ---
 export default function ExamsHistory() {
   const { id } = useParams<{ id: string }>();
   const [namePatient, setNamePatient] = useState<string>("");
@@ -62,39 +54,41 @@ export default function ExamsHistory() {
   });
   const [filteredExams, setFilteredExams] = useState<ExamData[]>([]);
 
-  // Histórico de exames
+  // --- Fetch history ---
   const historyExams = useQuery({
     queryKey: ["exams-history", id],
     queryFn: async () => {
-      const response = await _axios.get<ExamData[]>(`/exams/history/${id}`);
+      const response = await _axios.get(`/exams/history/${id}`);
       return response.data;
     },
     enabled: !!id,
   });
 
-  // Buscar paciente e tipos de exames
+  // --- Fetch patient & exam types ---
   useEffect(() => {
     if (!id) return;
+
     const fetchData = async () => {
       try {
-        const [patientData, examTypes] = await Promise.all([
-          _axios.get(`/pacients/${id}`),
-          _axios.get("/exam-types"),
-        ]);
+        const [patientData, examTypes] = await Promise.all([_axios.get(`/pacients/${id}`), _axios.get("/exam-types")]);
         setNamePatient(patientData.data.nome_completo);
         setExams(examTypes.data.data);
-      } catch (error) {
-        console.error("Error fetching data:", error);
+      } catch (err) {
+        console.error("Error fetching patient or exam types:", err);
       }
     };
+
     fetchData();
   }, [id]);
 
-  // Filtragem dos exames
+  // --- Filter exams ---
   useEffect(() => {
     if (!historyExams.data) return;
 
-    const filtered = historyExams.data.filter((exam) => {
+    // Garantir que temos um array
+    const examsArray: ExamData[] = Array.isArray(historyExams.data.data) ? historyExams.data.data : [];
+
+    const filtered = examsArray.filter((exam) => {
       const isWithinDateRange =
         !filters.isDateFilterEnabled ||
         (filters.selectedDateRange?.from &&
@@ -106,10 +100,7 @@ export default function ExamsHistory() {
 
       const matchesType = !filters.selectedExam || exam.Tipo_Exame.nome === filters.selectedExam.nome;
       const matchesStatus = !filters.statusFilter || exam.status.toLowerCase() === filters.statusFilter.toLowerCase();
-      const matchesSearch =
-        !filters.searchTerm ||
-        exam.Tipo_Exame.nome.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
-        exam.status.toLowerCase().includes(filters.searchTerm.toLowerCase());
+      const matchesSearch = !filters.searchTerm || exam.Tipo_Exame.nome.toLowerCase().includes(filters.searchTerm.toLowerCase()) || exam.status.toLowerCase().includes(filters.searchTerm.toLowerCase());
 
       return isWithinDateRange && matchesType && matchesStatus && matchesSearch;
     });
@@ -117,24 +108,21 @@ export default function ExamsHistory() {
     setFilteredExams(filtered);
   }, [filters, historyExams.data]);
 
-  // Handlers de filtros
+  // --- Handlers ---
   const handleDateChange = (date: Date | DateRange | undefined) => {
     if (!date) return;
     if ((date as DateRange).from && (date as DateRange).to) {
       const range = date as DateRange;
-      setFilters((prev) => ({ ...prev, selectedDateRange: { from: range.from, to: range.to } }));
-    }
-    if (date instanceof Date) {
+      setFilters((prev) => ({ ...prev, selectedDateRange: range }));
+    } else if (date instanceof Date) {
       setFilters((prev) => ({ ...prev, selectedDateRange: { from: date, to: date } }));
     }
   };
 
   const handleExamSelect = (exam: IExamProps | null) => setFilters((prev) => ({ ...prev, selectedExam: exam }));
   const handleStatusChange = (status: string | null) => setFilters((prev) => ({ ...prev, statusFilter: status }));
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) =>
-    setFilters((prev) => ({ ...prev, searchTerm: e.target.value }));
-  const clearAllFilters = () =>
-    setFilters({ statusFilter: null, selectedExam: null, selectedDateRange: undefined, isDateFilterEnabled: false, searchTerm: "" });
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => setFilters((prev) => ({ ...prev, searchTerm: e.target.value }));
+  const clearAllFilters = () => setFilters({ statusFilter: null, selectedExam: null, selectedDateRange: undefined, isDateFilterEnabled: false, searchTerm: "" });
 
   const statusOptions = [
     { label: "Todos", value: null },
@@ -143,16 +131,15 @@ export default function ExamsHistory() {
     { label: "Cancelado", value: "cancelado" },
   ];
 
-  // Skeleton
+  // --- Loading & Error States ---
   if (historyExams.isLoading || !namePatient) {
     return (
-      <View.Vertical className="min-h-screen bg-gray-50 p-4">
+      <View.Vertical className="min-h-screen bg-gray-50">
         <PatientByIdProfileSkeleton />
       </View.Vertical>
     );
   }
 
-  // Erro
   if (historyExams.isError) {
     return (
       <View.Vertical className="flex justify-center items-center min-h-screen bg-gray-50">
@@ -166,6 +153,7 @@ export default function ExamsHistory() {
     );
   }
 
+  // --- Render ---
   return (
     <View.Vertical className="min-h-screen bg-gray-50 p-4 space-y-6">
       {/* Header */}
@@ -184,11 +172,12 @@ export default function ExamsHistory() {
         </CardHeader>
       </Card>
 
-      {/* Filtros */}
+      {/* Filters */}
       <Card className="shadow-md">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
-            <Filter className="h-5 w-5" /> Filtros
+            <Filter className="h-5 w-5" />
+            Filtros
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -197,51 +186,23 @@ export default function ExamsHistory() {
               <Label htmlFor="search">Buscar</Label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  id="search"
-                  placeholder="Buscar por exame ou status..."
-                  value={filters.searchTerm}
-                  onChange={handleSearchChange}
-                  className="pl-9"
-                />
+                <Input id="search" placeholder="Buscar por exame ou status..." value={filters.searchTerm} onChange={handleSearchChange} className="pl-9" />
               </div>
             </div>
 
             <div className="space-y-2">
               <Label>Data</Label>
-              <DatePickerWithRange
-                enableRange={true}
-                enableDateFilter={true}
-                onDateChange={handleDateChange}
-                setEnableDateFilter={(enable) =>
-                  setFilters((prev) => ({ ...prev, isDateFilterEnabled: enable }))
-                }
-                placeholderText="Selecionar período"
-              />
+              <DatePickerWithRange enableRange={true} enableDateFilter={true} onDateChange={handleDateChange} setEnableDateFilter={(enable) => setFilters((prev) => ({ ...prev, isDateFilterEnabled: enable }))} placeholderText="Selecionar período" />
             </div>
 
             <div className="space-y-2">
               <Label>Status</Label>
-              <Combobox
-                data={statusOptions}
-                displayKey="label"
-                onSelect={(item) => handleStatusChange(item?.value || null)}
-                selectedValue={statusOptions.find((opt) => opt.value === filters.statusFilter) || null}
-                placeholder="Filtrar por status"
-                clearLabel="Limpar"
-              />
+              <Combobox data={statusOptions} displayKey="label" onSelect={(item) => handleStatusChange(item?.value || null)} selectedValue={statusOptions.find((opt) => opt.value === filters.statusFilter) || null} placeholder="Filtrar por status" clearLabel="Limpar" />
             </div>
 
             <div className="space-y-2">
               <Label>Tipo de Exame</Label>
-              <Combobox
-                data={exams}
-                displayKey="nome"
-                onSelect={handleExamSelect}
-                selectedValue={filters.selectedExam}
-                placeholder="Selecionar exame"
-                clearLabel="Limpar"
-              />
+              <Combobox data={exams} displayKey="nome" onSelect={handleExamSelect} selectedValue={filters.selectedExam} placeholder="Selecionar exame" clearLabel="Limpar" />
             </div>
           </div>
 
@@ -253,7 +214,7 @@ export default function ExamsHistory() {
         </CardContent>
       </Card>
 
-      {/* Resultados */}
+      {/* Results */}
       <Card className="shadow-md">
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
