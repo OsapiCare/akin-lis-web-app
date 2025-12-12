@@ -22,6 +22,7 @@ import { MedicalMaterialsModal } from "./_materialModal";
 import { EditScheduleFormModal } from "@/app/akin/schedule/editScheduleData";
 import { formatCurrency } from "@/utils/formartCurrency";
 import { toast } from "sonner";
+import { LabChief, labChiefRoutes } from "@/Api/Routes/lab-chief/index.routes";
 
 // Função auxiliar para formatar status em português
 const getStatusInPortuguese = (status: string) => {
@@ -51,7 +52,7 @@ const canViewTechnicalInfo = (userType: string | undefined) => {
   // Recepcionistas não podem ver informações técnicas
   if (userType === "RECEPCIONISTA") return false;
   // Técnicos, chefes e administradores podem ver
-  return ["TECNICO", "CHEFE_LABORATORIO", "ADMIN"].includes(userType || "");
+  return ["TECNICO", "CHEFE", "ADMIN"].includes(userType || "");
 };
 
 const SkeletonCard = () => (
@@ -122,18 +123,7 @@ interface ExamCardModernProps {
   canViewTechnicalInfo?: boolean;
 }
 
-const ExamCardModern = ({
-  exam,
-  onEdit,
-  onStart,
-  canStart,
-  technicianName,
-  chiefName,
-  isLoadingTechData = false,
-  patientName,
-  onExamSaved,
-  canViewTechnicalInfo = false,
-}: ExamCardModernProps) => {
+const ExamCardModern = ({ exam, onEdit, onStart, canStart, technicianName, chiefName, isLoadingTechData = false, patientName, onExamSaved, canViewTechnicalInfo = false }: ExamCardModernProps) => {
   const [isNextExamOpen, setIsNextExamOpen] = useState(false);
   const [isMaterialsModalOpen, setIsMaterialsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -204,9 +194,7 @@ const ExamCardModern = ({
                   <Button variant="ghost" size="sm" onClick={handleEditClick} className="h-8 w-8 p-0">
                     <Pencil className="h-4 w-4" />
                   </Button>
-                  <span className="absolute cursor-pointer -left-8 top-8 mt-0 px-2 py-1 text-xs text-white bg-black rounded opacity-0 group-hover:opacity-100 transition-opacity">
-                    Editar
-                  </span>
+                  <span className="absolute cursor-pointer -left-8 top-8 mt-0 px-2 py-1 text-xs text-white bg-black rounded opacity-0 group-hover:opacity-100 transition-opacity">Editar</span>
                 </div>
               )}
             </div>
@@ -262,7 +250,7 @@ const ExamCardModern = ({
 
           <div className="flex justify-end">
             {canStart && (
-              <Button disabled={exam.status_pagamento.toLowerCase() !== "pago"} onClick={handleStartExam} className="bg-teal-600 hover:bg-teal-700">
+              <Button disabled={exam.status_pagamento.toLowerCase() === "pago"} onClick={handleStartExam} className="bg-teal-600 hover:bg-teal-700">
                 <Play className="h-4 w-4 mr-2" />
                 Começar
               </Button>
@@ -314,18 +302,7 @@ interface ExamListItemProps {
   canViewTechnicalInfo?: boolean;
 }
 
-const ExamListItem = ({
-  exam,
-  onEdit,
-  onStart,
-  canStart,
-  technicianName,
-  chiefName,
-  isLoadingTechData = false,
-  patientName,
-  onExamSaved,
-  canViewTechnicalInfo = false,
-}: ExamListItemProps) => {
+const ExamListItem = ({ exam, onEdit, onStart, canStart, technicianName, chiefName, isLoadingTechData = false, patientName, onExamSaved, canViewTechnicalInfo = false }: ExamListItemProps) => {
   const [isNextExamOpen, setIsNextExamOpen] = useState(false);
   const [isMaterialsModalOpen, setIsMaterialsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -397,13 +374,11 @@ const ExamListItem = ({
                   <Button variant="ghost" size="sm" onClick={handleEditClick} className="h-8 w-8 p-0">
                     <Pencil className="h-4 w-4" />
                   </Button>
-                  <span className="absolute cursor-pointer -left-8 top-8 mt-0 px-2 py-1 text-xs text-white bg-black rounded opacity-0 group-hover:opacity-100 transition-opacity">
-                    Editar
-                  </span>
+                  <span className="absolute cursor-pointer -left-8 top-8 mt-0 px-2 py-1 text-xs text-white bg-black rounded opacity-0 group-hover:opacity-100 transition-opacity">Editar</span>
                 </div>
               )}
               {canStart && (
-                <Button disabled={true} size="sm" onClick={handleStartExam} className="bg-teal-600 hover:bg-teal-700">
+                <Button disabled={exam.status_pagamento.toLowerCase() === "pago"} size="sm" onClick={handleStartExam} className="bg-teal-600 hover:bg-teal-700">
                   <Play className="h-4 w-4 mr-1" />
                   Começar
                 </Button>
@@ -477,12 +452,29 @@ const UpcomingExams = () => {
     },
   });
 
+  const { data: chiefLab } = useQuery({
+    queryKey: ["chief-lab"],
+    queryFn: async () => {
+      const response = await await _axios.get<LabChief>("/lab-chiefs");;
+      return response.data;
+    },
+  });
+
   const { data: techniciansData, isLoading: isLoadingTechData } = useQuery({
     queryKey: ["lab-technicians"],
     queryFn: async () => {
-      const response = await _axios.get<{ data: LabTechnician[] }>("/lab-technicians");
-      return response.data.data;
+      try {
+        const response = await _axios.get<{ data: LabTechnician[] }>("/lab-technicians");
+        // Garantir que sempre retornamos um array, mesmo se response.data for undefined
+        return response.data?.data || [];
+      } catch (error) {
+        console.error("Erro ao buscar técnicos:", error);
+        // Retornar array vazio em caso de erro
+        return [];
+      }
     },
+    // Adicionar configurações para evitar undefined
+    initialData: [],
   });
 
   // Função para obter o nome do técnico pelo ID
@@ -492,16 +484,24 @@ const UpcomingExams = () => {
     return technician?.nome || "Técnico não encontrado";
   };
 
-  // Função para obter o nome do chefe pelo ID
+  // Função para obter o nome do chefe pelo ID - MODIFICADA
   const getChiefName = (chiefId: string | null): string => {
+    // Se o usuário atual for um chefe de laboratório, sempre mostrar seu próprio nome
+    if (chiefLab?.tipo === "CHEFE" && chiefLab?.nome) {
+      return chiefLab.nome;
+    }
+
+    // Verificar também se é apenas "CHEFE" (sem o _LABORATORIO)
+    if ((chiefLab?.tipo === "CHEFE" || chiefLab?.tipo === "CHEFE") && userData?.nome) {
+      return chiefLab.nome;
+    }
+
     if (!chiefId) return "Não atribuído";
     const chief = techniciansData?.find((tech) => tech.id === chiefId);
     return chief?.nome || "Chefe não encontrado";
   };
 
-  const filteredData = filter 
-    ? data?.data?.filter((exam) => exam.Tipo_Exame.nome.toLowerCase().includes(filter.toLowerCase())) 
-    : data?.data;
+  const filteredData = filter ? data?.data?.filter((exam) => exam.Tipo_Exame.nome.toLowerCase().includes(filter.toLowerCase())) : data?.data;
 
   const handleEdit = async (exam: any) => {
     try {
@@ -511,7 +511,7 @@ const UpcomingExams = () => {
         chiefId: exam.chiefId,
         status: exam.status,
       });
-      
+
       if (response.status === 200) {
         toast.success("Exame atualizado com sucesso!");
         handleExamSaved();
@@ -677,28 +677,18 @@ const UpcomingExams = () => {
               <div className="flex items-center space-x-4">
                 <Avatar className="h-12 w-12">
                   <AvatarImage src="/placeholder-user.jpg" />
-                  <AvatarFallback className="bg-teal-100 text-teal-700">
-                    {getInitials(userName.data?.nome_completo || "")}
-                  </AvatarFallback>
+                  <AvatarFallback className="bg-teal-100 text-teal-700">{getInitials(userName.data?.nome_completo || "")}</AvatarFallback>
                 </Avatar>
                 <div>
                   <Label className="text-sm font-medium text-gray-600">Paciente</Label>
-                  <p className="text-lg font-semibold text-gray-900">
-                    {userName.isLoading ? <Skeleton className="h-6 w-48" /> : userName.data?.nome_completo || "Nome não encontrado"}
-                  </p>
+                  <p className="text-lg font-semibold text-gray-900">{userName.isLoading ? <Skeleton className="h-6 w-48" /> : userName.data?.nome_completo || "Nome não encontrado"}</p>
                 </div>
               </div>
 
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-3 sm:space-y-0 sm:space-x-4">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <Input 
-                    type="text" 
-                    placeholder="Buscar exames..." 
-                    className="pl-10 w-full sm:w-64" 
-                    value={filter} 
-                    onChange={(e) => setFilter(e.target.value)} 
-                  />
+                  <Input type="text" placeholder="Buscar exames..." className="pl-10 w-full sm:w-64" value={filter} onChange={(e) => setFilter(e.target.value)} />
                 </div>
 
                 <div className="flex items-center space-x-2 bg-gray-100 rounded-lg p-1">
@@ -723,9 +713,7 @@ const UpcomingExams = () => {
           </div>
 
           {isPending ? (
-            <div className="space-y-4">
-              {[...Array(3)].map((_, i) => (viewMode === "card" ? <SkeletonCard key={i} /> : <SkeletonList key={i} />))}
-            </div>
+            <div className="space-y-4">{[...Array(3)].map((_, i) => (viewMode === "card" ? <SkeletonCard key={i} /> : <SkeletonList key={i} />))}</div>
           ) : (
             <div className="space-y-2">
               {filteredData?.map((exam) =>
@@ -767,9 +755,7 @@ const UpcomingExams = () => {
               <CardContent className="py-12 text-center">
                 <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum exame encontrado</h3>
-                <p className="text-gray-600">
-                  {filter ? "Tente ajustar os filtros de busca." : "Não há exames agendados para este paciente."}
-                </p>
+                <p className="text-gray-600">{filter ? "Tente ajustar os filtros de busca." : "Não há exames agendados para este paciente."}</p>
               </CardContent>
             </Card>
           )}
