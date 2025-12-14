@@ -77,17 +77,11 @@ export function useCompletedScheduleFilters(schedules: CompletedScheduleType[]) 
       // 👨‍🔧 TECHNICIAN FILTER (apenas se role !== CHEFE)
       if (role !== "CHEFE") {
         if (filters.technicianFilter === "ALOCADO") {
-          const match = schedule.Exame?.some(exam =>
-            exam.id_tecnico_alocado !== null
-          );
-          if (!match) return false;
+          if (!schedule.id_chefe_alocado) return false;
         }
 
         if (filters.technicianFilter === "NAO_ALOCADO") {
-          const match = schedule.Exame?.some(exam =>
-            exam.id_tecnico_alocado === null
-          );
-          if (!match) return false;
+          if (schedule.id_chefe_alocado) return false;
         }
       }
 
@@ -106,38 +100,38 @@ export function useCompletedScheduleFilters(schedules: CompletedScheduleType[]) 
     setFilters(prev => ({ ...prev, ...newFilters }));
   };
 
-const clearFilters = (key?: keyof CompletedScheduleFilters) => {
-  if (!key) {
-    setFilters({
-      searchQuery: "",
-      examStatus: "TODOS",
-      paymentStatus: "TODOS",
-      technicianFilter: "TODOS",
-      dateFrom: null,
-      dateTo: null,
-    });
-    return;
-  }
-
-  setFilters(prev => {
-    const updated = { ...prev };
-    switch (key) {
-      case "examStatus":
-      case "paymentStatus":
-      case "technicianFilter":
-        updated[key] = "TODOS";
-        break;
-      case "dateFrom":
-      case "dateTo":
-        updated[key] = null;
-        break;
-      case "searchQuery":
-        updated[key] = "";
-        break;
+  const clearFilters = (key?: keyof CompletedScheduleFilters) => {
+    if (!key) {
+      setFilters({
+        searchQuery: "",
+        examStatus: "TODOS",
+        paymentStatus: "TODOS",
+        technicianFilter: "TODOS",
+        dateFrom: null,
+        dateTo: null,
+      });
+      return;
     }
-    return updated;
-  });
-};
+
+    setFilters(prev => {
+      const updated = { ...prev };
+      switch (key) {
+        case "examStatus":
+        case "paymentStatus":
+        case "technicianFilter":
+          updated[key] = "TODOS";
+          break;
+        case "dateFrom":
+        case "dateTo":
+          updated[key] = null;
+          break;
+        case "searchQuery":
+          updated[key] = "";
+          break;
+      }
+      return updated;
+    });
+  };
 
   return {
     filteredSchedules,

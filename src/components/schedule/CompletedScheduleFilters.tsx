@@ -254,7 +254,7 @@ export function CompletedScheduleFilters({ onSearch, onFilterChange, onClearFilt
                   <DollarSign className="w-3 h-3 mr-1" /> Pagamentos Pendentes
                 </Button>
                 {isLabChief && (
-                  <Button variant="outline" size="sm" onClick={() => handleFilterChange("technicianFilter", "CHEFE")} className="text-xs">
+                  <Button variant="outline" size="sm" onClick={() => handleFilterChange("technicianFilter", "ALOCADO")} className="text-xs">
                     <AlertCircle className="w-3 h-3 mr-1" /> Chefe de Laboratório
                   </Button>
                 )}

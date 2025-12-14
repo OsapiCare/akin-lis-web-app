@@ -20,7 +20,6 @@ import { useCompletedSchedules } from "@/hooks/useCompletedSchedules";
 import { useCompletedScheduleFilters } from "@/hooks/useCompletedScheduleFilters";
 
 import { Separator } from "@/components/ui/separator";
-import { Checkbox } from "@/components/ui/checkbox";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 // Helper para obter status dos exames
