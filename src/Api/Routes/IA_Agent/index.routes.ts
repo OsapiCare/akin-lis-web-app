@@ -1,8 +1,6 @@
 import { agentUrl } from "@/Api/api";
 
 interface IA_AgentRoutesInterface {
-  user_id?:string;
-  session_id?:string;
   message: string;
   email_recepcionista: string;
   senha_recepcionista: string;

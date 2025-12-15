@@ -34,8 +34,6 @@ export const Chatbot: React.FC<ChatbotProps> = ({ isChatOpen, onClose }) => {
       return await iaAgentRoutes.sendMessageToAgent(
         {
           message: texto,
-          user_id: user.id,
-          session_id: token,
           email_recepcionista: data.data.email,
           senha_recepcionista: data.data.senha,
           token_acess: token,
