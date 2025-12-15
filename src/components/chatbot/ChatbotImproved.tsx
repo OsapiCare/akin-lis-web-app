@@ -3,21 +3,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import {
-  Send,
-  Mic,
-  MicOff,
-  Minimize2,
-  Maximize2,
-  X,
-  Bot,
-  User,
-  Volume2,
-  VolumeX,
-  Loader2,
-  Paperclip,
-  MoreVertical
-} from "lucide-react";
+import { Send, Mic, MicOff, Minimize2, Maximize2, X, Bot, User, Volume2, VolumeX, Loader2, Paperclip, MoreVertical } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,12 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 import { _axios } from "@/Api/axios.config";
@@ -71,7 +52,7 @@ export const Chatbot: React.FC<ChatbotProps> = ({ isChatOpen, onClose }) => {
 
   // Dados do usuário
   const { data: userData } = useQuery({
-    queryKey: ['user-data'],
+    queryKey: ["user-data"],
     queryFn: async () => {
       return await _axios.get(`/users/${user?.id}`);
     },
@@ -79,11 +60,7 @@ export const Chatbot: React.FC<ChatbotProps> = ({ isChatOpen, onClose }) => {
     enabled: !!user?.id,
   });
 
-  const tipo = userData?.data?.tipo === "CHEFE"
-    ? "chefe_laboratorio"
-    : userData?.data?.tipo === "RECEPCIONISTA"
-      ? "recepsionista"
-      : "tecnico";
+  const tipo = userData?.data?.tipo === "CHEFE" ? "chefe_laboratorio" : userData?.data?.tipo === "RECEPCIONISTA" ? "recepsionista" : "tecnico";
 
   // Scroll automático para mensagens
   useEffect(() => {
@@ -101,14 +78,17 @@ export const Chatbot: React.FC<ChatbotProps> = ({ isChatOpen, onClose }) => {
         throw new Error("Dados de autenticação ausentes.");
       }
 
-      return await iaAgentRoutes.sendMessageToAgent({
-        message,
-        user_id: user.id,
-        session_id: token,
-        email: userData.data.email,
-        senha: userData.data.senha,
-        audioFile: audio,
-      }, tipo);
+      return await iaAgentRoutes.sendMessageToAgent(
+        {
+          message,
+          // user_id: user.id,
+          token_acess: token,
+          email_recepcionista: userData.data.email,
+          senha_recepcionista: userData.data.senha,
+          // audioFile: audio,
+        },
+        tipo
+      );
     },
     onMutate: () => {
       // Adicionar indicador de digitação
@@ -120,11 +100,11 @@ export const Chatbot: React.FC<ChatbotProps> = ({ isChatOpen, onClose }) => {
         type: "text",
         isTyping: true,
       };
-      setMessages(prev => [...prev, typingMessage]);
+      setMessages((prev) => [...prev, typingMessage]);
     },
     onSuccess: (data) => {
       // Remover indicador de digitação
-      setMessages(prev => prev.filter(msg => !msg.isTyping));
+      setMessages((prev) => prev.filter((msg) => !msg.isTyping));
 
       const agentMessage: Message = {
         id: `agent-${Date.now()}`,
@@ -134,7 +114,7 @@ export const Chatbot: React.FC<ChatbotProps> = ({ isChatOpen, onClose }) => {
         type: "text",
       };
 
-      setMessages(prev => [...prev, agentMessage]);
+      setMessages((prev) => [...prev, agentMessage]);
       setInput("");
       setAudioFile(null);
 
@@ -145,7 +125,7 @@ export const Chatbot: React.FC<ChatbotProps> = ({ isChatOpen, onClose }) => {
     },
     onError: (error) => {
       // Remover indicador de digitação
-      setMessages(prev => prev.filter(msg => !msg.isTyping));
+      setMessages((prev) => prev.filter((msg) => !msg.isTyping));
 
       const errorMessage: Message = {
         id: `error-${Date.now()}`,
@@ -155,7 +135,7 @@ export const Chatbot: React.FC<ChatbotProps> = ({ isChatOpen, onClose }) => {
         type: "text",
       };
 
-      setMessages(prev => [...prev, errorMessage]);
+      setMessages((prev) => [...prev, errorMessage]);
       chatbotToast.error("Erro ao enviar mensagem");
     },
   });
@@ -172,7 +152,7 @@ export const Chatbot: React.FC<ChatbotProps> = ({ isChatOpen, onClose }) => {
       audioUrl: audioFile ? URL.createObjectURL(audioFile) : undefined,
     };
 
-    setMessages(prev => [...prev, userMessage]);
+    setMessages((prev) => [...prev, userMessage]);
     mutation.mutate({ message: input, audio: audioFile ?? undefined });
   };
 
@@ -196,10 +176,10 @@ export const Chatbot: React.FC<ChatbotProps> = ({ isChatOpen, onClose }) => {
       };
 
       mediaRecorder.onstop = () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/mp3' });
-        const audioFile = new File([audioBlob], 'audio.mp3', { type: 'audio/mp3' });
+        const audioBlob = new Blob(audioChunksRef.current, { type: "audio/mp3" });
+        const audioFile = new File([audioBlob], "audio.mp3", { type: "audio/mp3" });
         setAudioFile(audioFile);
-        stream.getTracks().forEach(track => track.stop());
+        stream.getTracks().forEach((track) => track.stop());
       };
 
       mediaRecorder.start();
@@ -224,16 +204,16 @@ export const Chatbot: React.FC<ChatbotProps> = ({ isChatOpen, onClose }) => {
 
   const playNotificationSound = () => {
     // Implementar som de notificação
-    const audio = new Audio('/sounds/notification.mp3');
+    const audio = new Audio("/sounds/notification.mp3");
     audio.play().catch(() => {
       // Ignorar erros de reprodução automática
     });
   };
 
   const formatTime = (date: Date) => {
-    return date.toLocaleTimeString('pt-BR', {
-      hour: '2-digit',
-      minute: '2-digit'
+    return date.toLocaleTimeString("pt-BR", {
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
@@ -253,8 +233,7 @@ export const Chatbot: React.FC<ChatbotProps> = ({ isChatOpen, onClose }) => {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ type: "spring", duration: 0.3 }}
-            className={`fixed bottom-20 right-6 z-50 bg-white shadow-2xl rounded-xl border border-gray-200 flex flex-col overflow-hidden ${isMinimized ? 'w-80 h-16' : 'w-96 h-[500px]'
-              }`}
+            className={`fixed bottom-20 right-6 z-50 bg-white shadow-2xl rounded-xl border border-gray-200 flex flex-col overflow-hidden ${isMinimized ? "w-80 h-16" : "w-96 h-[500px]"}`}
           >
             {/* Header */}
             <div className="flex items-center justify-between p-4 bg-gradient-to-r from-akin-turquoise to-akin-turquoise/80 text-white">
@@ -266,68 +245,41 @@ export const Chatbot: React.FC<ChatbotProps> = ({ isChatOpen, onClose }) => {
                 </Avatar>
                 <div>
                   <h3 className="font-semibold text-sm">Chat-kin</h3>
-                  <p className="text-xs opacity-90">
-                    {mutation.isPending ? "Digitando..." : "Assistente Virtual"}
-                  </p>
+                  <p className="text-xs opacity-90">{mutation.isPending ? "Digitando..." : "Assistente Virtual"}</p>
                 </div>
               </div>
 
               <div className="flex items-center gap-1">
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setIsMuted(!isMuted)}
-                      className="text-white hover:bg-white/20 w-8 h-8 p-0"
-                    >
+                    <Button variant="ghost" size="sm" onClick={() => setIsMuted(!isMuted)} className="text-white hover:bg-white/20 w-8 h-8 p-0">
                       {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent>
-                    {isMuted ? "Ativar som" : "Silenciar"}
-                  </TooltipContent>
+                  <TooltipContent>{isMuted ? "Ativar som" : "Silenciar"}</TooltipContent>
                 </Tooltip>
 
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setIsMinimized(!isMinimized)}
-                      className="text-white hover:bg-white/20 w-8 h-8 p-0"
-                    >
+                    <Button variant="ghost" size="sm" onClick={() => setIsMinimized(!isMinimized)} className="text-white hover:bg-white/20 w-8 h-8 p-0">
                       {isMinimized ? <Maximize2 className="w-4 h-4" /> : <Minimize2 className="w-4 h-4" />}
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent>
-                    {isMinimized ? "Expandir" : "Minimizar"}
-                  </TooltipContent>
+                  <TooltipContent>{isMinimized ? "Expandir" : "Minimizar"}</TooltipContent>
                 </Tooltip>
 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-white hover:bg-white/20 w-8 h-8 p-0"
-                    >
+                    <Button variant="ghost" size="sm" className="text-white hover:bg-white/20 w-8 h-8 p-0">
                       <MoreVertical className="w-4 h-4" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={clearChat}>
-                      Limpar conversa
-                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={clearChat}>Limpar conversa</DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
 
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={onClose}
-                  className="text-white hover:bg-white/20 w-8 h-8 p-0"
-                >
+                <Button variant="ghost" size="sm" onClick={onClose} className="text-white hover:bg-white/20 w-8 h-8 p-0">
                   <X className="w-4 h-4" />
                 </Button>
               </div>
@@ -341,21 +293,13 @@ export const Chatbot: React.FC<ChatbotProps> = ({ isChatOpen, onClose }) => {
                     {messages.length === 0 && (
                       <div className="text-center py-8">
                         <Bot className="w-12 h-12 mx-auto text-gray-400 mb-3" />
-                        <p className="text-gray-500 text-sm">
-                          Olá! Sou o Chat-kin, seu assistente virtual.
-                        </p>
-                        <p className="text-gray-400 text-xs mt-1">
-                          Como posso ajudá-lo hoje?
-                        </p>
+                        <p className="text-gray-500 text-sm">Olá! Sou o Chat-kin, seu assistente virtual.</p>
+                        <p className="text-gray-400 text-xs mt-1">Como posso ajudá-lo hoje?</p>
                       </div>
                     )}
 
                     {messages.map((message) => (
-                      <div
-                        key={message.id}
-                        className={`flex gap-3 ${message.sender === "user" ? "justify-end" : "justify-start"
-                          }`}
-                      >
+                      <div key={message.id} className={`flex gap-3 ${message.sender === "user" ? "justify-end" : "justify-start"}`}>
                         {message.sender === "agent" && (
                           <Avatar className="w-8 h-8">
                             <AvatarFallback className="bg-akin-turquoise text-white">
@@ -364,16 +308,8 @@ export const Chatbot: React.FC<ChatbotProps> = ({ isChatOpen, onClose }) => {
                           </Avatar>
                         )}
 
-                        <div
-                          className={`max-w-[75%] ${message.sender === "user" ? "order-1" : ""
-                            }`}
-                        >
-                          <div
-                            className={`px-4 py-2 rounded-2xl ${message.sender === "user"
-                                ? "bg-akin-turquoise text-white"
-                                : "bg-gray-100 text-gray-900"
-                              }`}
-                          >
+                        <div className={`max-w-[75%] ${message.sender === "user" ? "order-1" : ""}`}>
+                          <div className={`px-4 py-2 rounded-2xl ${message.sender === "user" ? "bg-akin-turquoise text-white" : "bg-gray-100 text-gray-900"}`}>
                             {message.isTyping ? (
                               <TypingIndicator />
                             ) : message.type === "audio" && message.audioUrl ? (
@@ -386,9 +322,7 @@ export const Chatbot: React.FC<ChatbotProps> = ({ isChatOpen, onClose }) => {
                               <p className="text-sm whitespace-pre-wrap">{message.text}</p>
                             )}
                           </div>
-                          <p className="text-xs text-gray-400 mt-1 px-1">
-                            {formatTime(message.timestamp)}
-                          </p>
+                          <p className="text-xs text-gray-400 mt-1 px-1">{formatTime(message.timestamp)}</p>
                         </div>
 
                         {message.sender === "user" && (
@@ -419,12 +353,7 @@ export const Chatbot: React.FC<ChatbotProps> = ({ isChatOpen, onClose }) => {
                           <source src={URL.createObjectURL(audioFile)} type="audio/mp3" />
                         </audio>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={clearAudio}
-                        className="text-red-500 hover:text-red-600"
-                      >
+                      <Button variant="ghost" size="sm" onClick={clearAudio} className="text-red-500 hover:text-red-600">
                         <X className="w-4 h-4" />
                       </Button>
                     </div>
@@ -435,67 +364,30 @@ export const Chatbot: React.FC<ChatbotProps> = ({ isChatOpen, onClose }) => {
                 <div className="p-4 bg-gray-50">
                   <div className="flex items-end gap-2">
                     <div className="flex-1 relative">
-                      <Input
-                        ref={inputRef}
-                        type="text"
-                        placeholder="Digite sua mensagem..."
-                        value={input}
-                        onChange={(e) => setInput(e.target.value)}
-                        onKeyPress={handleKeyPress}
-                        disabled={mutation.isPending}
-                        className="pr-12 resize-none"
-                      />
-                      <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                      <Input ref={inputRef} type="text" placeholder="Digite sua mensagem..." value={input} onChange={(e) => setInput(e.target.value)} onKeyPress={handleKeyPress} disabled={mutation.isPending} className="pr-12 resize-none" />
+                      {/* <div className="absolute right-2 top-1/2 -translate-y-1/2">
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="w-8 h-8 p-0"
-                              disabled
-                            >
+                            <Button variant="ghost" size="sm" className="w-8 h-8 p-0" disabled>
                               <Paperclip className="w-4 h-4" />
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>Anexar arquivo</TooltipContent>
                         </Tooltip>
-                      </div>
+                      </div> */}
                     </div>
 
-                    <Tooltip>
+                    {/* <Tooltip>
                       <TooltipTrigger asChild>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={isRecording ? stopRecording : startRecording}
-                          disabled={mutation.isPending}
-                          className={`w-10 h-10 p-0 ${isRecording
-                              ? "bg-red-500 hover:bg-red-600 text-white border-red-500"
-                              : ""
-                            }`}
-                        >
-                          {isRecording ? (
-                            <MicOff className="w-4 h-4" />
-                          ) : (
-                            <Mic className="w-4 h-4" />
-                          )}
+                        <Button variant="outline" size="sm" onClick={isRecording ? stopRecording : startRecording} disabled={mutation.isPending} className={`w-10 h-10 p-0 ${isRecording ? "bg-red-500 hover:bg-red-600 text-white border-red-500" : ""}`}>
+                          {isRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
                         </Button>
                       </TooltipTrigger>
-                      <TooltipContent>
-                        {isRecording ? "Parar gravação" : "Gravar áudio"}
-                      </TooltipContent>
-                    </Tooltip>
+                      <TooltipContent>{isRecording ? "Parar gravação" : "Gravar áudio"}</TooltipContent>
+                    </Tooltip> */}
 
-                    <Button
-                      onClick={handleSendMessage}
-                      disabled={(!input.trim() && !audioFile) || mutation.isPending}
-                      className="bg-akin-turquoise hover:bg-akin-turquoise/80 w-10 h-10 p-0"
-                    >
-                      {mutation.isPending ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Send className="w-4 h-4" />
-                      )}
+                    <Button onClick={handleSendMessage} disabled={(!input.trim() && !audioFile) || mutation.isPending} className="bg-akin-turquoise hover:bg-akin-turquoise/80 w-10 h-10 p-0">
+                      {mutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                     </Button>
                   </div>
                 </div>

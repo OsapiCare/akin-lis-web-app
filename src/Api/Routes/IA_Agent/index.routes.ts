@@ -1,34 +1,36 @@
-import { agentUrl } from "../../api";
+import { agentUrl } from "@/Api/api";
 
 interface IA_AgentRoutesInterface {
-  user_id: string;
-  session_id: string;
-  email: string;
-  senha: string;
   message: string;
-  audioFile?: File;
-  tipo?: string;
+  email_recepcionista: string;
+  senha_recepcionista: string;
+  token_acess: string;
 }
 
+type UserTipo = "CHEFE" | "RECEPCIONISTA" | "RECEPSIONISTA" | "TECNICO";
+
+const AGENT_ROUTE_MAP: Record<UserTipo, string> = {
+  CHEFE: "chefe_laboratorio",
+  RECEPCIONISTA: "recepsionista",
+  RECEPSIONISTA: "recepsionista",
+  TECNICO: "tecnico",
+};
+
 class IA_AgentRoutes {
+  async sendMessageToAgent(data: IA_AgentRoutesInterface, userTipo: string) {
+    const normalizedTipo = userTipo?.toUpperCase() as UserTipo;
+    const route = AGENT_ROUTE_MAP[normalizedTipo];
 
-  async sendMessageToAgent(data: IA_AgentRoutesInterface, tipo: string) {
-    const formData = new FormData();
+    if (!route) throw new Error(`Invalid user type: ${userTipo}`);
 
-    formData.append('user_id', data.user_id);
-    formData.append('session_id', data.session_id);
-    formData.append('email', data.email);
-    formData.append('senha', data.senha);
-    formData.append('message', data.message);
-
-    if (data.audioFile) {
-      formData.append('audioFile', data.audioFile, 'audio.mp3');
-    }
-
-    const response = await agentUrl.post(`/${tipo}`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
+    // Envia JSON diretamente
+    const response = await agentUrl.post(`/${route}`, {
+      message: data.message,
+      email_recepcionista: data.email_recepcionista,
+      senha_recepcionista: data.senha_recepcionista,
+      token_acess: data.token_acess,
+    }, {
+      headers: { "Content-Type": "application/json" },
     });
 
     return response.data;
