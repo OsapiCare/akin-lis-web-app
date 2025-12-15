@@ -17,7 +17,7 @@ export const Chatbot: React.FC<ChatbotProps> = ({ isChatOpen, onClose }) => {
   const [messages, setMessages] = useState<{ sender: "user" | "agent"; text: string }[]>([]);
 
   const { data } = useQuery({
-    queryKey: ['user-data'],
+    queryKey: ["user-data"],
     queryFn: async () => {
       return await _axios.get(`/users/${user?.id}`);
     },
@@ -31,35 +31,30 @@ export const Chatbot: React.FC<ChatbotProps> = ({ isChatOpen, onClose }) => {
       if (!user || !token || !data?.data) {
         throw new Error("Usuário, token ou dados do usuário ausentes.");
       }
-      return await iaAgentRoutes.sendMessageToAgent({
-        message: texto,
-        user_id: user.id,
-        session_id: token,
-        email: data.data.email,
-        senha: data.data.senha
-      }, tipo);
+      return await iaAgentRoutes.sendMessageToAgent(
+        {
+          message: texto,
+          user_id: user.id,
+          session_id: token,
+          email_recepcionista: data.data.email,
+          senha_recepcionista: data.data.senha,
+          token_acess: token,
+        },
+        tipo
+      );
     },
     onSuccess: (data) => {
-      setMessages((prev) => [
-        ...prev,
-        { sender: "agent", text: data.response || "Sem nenhuma resposta do agente." }
-      ]);
+      setMessages((prev) => [...prev, { sender: "agent", text: data.response || "Sem nenhuma resposta do agente." }]);
       setInput("");
     },
     onError: (e) => {
-      setMessages((prev) => [
-        ...prev,
-        { sender: "agent", text: "Erro ao conectar com o agente." }
-      ]);
+      setMessages((prev) => [...prev, { sender: "agent", text: "Erro ao conectar com o agente." }]);
     },
   });
 
   const handleEnviar = () => {
     if (!input.trim()) return;
-    setMessages((prev) => [
-      ...prev,
-      { sender: "user", text: input }
-    ]);
+    setMessages((prev) => [...prev, { sender: "user", text: input }]);
     mutation.mutate(input);
   };
 
@@ -82,14 +77,10 @@ export const Chatbot: React.FC<ChatbotProps> = ({ isChatOpen, onClose }) => {
             </button>
           </header>
           <div className="p-4 overflow-y-auto flex-1 space-y-2 text-sm">
-            {messages.length === 0 && (
-              <p className="text-gray-500">Comece sua conversa...</p>
-            )}
+            {messages.length === 0 && <p className="text-gray-500">Comece sua conversa...</p>}
             {messages.map((msg, idx) => (
               <div key={idx} className={`flex ${msg.sender === "user" ? "justify-end" : "justify-start"}`}>
-                <div className={`px-3 py-2 rounded-lg max-w-[80%] ${msg.sender === "user" ? "bg-akin-turquoise text-white" : "bg-gray-100 text-gray-800"}`}>
-                  {msg.text}
-                </div>
+                <div className={`px-3 py-2 rounded-lg max-w-[80%] ${msg.sender === "user" ? "bg-akin-turquoise text-white" : "bg-gray-100 text-gray-800"}`}>{msg.text}</div>
               </div>
             ))}
             {mutation.isPending && (
@@ -108,11 +99,7 @@ export const Chatbot: React.FC<ChatbotProps> = ({ isChatOpen, onClose }) => {
               onKeyDown={(e) => e.key === "Enter" && handleEnviar()}
               disabled={mutation.isPending}
             />
-            <button
-              onClick={handleEnviar}
-              className="ml-2 px-3 py-2 bg-akin-turquoise text-white rounded-md hover:bg-akin-turquoise transition-all"
-              disabled={mutation.isPending}
-            >
+            <button onClick={handleEnviar} className="ml-2 px-3 py-2 bg-akin-turquoise text-white rounded-md hover:bg-akin-turquoise transition-all" disabled={mutation.isPending}>
               ➤
             </button>
           </footer>
@@ -120,4 +107,4 @@ export const Chatbot: React.FC<ChatbotProps> = ({ isChatOpen, onClose }) => {
       )}
     </AnimatePresence>
   );
-}
+};
