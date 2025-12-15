@@ -38,6 +38,7 @@ export function CompletedScheduleFilters({ onSearch, onFilterChange, onClearFilt
   const userRole = getCookieByName("akin-role");
   const isLabChief = userRole === "CHEFE";
 
+
   const handleSearchChange = (value: string) => {
     onSearch(value);
   };
