@@ -678,8 +678,10 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                         <div>
                           <h4 className="font-semibold">{exam.Tipo_Exame?.nome || "Exame não especificado"}</h4>
-                          <div className="flex items-center gap-2 mt-1">
+                          <div className="flex items-center gap-2 mt-1 text-gray-600 text-sm">
+                            Exame:
                             {getExamStatusBadge(exam.status)}
+                            <p>Pagamento: </p>
                             <span className={`text-xs px-2 py-0.5 rounded-full ${exam.status_pagamento === "PAGO" ? "bg-green-100 text-green-800" : "bg-amber-100 text-amber-800"}`}>
                               {exam.status_pagamento === "PAGO" ? "Pago" : "Pendente"}
                             </span>
