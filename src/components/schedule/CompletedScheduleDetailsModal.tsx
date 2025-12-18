@@ -11,9 +11,9 @@ import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { CalendarDays, Clock, User, Phone, Stethoscope, CheckCircle, XCircle, AlertCircle, Edit3, Mail, Calendar, Users, Save, X, FileText, DollarSign, CreditCard, Shield } from "lucide-react";
-import { format, addDays, subDays, isToday, isTomorrow, isYesterday, parseISO, isAfter, isBefore, startOfDay } from "date-fns";
+import { Calendar } from "primereact/calendar";
+import { CalendarDays, Clock, User, Phone, Stethoscope, CheckCircle, XCircle, AlertCircle, Edit3, Mail, Users, Save, X, FileText, DollarSign, CreditCard, Shield } from "lucide-react";
+import { format, parse, isValid } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { _axios } from "@/Api/axios.config";
 import { ___showSuccessToastNotification, ___showErrorToastNotification } from "@/lib/sonner";
@@ -21,6 +21,9 @@ import { getAllDataInCookies } from "@/utils/get-data-in-cookies";
 import { labTechniciansRoutes } from "@/Api/Routes/lab-technicians/index.routes";
 import { labChiefRoutes } from "@/Api/Routes/lab-chief/index.routes";
 import { examRoutes } from "@/Api/Routes/Exam/index.route";
+import TimePicker from "@/components/ui/timepicker";
+import "primereact/resources/themes/lara-light-indigo/theme.css";
+import "primereact/resources/primereact.min.css";
 
 interface CompletedScheduleDetailsModalProps {
   schedule: CompletedScheduleType | null;
@@ -45,152 +48,103 @@ interface ExamType {
   descricao?: string;
 }
 
-interface TimeSlot {
-  time: string;
-  formattedTime: string;
-  period: "manhã" | "tarde" | "noite";
-}
-
-// Componente para o carrossel de datas (versão compacta)
-function DateCarousel({ selectedDate, onDateSelect }: { selectedDate: string; onDateSelect: (date: string) => void }) {
-  const [dates, setDates] = useState<Array<{ date: Date; formattedDate: string; label: string }>>([]);
-
-  useEffect(() => {
-    const today = startOfDay(new Date());
-    const dateList = [];
-
-    // Gera 10 dias (5 antes, 5 depois) para ser mais compacto
-    for (let i = -5; i <= 5; i++) {
-      const date = addDays(today, i);
-      const formattedDate = format(date, "yyyy-MM-dd");
-
-      let label = format(date, "dd/MM");
-      if (isToday(date)) label = "Hoje";
-      else if (isTomorrow(date)) label = "Amanhã";
-      else if (isYesterday(date)) label = "Ontem";
-      else if (i === -2) label = "Anteontem";
-
-      dateList.push({
-        date,
-        formattedDate,
-        label,
-      });
+// Função para converter string no formato yy/M/d para Date
+const parseFromYYMMDD = (dateString: string): Date | null => {
+  if (!dateString || dateString.trim() === '') return null;
+  
+  try {
+    // Remove espaços em branco
+    const trimmedString = dateString.trim();
+    
+    // Tenta parsear no formato yy/M/d
+    if (trimmedString.includes('/')) {
+      const parts = trimmedString.split('/').map(part => part.trim());
+      
+      if (parts.length === 3) {
+        let year = parseInt(parts[0], 10);
+        const month = parseInt(parts[1], 10) - 1; // Mês é 0-indexed
+        const day = parseInt(parts[2], 10);
+        
+        // Verifica se os valores são números válidos
+        if (isNaN(year) || isNaN(month) || isNaN(day)) {
+          throw new Error('Valores de data inválidos');
+        }
+        
+        // Ajusta o ano (assume 2000+ para anos de 2 dígitos)
+        if (year < 100) {
+          year = 2000 + year;
+        }
+        
+        const parsed = new Date(year, month, day);
+        
+        // Verifica se a data é válida
+        if (
+          parsed.getFullYear() === year &&
+          parsed.getMonth() === month &&
+          parsed.getDate() === day &&
+          parsed.getFullYear() >= 2000 &&
+          parsed.getFullYear() <= 2100
+        ) {
+          return parsed;
+        }
+      }
     }
+    
+    // Se não funcionou, tenta parsear com date-fns
+    try {
+      // Tenta diferentes formatos
+      const formats = [
+        'yy/M/d',
+        'yyyy/M/d',
+        'yy-MM-dd',
+        'yyyy-MM-dd',
+        'yy.MM.dd',
+        'yyyy.MM.dd',
+      ];
+      
+      for (const fmt of formats) {
+        try {
+          const parsed = parse(trimmedString, fmt, new Date());
+          if (isValid(parsed)) {
+            return parsed;
+          }
+        } catch {
+          continue;
+        }
+      }
+    } catch {
+      // Ignora erros do date-fns
+    }
+    
+    // Tenta como ISO string do backend
+    try {
+      const isoDate = new Date(trimmedString);
+      if (isValid(isoDate)) {
+        return isoDate;
+      }
+    } catch {
+      // Ignora erros
+    }
+    
+    console.warn(`Não foi possível parsear a data: "${dateString}"`);
+    return null;
+  } catch (error) {
+    console.error("Erro ao parsear data:", error, "String:", dateString);
+    return null;
+  }
+};
 
-    setDates(dateList);
-  }, []);
-
-  return (
-    <div className="relative">
-      <div className="flex overflow-x-auto py-1 space-x-1.5 scrollbar-hide">
-        {dates.map((dateItem) => {
-          const isSelected = selectedDate === dateItem.formattedDate;
-          const isWeekend = dateItem.date.getDay() === 0 || dateItem.date.getDay() === 6;
-
-          return (
-            <button
-              key={dateItem.formattedDate}
-              onClick={() => onDateSelect(dateItem.formattedDate)}
-              className={`
-                flex-shrink-0 w-16 px-2 py-1.5 rounded-md border transition-all duration-200 text-xs
-                ${isSelected ? "bg-blue-600 text-white border-blue-600" : isWeekend ? "bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100" : "bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100"}
-              `}
-            >
-              <div className="text-center">
-                <div className={`text-[10px] font-medium ${isSelected ? "text-white" : "text-gray-500"}`}>
-                  {format(dateItem.date, "EEE", { locale: ptBR }).slice(0, 3)}
-                </div>
-                <div className={`text-sm font-bold ${isSelected ? "text-white" : "text-gray-900"}`}>{dateItem.label}</div>
-              </div>
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-// Componente para o carrossel de horários (versão compacta)
-function TimeCarousel({ selectedTime, onTimeSelect }: { selectedTime: string; onTimeSelect: (time: string) => void }) {
-  const timeSlots: TimeSlot[] = [
-    // Manhã
-    { time: "08:00", formattedTime: "08:00", period: "manhã" },
-    { time: "08:30", formattedTime: "08:30", period: "manhã" },
-    { time: "09:00", formattedTime: "09:00", period: "manhã" },
-    { time: "09:30", formattedTime: "09:30", period: "manhã" },
-    { time: "10:00", formattedTime: "10:00", period: "manhã" },
-    { time: "10:30", formattedTime: "10:30", period: "manhã" },
-    { time: "11:00", formattedTime: "11:00", period: "manhã" },
-    { time: "11:30", formattedTime: "11:30", period: "manhã" },
-    // Tarde
-    { time: "13:00", formattedTime: "13:00", period: "tarde" },
-    { time: "13:30", formattedTime: "13:30", period: "tarde" },
-    { time: "14:00", formattedTime: "14:00", period: "tarde" },
-    { time: "14:30", formattedTime: "14:30", period: "tarde" },
-    { time: "15:00", formattedTime: "15:00", period: "tarde" },
-    { time: "15:30", formattedTime: "15:30", period: "tarde" },
-    { time: "16:00", formattedTime: "16:00", period: "tarde" },
-    { time: "16:30", formattedTime: "16:30", period: "tarde" },
-    { time: "17:00", formattedTime: "17:00", period: "tarde" },
-    { time: "17:30", formattedTime: "17:30", period: "tarde" },
-  ];
-
-  const [selectedPeriod, setSelectedPeriod] = useState<"manhã" | "tarde" | "todos">("manhã");
-
-  const filteredTimeSlots = timeSlots.filter((slot) => selectedPeriod === "todos" || slot.period === selectedPeriod);
-
-  return (
-    <div className="space-y-2">
-      <div className="flex gap-1.5 flex-wrap">
-        <Button
-          variant={selectedPeriod === "manhã" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setSelectedPeriod("manhã")}
-          className="text-xs h-7 px-2"
-        >
-          Manhã
-        </Button>
-        <Button
-          variant={selectedPeriod === "tarde" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setSelectedPeriod("tarde")}
-          className="text-xs h-7 px-2"
-        >
-          Tarde
-        </Button>
-        <Button
-          variant={selectedPeriod === "todos" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setSelectedPeriod("todos")}
-          className="text-xs h-7 px-2"
-        >
-          Todos
-        </Button>
-      </div>
-
-      <div className="flex overflow-x-auto py-1 space-x-1.5 scrollbar-hide">
-        {filteredTimeSlots.map((slot) => {
-          const isSelected = selectedTime === slot.time;
-
-          return (
-            <button
-              key={slot.time}
-              onClick={() => onTimeSelect(slot.time)}
-              className={`
-                flex-shrink-0 px-2.5 py-1.5 rounded-md border transition-all duration-200 text-xs
-                ${isSelected ? "bg-green-600 text-white border-green-600" : "bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100"}
-              `}
-            >
-              <div className="text-center">
-                <div className="font-medium">{slot.formattedTime}</div>
-              </div>
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
+// Função para converter Date para string no formato yy/M/d
+const formatToYYMMDD = (date: Date | null | undefined): string => {
+  if (!date || !isValid(date)) return "";
+  
+  try {
+    return format(date, "yy/M/d");
+  } catch (error) {
+    console.error("Erro ao formatar data:", error);
+    return "";
+  }
+};
 
 export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: CompletedScheduleDetailsModalProps) {
   const [editingExam, setEditingExam] = useState<number | null>(null);
@@ -198,6 +152,7 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
   const [selectedTechnician, setSelectedTechnician] = useState<string | null>(null);
   const [selectedChief, setSelectedChief] = useState<string | null>(null);
   const [localExams, setLocalExams] = useState<any[]>([]);
+  const [calendarDates, setCalendarDates] = useState<Map<number, Date | null>>(new Map());
 
   const queryClient = useQueryClient();
   const userRole = getAllDataInCookies().userRole;
@@ -231,13 +186,91 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
     if (schedule?.Exame) {
       // Filtra exames que não estão concluídos (conforme regra 1)
       const activeExams = schedule.Exame.filter((exam) => exam.status !== "CONCLUIDO");
-      setLocalExams(activeExams);
+
+      // Converte as datas para o formato yy/M/d e prepara as datas para o calendar
+      const examsWithFormattedDates = activeExams.map((exam) => {
+        try {
+          // Tenta converter a data do backend para o formato de exibição
+          let formattedDate = "";
+          let dateObj: Date | null = null;
+          
+          if (exam.data_agendamento) {
+            // Primeiro tenta parsear como ISO string
+            dateObj = new Date(exam.data_agendamento);
+            
+            if (!isValid(dateObj)) {
+              // Se falhar, tenta nosso parser customizado
+              dateObj = parseFromYYMMDD(exam.data_agendamento);
+            }
+            
+            if (dateObj && isValid(dateObj)) {
+              formattedDate = format(dateObj, "yy/M/d");
+            } else {
+              // Fallback para data atual
+              console.warn(`Data inválida para exame ${exam.id}: ${exam.data_agendamento}`);
+              dateObj = new Date();
+              formattedDate = format(dateObj, "yy/M/d");
+            }
+          } else {
+            // Se não há data, usa data atual
+            dateObj = new Date();
+            formattedDate = format(dateObj, "yy/M/d");
+          }
+          
+          return {
+            ...exam,
+            data_agendamento: formattedDate,
+            originalDate: dateObj,
+          };
+        } catch (error) {
+          console.error(`Erro ao processar data do exame ${exam.id}:`, error);
+          return {
+            ...exam,
+            data_agendamento: format(new Date(), "yy/M/d"),
+            originalDate: new Date(),
+          };
+        }
+      });
+
+      setLocalExams(examsWithFormattedDates);
+
+      // Inicializa as datas do calendar
+      const datesMap = new Map<number, Date | null>();
+      examsWithFormattedDates.forEach((exam) => {
+        const date = exam.originalDate || parseFromYYMMDD(exam.data_agendamento);
+        datesMap.set(exam.id, date);
+      });
+      setCalendarDates(datesMap);
     }
   }, [schedule]);
+
+  // Atualiza as datas do calendar quando um exame está sendo editado
+  useEffect(() => {
+    if (editedExam) {
+      const date = parseFromYYMMDD(editedExam.data_agendamento);
+      setCalendarDates((prevMap) => new Map(prevMap.set(editedExam.id, date)));
+    }
+  }, [editedExam]);
 
   const updateExamMutation = useMutation({
     mutationFn: async (data: { examId: number; updates: Partial<EditableExam> }) => {
       const updatePayload: any = { ...data.updates };
+
+      // Converte a data de volta para o formato do banco se necessário
+      if (updatePayload.data_agendamento) {
+        try {
+          const date = parseFromYYMMDD(updatePayload.data_agendamento);
+          if (date && isValid(date)) {
+            // Formato YYYY-MM-DD para o backend
+            updatePayload.data_agendamento = format(date, "yyyy-MM-dd");
+          } else {
+            // Se não conseguir parsear, mantém o valor original
+            console.warn("Não foi possível converter a data para o formato do backend:", updatePayload.data_agendamento);
+          }
+        } catch (error) {
+          console.error("Erro ao converter data:", error);
+        }
+      }
 
       // Se o usuário é recepcionista, não pode marcar como CONCLUIDO
       if (isReceptionist && updatePayload.status === "CONCLUIDO") {
@@ -260,6 +293,19 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
         prev.map((exam) => {
           if (exam.id === variables.examId) {
             const updatedExam = { ...exam, ...variables.updates };
+
+            // Formata a data para o formato yy/M/d para exibição
+            if (variables.updates.data_agendamento) {
+              try {
+                const date = parseFromYYMMDD(variables.updates.data_agendamento) || new Date();
+                if (date && isValid(date)) {
+                  updatedExam.data_agendamento = format(date, "yy/M/d");
+                }
+              } catch (error) {
+                console.error("Erro ao formatar data:", error);
+                updatedExam.data_agendamento = format(new Date(), "yy/M/d");
+              }
+            }
 
             // Atualiza o tipo de exame se foi alterado
             if (variables.updates.id_tipo_exame && examTypes) {
@@ -355,15 +401,22 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
 
   const getPatientAge = () => {
     if (!schedule.Paciente?.data_nascimento) return "N/A";
-    const birthDate = new Date(schedule.Paciente.data_nascimento);
-    const now = new Date();
-    const diffTime = now.getTime() - birthDate.getTime();
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-    const diffMonths = (now.getFullYear() - birthDate.getFullYear()) * 12 + now.getMonth() - birthDate.getMonth();
-    const diffYears = now.getFullYear() - birthDate.getFullYear();
-    if (diffYears > 0) return `${diffYears} ano${diffYears > 1 ? "s" : ""}`;
-    if (diffMonths > 0) return `${diffMonths} mês${diffMonths > 1 ? "es" : ""}`;
-    return `${diffDays} dia${diffDays > 1 ? "s" : ""}`;
+    try {
+      const birthDate = new Date(schedule.Paciente.data_nascimento);
+      if (!isValid(birthDate)) return "N/A";
+      
+      const now = new Date();
+      const diffTime = now.getTime() - birthDate.getTime();
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      const diffMonths = (now.getFullYear() - birthDate.getFullYear()) * 12 + now.getMonth() - birthDate.getMonth();
+      const diffYears = now.getFullYear() - birthDate.getFullYear();
+      
+      if (diffYears > 0) return `${diffYears} ano${diffYears > 1 ? "s" : ""}`;
+      if (diffMonths > 0) return `${diffMonths} mês${diffMonths > 1 ? "es" : ""}`;
+      return `${diffDays} dia${diffDays > 1 ? "s" : ""}`;
+    } catch {
+      return "N/A";
+    }
   };
 
   const getPatientInitials = () =>
@@ -469,14 +522,16 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
     setEditedExam({ ...editedExam, [field]: value });
   };
 
-  // Funções para o carrossel
-  const handleDateSelect = (date: string) => {
+  // Função para mudança do Calendar
+  const handleDateChange = (value: Date | null) => {
     if (editedExam) {
-      setEditedExam({ ...editedExam, data_agendamento: date });
+      const formattedDate = formatToYYMMDD(value);
+      setEditedExam({ ...editedExam, data_agendamento: formattedDate });
     }
   };
 
-  const handleTimeSelect = (time: string) => {
+  // Função para mudança do TimePicker
+  const handleTimeChange = (time: string) => {
     if (editedExam) {
       setEditedExam({ ...editedExam, hora_agendamento: time });
     }
@@ -534,17 +589,25 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
                       <CreditCard className="w-4 h-4" />
                       Status do Pagamento
                     </div>
-                    <div className={`font-medium ${hasPendingPayment ? "text-amber-600" : "text-green-600"}`}>
-                      {hasPendingPayment ? "Pendente" : "Pago"}
-                    </div>
+                    <div className={`font-medium ${hasPendingPayment ? "text-amber-600" : "text-green-600"}`}>{hasPendingPayment ? "Pendente" : "Pago"}</div>
                   </div>
                   <div className="space-y-1">
                     <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <Calendar className="w-4 h-4" />
+                      <CalendarDays className="w-4 h-4" />
                       Data de Criação
                     </div>
                     <div className="font-medium text-sm">
-                      {format(new Date(schedule.criado_aos), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                      {(() => {
+                        try {
+                          const date = new Date(schedule.criado_aos);
+                          if (isValid(date)) {
+                            return format(date, "yy/M/d HH:mm", { locale: ptBR });
+                          }
+                          return "Data inválida";
+                        } catch {
+                          return "Erro na data";
+                        }
+                      })()}
                     </div>
                   </div>
                   <div className="space-y-1">
@@ -552,9 +615,7 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
                       <DollarSign className="w-4 h-4" />
                       Valor Total
                     </div>
-                    <div className="font-medium text-green-600 text-sm">
-                      {new Intl.NumberFormat("pt-AO", { style: "currency", currency: "AOA" }).format(totalValue)}
-                    </div>
+                    <div className="font-medium text-green-600 text-sm">{new Intl.NumberFormat("pt-AO", { style: "currency", currency: "AOA" }).format(totalValue)}</div>
                   </div>
                 </div>
               </CardContent>
@@ -573,9 +634,7 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
                   <div className="flex-shrink-0 flex justify-center sm:justify-start">
                     <Avatar className="w-16 h-16">
                       <AvatarImage src="" alt={schedule.Paciente?.nome_completo} />
-                      <AvatarFallback className="bg-blue-100 text-blue-600 text-lg">
-                        {getPatientInitials()}
-                      </AvatarFallback>
+                      <AvatarFallback className="bg-blue-100 text-blue-600 text-lg">{getPatientInitials()}</AvatarFallback>
                     </Avatar>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 flex-1">
@@ -589,9 +648,7 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
                     </div>
                     <div>
                       <Label className="text-xs text-gray-500">BI/Identificação</Label>
-                      <p className="font-medium mt-1 text-sm">
-                        {schedule.Paciente?.numero_identificacao || "Não informado"}
-                      </p>
+                      <p className="font-medium mt-1 text-sm">{schedule.Paciente?.numero_identificacao || "Não informado"}</p>
                     </div>
                     <div>
                       <Label className="text-xs text-gray-500">Telefone</Label>
@@ -647,11 +704,7 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
                             ))}
                         </SelectContent>
                       </Select>
-                      <Button
-                        onClick={() => selectedChief && allocateChiefMutation.mutate({ scheduleId: schedule.id, chiefId: selectedChief })}
-                        disabled={!selectedChief || allocateChiefMutation.isPending}
-                        className="sm:w-auto"
-                      >
+                      <Button onClick={() => selectedChief && allocateChiefMutation.mutate({ scheduleId: schedule.id, chiefId: selectedChief })} disabled={!selectedChief || allocateChiefMutation.isPending} className="sm:w-auto">
                         {allocateChiefMutation.isPending ? "Alocando..." : "Alocar"}
                       </Button>
                     </div>
@@ -671,7 +724,8 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
               <CardContent className="space-y-4">
                 {activeExams.map((exam, index) => {
                   const currentPrice = exam.Tipo_Exame?.preco || 0;
-
+                  const calendarDate = calendarDates.get(exam.id) || null;
+                  
                   return (
                     <div key={exam.id} className="border rounded-lg p-4 space-y-3">
                       {/* Cabeçalho do exame */}
@@ -758,40 +812,32 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
                             </div>
                           </div>
 
-                          {/* Carrossel de Datas */}
+                          {/* Calendário para Data (PrimeReact Calendar) */}
                           <div>
                             <Label className="text-sm">Selecione a Data</Label>
                             <div className="mt-2">
-                              <DateCarousel selectedDate={editedExam.data_agendamento} onDateSelect={handleDateSelect} />
+                              <Calendar 
+                                value={calendarDate} 
+                                onChange={(e) => handleDateChange(e.value as Date | null)} 
+                                showIcon 
+                                dateFormat="yy/mm/dd" 
+                                className="w-full h-10 px-2 bg-white rounded-md shadow-sm border-gray-300 focus:border-none"
+                                showButtonBar
+                                showOnFocus={false}
+                                placeholder="YYYY/MM/DD"
+                                inputId={`calendar-${exam.id}`}
+                                appendTo="self"
+                              />
                             </div>
                           </div>
 
-                          {/* Carrossel de Horários */}
+                          {/* TimePicker para Hora */}
                           <div>
                             <Label className="text-sm">Selecione o Horário</Label>
                             <div className="mt-2">
-                              <TimeCarousel selectedTime={editedExam.hora_agendamento} onTimeSelect={handleTimeSelect} />
-                            </div>
-                          </div>
-
-                          {/* Inputs manuais */}
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div>
-                              <Label className="text-sm">Data</Label>
-                              <Input
-                                type="date"
-                                value={editedExam.data_agendamento}
-                                onChange={(e) => handleExamFieldChange("data_agendamento", e.target.value)}
-                                className="w-full"
-                              />
-                            </div>
-                            <div>
-                              <Label className="text-sm">Hora</Label>
-                              <Input
-                                type="time"
-                                value={editedExam.hora_agendamento}
-                                onChange={(e) => handleExamFieldChange("hora_agendamento", e.target.value)}
-                                className="w-full"
+                              <TimePicker 
+                                value={editedExam.hora_agendamento} 
+                                onChange={handleTimeChange} 
                               />
                             </div>
                           </div>
@@ -803,7 +849,7 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
                             <div className="flex items-center gap-2 mt-1">
                               <CalendarDays className="w-3 h-3 text-gray-500" />
                               <span className="font-medium">
-                                {format(new Date(exam.data_agendamento), "dd/MM/yyyy", { locale: ptBR })} às {exam.hora_agendamento}
+                                {exam.data_agendamento} às {exam.hora_agendamento}
                               </span>
                             </div>
                           </div>
@@ -843,11 +889,7 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
                                   ))}
                               </SelectContent>
                             </Select>
-                            <Button
-                              onClick={() => selectedTechnician && allocateTechnicianMutation.mutate({ examId: exam.id, technicianId: selectedTechnician })}
-                              disabled={!selectedTechnician || allocateTechnicianMutation.isPending}
-                              className="sm:w-auto"
-                            >
+                            <Button onClick={() => selectedTechnician && allocateTechnicianMutation.mutate({ examId: exam.id, technicianId: selectedTechnician })} disabled={!selectedTechnician || allocateTechnicianMutation.isPending} className="sm:w-auto">
                               {allocateTechnicianMutation.isPending ? "Alocando..." : "Alocar"}
                             </Button>
                           </div>
