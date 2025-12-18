@@ -533,7 +533,7 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden p-0">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden p-0 z-[50]">
         <DialogHeader className="sticky top-0 bg-white z-10 px-6 py-4 border-b">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -806,12 +806,22 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
                                 onChange={(e) => handleDateChange(e.value as Date | null)}
                                 showIcon
                                 dateFormat="yy/mm/dd"
-                                className="w-full h-10 px-2 bg-white rounded-md shadow-sm border-gray-300 focus:border-none"
+                                className="w-full h-10  bg-white border rounded-md shadow-sm focus:border-none"
                                 showButtonBar
                                 showOnFocus={false}
                                 placeholder="YYYY/MM/DD"
                                 inputId={`calendar-${exam.id}`}
                                 appendTo="self"
+                                panelClassName="relative z-[9999]"
+                                panelStyle={{
+                                  position: "relative",
+                                  zIndex: 9999,
+                                  maxWidth: "100px",
+                                  width: "100%",
+                                  transform: "translate(4%, 0%)",
+                                }}
+                                touchUI={false}
+                                hideOnDateTimeSelect
                               />
                             </div>
                           </div>
