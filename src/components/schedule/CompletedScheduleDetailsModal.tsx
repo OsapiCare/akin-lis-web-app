@@ -50,58 +50,45 @@ interface ExamType {
 
 // Função para converter string no formato yy/M/d para Date
 const parseFromYYMMDD = (dateString: string): Date | null => {
-  if (!dateString || dateString.trim() === '') return null;
-  
+  if (!dateString || dateString.trim() === "") return null;
+
   try {
     // Remove espaços em branco
     const trimmedString = dateString.trim();
-    
+
     // Tenta parsear no formato yy/M/d
-    if (trimmedString.includes('/')) {
-      const parts = trimmedString.split('/').map(part => part.trim());
-      
+    if (trimmedString.includes("/")) {
+      const parts = trimmedString.split("/").map((part) => part.trim());
+
       if (parts.length === 3) {
         let year = parseInt(parts[0], 10);
         const month = parseInt(parts[1], 10) - 1; // Mês é 0-indexed
         const day = parseInt(parts[2], 10);
-        
+
         // Verifica se os valores são números válidos
         if (isNaN(year) || isNaN(month) || isNaN(day)) {
-          throw new Error('Valores de data inválidos');
+          throw new Error("Valores de data inválidos");
         }
-        
+
         // Ajusta o ano (assume 2000+ para anos de 2 dígitos)
         if (year < 100) {
           year = 2000 + year;
         }
-        
+
         const parsed = new Date(year, month, day);
-        
+
         // Verifica se a data é válida
-        if (
-          parsed.getFullYear() === year &&
-          parsed.getMonth() === month &&
-          parsed.getDate() === day &&
-          parsed.getFullYear() >= 2000 &&
-          parsed.getFullYear() <= 2100
-        ) {
+        if (parsed.getFullYear() === year && parsed.getMonth() === month && parsed.getDate() === day && parsed.getFullYear() >= 2000 && parsed.getFullYear() <= 2100) {
           return parsed;
         }
       }
     }
-    
+
     // Se não funcionou, tenta parsear com date-fns
     try {
       // Tenta diferentes formatos
-      const formats = [
-        'yy/M/d',
-        'yyyy/M/d',
-        'yy-MM-dd',
-        'yyyy-MM-dd',
-        'yy.MM.dd',
-        'yyyy.MM.dd',
-      ];
-      
+      const formats = ["yy/M/d", "yyyy/M/d", "yy-MM-dd", "yyyy-MM-dd", "yy.MM.dd", "yyyy.MM.dd"];
+
       for (const fmt of formats) {
         try {
           const parsed = parse(trimmedString, fmt, new Date());
@@ -115,7 +102,7 @@ const parseFromYYMMDD = (dateString: string): Date | null => {
     } catch {
       // Ignora erros do date-fns
     }
-    
+
     // Tenta como ISO string do backend
     try {
       const isoDate = new Date(trimmedString);
@@ -125,7 +112,7 @@ const parseFromYYMMDD = (dateString: string): Date | null => {
     } catch {
       // Ignora erros
     }
-    
+
     console.warn(`Não foi possível parsear a data: "${dateString}"`);
     return null;
   } catch (error) {
@@ -137,7 +124,7 @@ const parseFromYYMMDD = (dateString: string): Date | null => {
 // Função para converter Date para string no formato yy/M/d
 const formatToYYMMDD = (date: Date | null | undefined): string => {
   if (!date || !isValid(date)) return "";
-  
+
   try {
     return format(date, "yy/M/d");
   } catch (error) {
@@ -193,16 +180,16 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
           // Tenta converter a data do backend para o formato de exibição
           let formattedDate = "";
           let dateObj: Date | null = null;
-          
+
           if (exam.data_agendamento) {
             // Primeiro tenta parsear como ISO string
             dateObj = new Date(exam.data_agendamento);
-            
+
             if (!isValid(dateObj)) {
               // Se falhar, tenta nosso parser customizado
               dateObj = parseFromYYMMDD(exam.data_agendamento);
             }
-            
+
             if (dateObj && isValid(dateObj)) {
               formattedDate = format(dateObj, "yy/M/d");
             } else {
@@ -216,7 +203,7 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
             dateObj = new Date();
             formattedDate = format(dateObj, "yy/M/d");
           }
-          
+
           return {
             ...exam,
             data_agendamento: formattedDate,
@@ -404,13 +391,13 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
     try {
       const birthDate = new Date(schedule.Paciente.data_nascimento);
       if (!isValid(birthDate)) return "N/A";
-      
+
       const now = new Date();
       const diffTime = now.getTime() - birthDate.getTime();
       const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
       const diffMonths = (now.getFullYear() - birthDate.getFullYear()) * 12 + now.getMonth() - birthDate.getMonth();
       const diffYears = now.getFullYear() - birthDate.getFullYear();
-      
+
       if (diffYears > 0) return `${diffYears} ano${diffYears > 1 ? "s" : ""}`;
       if (diffMonths > 0) return `${diffMonths} mês${diffMonths > 1 ? "es" : ""}`;
       return `${diffDays} dia${diffDays > 1 ? "s" : ""}`;
@@ -601,7 +588,7 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
                         try {
                           const date = new Date(schedule.criado_aos);
                           if (isValid(date)) {
-                            return format(date, "yy/M/d HH:mm", { locale: ptBR });
+                            return format(date, "dd/M/yyyy HH:mm", { locale: ptBR });
                           }
                           return "Data inválida";
                         } catch {
@@ -725,7 +712,7 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
                 {activeExams.map((exam, index) => {
                   const currentPrice = exam.Tipo_Exame?.preco || 0;
                   const calendarDate = calendarDates.get(exam.id) || null;
-                  
+
                   return (
                     <div key={exam.id} className="border rounded-lg p-4 space-y-3">
                       {/* Cabeçalho do exame */}
@@ -736,9 +723,7 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
                             Exame:
                             {getExamStatusBadge(exam.status)}
                             <p>Pagamento: </p>
-                            <span className={`text-xs px-2 py-0.5 rounded-full ${exam.status_pagamento === "PAGO" ? "bg-green-100 text-green-800" : "bg-amber-100 text-amber-800"}`}>
-                              {exam.status_pagamento === "PAGO" ? "Pago" : "Pendente"}
-                            </span>
+                            <span className={`text-xs px-2 py-0.5 rounded-full ${exam.status_pagamento === "PAGO" ? "bg-green-100 text-green-800" : "bg-amber-100 text-amber-800"}`}>{exam.status_pagamento === "PAGO" ? "Pago" : "Pendente"}</span>
                           </div>
                         </div>
                         <div className="flex gap-2">
@@ -816,11 +801,11 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
                           <div>
                             <Label className="text-sm">Selecione a Data</Label>
                             <div className="mt-2">
-                              <Calendar 
-                                value={calendarDate} 
-                                onChange={(e) => handleDateChange(e.value as Date | null)} 
-                                showIcon 
-                                dateFormat="yy/mm/dd" 
+                              <Calendar
+                                value={calendarDate}
+                                onChange={(e) => handleDateChange(e.value as Date | null)}
+                                showIcon
+                                dateFormat="yy/mm/dd"
                                 className="w-full h-10 px-2 bg-white rounded-md shadow-sm border-gray-300 focus:border-none"
                                 showButtonBar
                                 showOnFocus={false}
@@ -835,10 +820,7 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
                           <div>
                             <Label className="text-sm">Selecione o Horário</Label>
                             <div className="mt-2">
-                              <TimePicker 
-                                value={editedExam.hora_agendamento} 
-                                onChange={handleTimeChange} 
-                              />
+                              <TimePicker value={editedExam.hora_agendamento} onChange={handleTimeChange} />
                             </div>
                           </div>
                         </div>
@@ -857,9 +839,7 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
                             <Label className="text-xs text-gray-500">Preço</Label>
                             <div className="flex items-center gap-2 mt-1">
                               <DollarSign className="w-3 h-3 text-gray-500" />
-                              <span className="font-medium text-green-600">
-                                {new Intl.NumberFormat("pt-AO", { style: "currency", currency: "AOA" }).format(currentPrice)}
-                              </span>
+                              <span className="font-medium text-green-600">{new Intl.NumberFormat("pt-AO", { style: "currency", currency: "AOA" }).format(currentPrice)}</span>
                             </div>
                           </div>
                           {(isLabChief || isLabTechnician) && (

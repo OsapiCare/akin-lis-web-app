@@ -79,14 +79,14 @@ export function CompletedScheduleCard({ schedule, onViewDetails, onViewReport }:
       {/* Content */}
       <CardContent className="space-y-6 p-4">
         {/* Appointment summary */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 w-full">
+        <div className=" w-full gap-4">
+          <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 max-w-full w-auto">
             <div className="p-2 rounded-md bg-blue-500 text-white flex-shrink-0">
               <CalendarDays className="w-4 h-4" />
             </div>
-            <div className="min-w-0">
+            <div className="w-full">
               <div className="text-xs text-gray-600 uppercase">Agendamento criado em</div>
-              <div className="font-medium text-gray-900 truncate">{schedule.Exame?.length ? `${formatDate(schedule.Exame[0].data_agendamento)} às ${formatTime(schedule.Exame[0].hora_agendamento)}` : "Data não disponível"}</div>
+              <div className="font-medium text-gray-900">{`${format(new Date(schedule.criado_aos), "d/M/yyyy HH:mm", {locale: ptBR})} `}</div>
             </div>
           </div>
         </div>
@@ -95,12 +95,12 @@ export function CompletedScheduleCard({ schedule, onViewDetails, onViewReport }:
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="p-3 bg-gray-50 rounded-lg">
             <Label className="text-xs text-gray-600 uppercase">Sexo</Label>
-            <p className="font-semibold text-gray-900 mt-1">{schedule.Paciente?.sexo?.nome || "N/A"}</p>
+            <p className="font-semibold text-gray-900 text-sm mt-1">{schedule.Paciente?.sexo?.nome || "N/A"}</p>
           </div>
 
           <div className="p-3 bg-gray-50 rounded-lg">
             <Label className="text-xs text-gray-600 uppercase">Contacto</Label>
-            <p className="font-semibold text-gray-900 flex items-center mt-1 break-all">
+            <p className="font-semibold text-gray-900 flex items-center text-sm mt-1 break-all">
               <Phone className="w-4 h-4 mr-2 text-green-600" />
               {schedule.Paciente?.contacto_telefonico || "N/A"}
             </p>
@@ -137,24 +137,24 @@ export function CompletedScheduleCard({ schedule, onViewDetails, onViewReport }:
 
         {/* Payment summary */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border-2 border-green-200">
+          <div className="p-2 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border-2 border-green-200">
             <span className="flex items-center font-semibold text-green-800 mb-2">
-              <div className="p-1.5 bg-green-500 rounded-lg mr-2">
+              <div className="p-1.5 bg-green-500 rounded-lg mr-3">
                 <CreditCard className="w-4 h-4 text-white" />
               </div>
               Valor Total
             </span>
-            <span className="font-bold text-xl text-green-700">{new Intl.NumberFormat("pt-AO", { style: "currency", currency: "AOA" }).format(getTotalPrice())}</span>
+            <span className="font-bold text-lg text-green-700">{new Intl.NumberFormat("pt-AO", { style: "currency", currency: "AOA" }).format(getTotalPrice())}</span>
           </div>
 
-          <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border-2 border-blue-200">
+          <div className="p-2 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border-2 border-blue-200">
             <span className="flex items-center font-semibold text-blue-800 mb-2">
               <div className="p-1.5 bg-blue-500 rounded-lg mr-2">
                 <CheckCircle className="w-4 h-4 text-white" />
               </div>
               Valor Pago
             </span>
-            <span className="font-bold text-xl text-blue-700">{new Intl.NumberFormat("pt-AO", { style: "currency", currency: "AOA" }).format(getPaidAmount())}</span>
+            <span className="font-bold text-lg text-blue-700">{new Intl.NumberFormat("pt-AO", { style: "currency", currency: "AOA" }).format(getPaidAmount())}</span>
           </div>
         </div>
       </CardContent>
