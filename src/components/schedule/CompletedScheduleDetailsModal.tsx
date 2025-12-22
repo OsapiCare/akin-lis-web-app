@@ -12,7 +12,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CalendarDays, Clock, User, Phone, Stethoscope, CheckCircle, XCircle, AlertCircle, Edit3, Mail, Users, Save, X, FileText, DollarSign, CreditCard, Shield, ChevronDown } from "lucide-react";
-import { format, parse, isValid, isBefore, startOfDay, isToday, isAfter } from "date-fns";
+import { format, parse, isValid, isBefore, startOfDay, isToday } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { _axios } from "@/Api/axios.config";
 import { ___showSuccessToastNotification, ___showErrorToastNotification } from "@/lib/sonner";
@@ -142,21 +142,61 @@ const isValidScheduleDate = (date: Date): boolean => {
   return !isBefore(selectedDate, today);
 };
 
-// Função para validar formato de data manual
-const isValidDateInput = (value: string): boolean => {
+// Função para validar formato de data manual - mais permissiva para valores parciais
+const isValidPartialDateInput = (value: string): { isValid: boolean; isPartial: boolean; parsedDate?: Date | null } => {
+  if (!value.trim()) {
+    return { isValid: true, isPartial: false };
+  }
+
+  // Remove caracteres não numéricos e barras extras
+  const cleanValue = value.replace(/[^\d/]/g, '');
+  
+  // Verifica se é um valor parcial (menos de 8 caracteres para dd/mm/aa)
+  const isPartial = cleanValue.replace(/\//g, '').length < 6;
+  
+  if (isPartial) {
+    // Para valores parciais, apenas verifica se o formato básico está correto
+    const parts = cleanValue.split('/').filter(part => part !== '');
+    
+    // Verifica se temos algo como "30/12" ou "30/12/2"
+    if (parts.length === 2) {
+      const day = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10) - 1;
+      
+      if (!isNaN(day) && !isNaN(month) && day >= 1 && day <= 31 && month >= 0 && month <= 11) {
+        return { isValid: true, isPartial: true };
+      }
+    }
+    
+    if (parts.length === 3) {
+      const day = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10) - 1;
+      const year = parseInt(parts[2], 10);
+      
+      if (!isNaN(day) && !isNaN(month) && !isNaN(year) && day >= 1 && day <= 31 && month >= 0 && month <= 11) {
+        return { isValid: true, isPartial: true };
+      }
+    }
+    
+    // Se não for um formato parcial válido, não mostra erro ainda
+    return { isValid: true, isPartial: true };
+  }
+
+  // Para valores completos, tenta fazer parsing
   const formats = ["dd/MM/yy", "dd/MM/yyyy", "dd-MM-yy", "dd-MM-yyyy"];
   
   for (const fmt of formats) {
     try {
-      const parsedDate = parse(value, fmt, new Date());
+      const parsedDate = parse(cleanValue, fmt, new Date());
       if (isValid(parsedDate)) {
-        return true;
+        return { isValid: true, isPartial: false, parsedDate };
       }
     } catch {
       continue;
     }
   }
-  return false;
+  
+  return { isValid: false, isPartial: false };
 };
 
 export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: CompletedScheduleDetailsModalProps) {
@@ -199,10 +239,10 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setInputValue(value);
-    setInputError(null);
-
-    // Se o campo estiver vazio, limpa a data
+    
+    // Se o campo estiver vazio, limpa tudo
     if (!value.trim()) {
+      setInputError(null);
       setCalendarDate(null);
       if (editedExam && editingExam) {
         setEditedExam({
@@ -213,29 +253,55 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
       return;
     }
 
-    // Verifica se é um formato válido primeiro
-    if (!isValidDateInput(value)) {
+    // Remove caracteres não numéricos, mantendo barras
+    const cleanValue = value.replace(/[^\d/]/g, '');
+    
+    // Formatação automática: dd/mm/aa
+    let formattedValue = cleanValue;
+    
+    // Adiciona barras automaticamente
+    if (cleanValue.length <= 2) {
+      // Apenas dia
+      formattedValue = cleanValue;
+    } else if (cleanValue.length <= 4) {
+      // Dia e mês
+      formattedValue = `${cleanValue.slice(0, 2)}/${cleanValue.slice(2)}`;
+    } else {
+      // Dia, mês e ano
+      const day = cleanValue.slice(0, 2);
+      const month = cleanValue.slice(2, 4);
+      const year = cleanValue.slice(4, 8);
+      formattedValue = `${day}/${month}${year ? '/' + year : ''}`;
+    }
+    
+    // Limita a 10 caracteres (dd/mm/aaaa)
+    if (formattedValue.length > 10) {
+      formattedValue = formattedValue.slice(0, 10);
+    }
+    
+    // Atualiza o valor formatado
+    if (formattedValue !== value) {
+      setInputValue(formattedValue);
+    }
+    
+    // Valida se é um valor parcial ou completo
+    const validation = isValidPartialDateInput(formattedValue);
+    
+    if (!validation.isValid) {
+      // Valor completo mas inválido
       setInputError("Formato inválido. Use dd/mm/aa (ex: 25/12/24)");
       setCalendarDate(null);
-      return;
-    }
-
-    // Parse a data
-    const formats = ["dd/MM/yy", "dd/MM/yyyy", "dd-MM-yy", "dd-MM-yyyy"];
-    let parsedDate: Date | null = null;
-
-    for (const fmt of formats) {
-      try {
-        parsedDate = parse(value, fmt, new Date());
-        if (isValid(parsedDate)) {
-          break;
-        }
-      } catch {
-        continue;
+      
+      if (editedExam && editingExam) {
+        setEditedExam({
+          ...editedExam,
+          data_agendamento: "",
+        });
       }
-    }
-
-    if (parsedDate && isValid(parsedDate)) {
+    } else if (!validation.isPartial && validation.parsedDate) {
+      // Valor completo e válido
+      const parsedDate = validation.parsedDate;
+      
       // Valida se a data não é anterior a hoje
       if (!isValidScheduleDate(parsedDate)) {
         setInputError("Não é possível agendar para uma data anterior à data atual.");
@@ -248,6 +314,7 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
           });
         }
       } else {
+        setInputError(null);
         setCalendarDate(parsedDate);
 
         // Atualiza o editedExam se estiver editando
@@ -260,8 +327,16 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
         }
       }
     } else {
-      setInputError("Data inválida");
+      // Valor parcial - não mostra erro, apenas limpa a data
+      setInputError(null);
       setCalendarDate(null);
+      
+      if (editedExam && editingExam) {
+        setEditedExam({
+          ...editedExam,
+          data_agendamento: "",
+        });
+      }
     }
   };
 
