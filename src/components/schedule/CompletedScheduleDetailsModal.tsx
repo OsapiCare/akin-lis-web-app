@@ -11,7 +11,7 @@ import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CalendarDays, Clock, User, Phone, Stethoscope, CheckCircle, XCircle, AlertCircle, Edit3, Mail, Users, Save, X, FileText, DollarSign, CreditCard, Shield, ChevronDown } from "lucide-react";
+import { CalendarDays, Clock, User, Phone, Stethoscope, CheckCircle, XCircle, AlertCircle, Edit3, Mail, Users, Save, X, FileText, DollarSign, CreditCard, Shield } from "lucide-react";
 import { format, parse, isValid, isBefore, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { _axios } from "@/Api/axios.config";
@@ -23,7 +23,6 @@ import { examRoutes } from "@/Api/Routes/Exam/index.route";
 import TimePicker from "@/components/ui/timepicker";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
 
 interface CompletedScheduleDetailsModalProps {
   schedule: CompletedScheduleType | null;
@@ -82,7 +81,7 @@ const parseFromYYMMDD = (dateString: string): Date | null => {
           }
 
           const parsed = new Date(year, month, day);
-
+          
           // Verifica se a data é válida
           if (isValid(parsed) && parsed.getFullYear() === year && parsed.getMonth() === month && parsed.getDate() === day) {
             return parsed;
@@ -93,7 +92,7 @@ const parseFromYYMMDD = (dateString: string): Date | null => {
 
     // Tenta outros formatos comuns com date-fns
     const formats = ["dd/MM/yyyy", "dd-MM-yyyy", "yyyy/MM/dd", "yyyy-MM-dd", "yy/MM/dd", "yy-MM-dd", "yy/M/d", "yyyy/M/d"];
-
+    
     for (const fmt of formats) {
       try {
         const parsed = parse(trimmedString, fmt, new Date());
@@ -129,7 +128,7 @@ const formatToYYMMDD = (date: Date | null | undefined): string => {
 const isValidScheduleDate = (date: Date): boolean => {
   const today = startOfDay(new Date());
   const selectedDate = startOfDay(date);
-
+  
   // Verifica se a data selecionada é hoje ou no futuro
   return !isBefore(selectedDate, today);
 };
@@ -482,7 +481,7 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
     // Valida se a data selecionada é válida
     const selectedDate = parseFromYYMMDD(editedExam.data_agendamento);
     const today = startOfDay(new Date());
-
+    
     if (selectedDate && isBefore(startOfDay(selectedDate), today)) {
       ___showErrorToastNotification({
         message: "Não é possível agendar para uma data anterior à data atual.",
@@ -554,15 +553,15 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
 
         // Formata a data para o formato yy/M/d
         const formattedDate = format(date, "yy/M/d");
-
-        setEditedExam((prev) => ({
+        
+        setEditedExam(prev => ({
           ...prev!,
-          data_agendamento: formattedDate,
+          data_agendamento: formattedDate
         }));
-
+        
         // Atualiza também o calendarDates
-        setCalendarDates((prev) => new Map(prev.set(editedExam.id, date)));
-
+        setCalendarDates(prev => new Map(prev.set(editedExam.id, date)));
+        
         ___showSuccessToastNotification({
           message: "Data selecionada com sucesso!",
         });
@@ -606,7 +605,13 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
             </div>
             <div className="flex items-center gap-2">
               {getExamStatusBadge(overallStatus)}
-              <Button variant="ghost" size="sm" onClick={handleForceRefresh} className="h-8 px-2" title="Recarregar dados">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={handleForceRefresh}
+                className="h-8 px-2"
+                title="Recarregar dados"
+              >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
@@ -857,87 +862,62 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
                             </div>
                           </div>
 
-                          {/* Calendário para Data - Com dias desabilitados visíveis */}
+                          {/* Calendário para Data (Shadcn Calendar) */}
                           <div>
-                            <Label className="text-sm mb-2 block font-medium text-gray-700">Selecione a Data</Label>
+                            <Label className="text-sm">Selecione a Data</Label>
                             <div className="mt-2">
                               <Popover>
                                 <PopoverTrigger asChild>
-                                  <Button variant="outline" className="w-full justify-start text-left font-normal h-10 px-3 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 hover:border-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
-                                    <CalendarDays className="mr-2 h-4 w-4 text-gray-500" />
-                                    {calendarDate ? <span className="font-medium text-gray-900">{format(calendarDate, "dd/MM/yy")}</span> : <span className="text-gray-400">Selecione uma data</span>}
-                                    <ChevronDown className="ml-auto h-4 w-4 text-gray-400" />
+                                  <Button
+                                    variant="outline"
+                                    className="w-full justify-start text-left font-normal h-10 px-3 bg-white border rounded-md shadow-sm hover:bg-white"
+                                  >
+                                    <CalendarDays className="mr-2 h-4 w-4" />
+                                    {calendarDate ? (
+                                      <span className="font-medium">{format(calendarDate, "dd/MM/yy")}</span>
+                                    ) : (
+                                      <span className="text-gray-400">Selecione uma data</span>
+                                    )}
                                   </Button>
                                 </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0 z-[100] border border-gray-300 shadow-lg" align="start" sideOffset={4}>
-                                  <div className="bg-white rounded-lg">
-                                    <Calendar
-                                      mode="single"
-                                      selected={calendarDate || undefined}
-                                      onSelect={(date) => {
-                                        if (date && editedExam) {
-                                          handleDateChange(date);
-                                        }
+                                <PopoverContent className="w-auto p-0 z-[100]" align="start">
+                                  <Calendar
+                                    mode="single"
+                                    selected={calendarDate || undefined}
+                                    onSelect={(date) => {
+                                      if (date && editedExam) {
+                                        handleDateChange(date);
+                                      }
+                                    }}
+                                    initialFocus
+                                    className="rounded-md border p-3"
+                                    // Desabilita datas anteriores a hoje
+                                    disabled={(date) => isBefore(startOfDay(date), startOfDay(new Date()))}
+                                  />
+                                  <div className="p-2 border-t flex flex-col gap-1">
+                                    <p className="text-xs text-gray-500 text-center mb-1">
+                                      Data atual: {format(new Date(), "dd/MM/yyyy")}
+                                    </p>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="w-full"
+                                      onClick={() => {
+                                        const today = new Date();
+                                        handleDateChange(today);
                                       }}
-                                      initialFocus
-                                      className="p-3"
-                                      // Desabilita datas anteriores a hoje
-                                      disabled={(date) => isBefore(startOfDay(date), startOfDay(new Date()))}
-                                      // Estilo com dias desabilitados claros
-                                      classNames={{
-                                        month: "flex flex-col m-auto text-center space-y-4",
-                                        months: "flex flex-col m-auto justify-center items-center space-y-4",
-                                        caption_label: "flex flex-col m-auto text-sm font-semibold text-gray-800",
-                                        caption: "flex justify-center pt-1 relative items-center",
-                                        nav: "space-x-1 flex items-center",
-                                        nav_button: "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 text-gray-600 hover:text-gray-900",
-                                        nav_button_previous: "absolute left-1",
-                                        nav_button_next: "absolute right-1",
-                                        table: "w-full border-collapse space-y-1",
-                                        head_row: "flex",
-                                        head_cell: "text-gray-500 rounded-md w-9 font-normal text-[0.8rem]",
-                                        row: "flex w-full mt-2",
-                                        cell: "h-9 w-9 text-center text-sm p-0 relative",
-                                        day: cn(
-                                          "h-9 w-9 p-0 font-normal rounded-md transition-colors",
-                                          "aria-selected:opacity-100",
-                                          // Dias normais
-                                          "hover:bg-blue-100 hover:text-blue-700",
-                                          // Dias desabilitados - aparência clara
-                                          "data-[disabled]:text-gray-300 data-[disabled]:bg-gray-50 data-[disabled]:cursor-not-allowed data-[disabled]:opacity-40",
-                                          // Dias de outros meses
-                                          "data-[outside]:text-gray-300 data-[outside]:opacity-30"
-                                        ),
-                                        day_selected: "bg-blue-600 text-white hover:bg-blue-700 hover:text-white",
-                                        day_today: "bg-blue-100 text-blue-700 border border-blue-300",
-                                        day_disabled: "text-gray-300 opacity-40 cursor-not-allowed",
-                                        day_outside: "text-gray-300 opacity-30",
-                                      }}
-                                    />
-                                    <div className="border-t border-gray-200 p-3 bg-gray-50 rounded-b-lg">
-                                      <div className="flex justify-between items-center">
-                                        <p className="text-xs text-gray-500">
-                                          Data atual: <span className="font-medium">{format(new Date(), "dd/MM/yyyy")}</span>
-                                        </p>
-                                        <Button
-                                          variant="ghost"
-                                          size="sm"
-                                          className="text-xs bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700 px-2 py-1"
-                                          onClick={() => {
-                                            const today = new Date();
-                                            handleDateChange(today);
-                                          }}
-                                        >
-                                          <CalendarDays className="h-3 w-3 mr-1" />
-                                          Hoje
-                                        </Button>
-                                      </div>
-                                    </div>
+                                    >
+                                      Usar data de hoje
+                                    </Button>
                                   </div>
                                 </PopoverContent>
                               </Popover>
+                              <p className="text-xs text-gray-500 mt-1">
+                                Nota: Só é permitido agendar para a data atual ou datas futuras.
+                              </p>
                             </div>
                           </div>
+
                           {/* TimePicker para Hora */}
                           <div>
                             <Label className="text-sm">Selecione o Horário</Label>
