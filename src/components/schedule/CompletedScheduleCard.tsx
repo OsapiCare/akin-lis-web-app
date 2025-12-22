@@ -39,19 +39,48 @@ export function CompletedScheduleCard({ schedule, onViewDetails, onViewReport }:
   const getTotalPrice = () => schedule.Exame?.reduce((total, exam) => total + (exam.Tipo_Exame?.preco || 0), 0) || 0;
   const getPaidAmount = () => schedule.Exame?.filter((exam) => exam.status_pagamento === "PAGO").reduce((total, exam) => total + (exam.Tipo_Exame?.preco || 0), 0) || 0;
 
-  // Metrics
+  // Metrics - incluindo concluídos e cancelados
   const completedExams = schedule.Exame?.filter((e) => e.status === "CONCLUIDO").length || 0;
   const pendingExams = schedule.Exame?.filter((e) => e.status === "PENDENTE").length || 0;
   const cancelledExams = schedule.Exame?.filter((e) => e.status === "CANCELADO").length || 0;
   const totalExams = schedule.Exame?.length || 0;
 
-  // Hide block if all exams are completed
-  if (completedExams === totalExams && totalExams > 0) return null;
+  // Remove a linha que filtra agendamentos concluídos
+  // if (completedExams === totalExams && totalExams > 0) return null;
+
+  // Status geral do bloco
+  const getOverallStatus = () => {
+    if (completedExams === totalExams && totalExams > 0) {
+      return { label: "Concluído", color: "green" };
+    }
+    if (cancelledExams === totalExams && totalExams > 0) {
+      return { label: "Cancelado", color: "red" };
+    }
+    if (pendingExams > 0) {
+      return { label: "Pendente", color: "yellow" };
+    }
+    return { label: "Em andamento", color: "blue" };
+  };
+
+  const overallStatus = getOverallStatus();
 
   return (
     <Card className="w-full transition-shadow duration-200 hover:shadow-lg">
-      {/* Header */}
-      <CardHeader className="p-4 bg-gradient-to-r from-green-50 to-emerald-50">
+      {/* Header com status geral */}
+      <CardHeader className={`p-4 ${overallStatus.color === 'green' ? 'bg-gradient-to-r from-green-50 to-emerald-50' : 
+                              overallStatus.color === 'red' ? 'bg-gradient-to-r from-red-50 to-pink-50' : 
+                              overallStatus.color === 'yellow' ? 'bg-gradient-to-r from-yellow-50 to-amber-50' :
+                              'bg-gradient-to-r from-blue-50 to-cyan-50'}`}>
+        <div className="flex items-center justify-between mb-2">
+          <Badge className={`${overallStatus.color === 'green' ? 'bg-green-100 text-green-800' :
+                           overallStatus.color === 'red' ? 'bg-red-100 text-red-800' :
+                           overallStatus.color === 'yellow' ? 'bg-yellow-100 text-yellow-800' :
+                           'bg-blue-100 text-blue-800'}`}>
+            {overallStatus.label}
+          </Badge>
+          <span className="text-sm text-gray-600">{totalExams} exame{totalExams !== 1 ? 's' : ''}</span>
+        </div>
+        
         <div className="flex flex-col items-center gap-3 text-center sm:flex-row sm:text-left sm:justify-between">
           <div className="flex items-center gap-3 flex-1 min-w-0">
             <Avatar className="h-12 w-12 flex-shrink-0 ring-2 ring-green-200">

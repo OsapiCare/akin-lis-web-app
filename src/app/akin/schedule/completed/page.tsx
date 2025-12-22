@@ -65,6 +65,22 @@ const calculateTotalValue = (exams: any[]) => {
   return exams.reduce((sum, exam) => sum + (exam.Tipo_Exame?.preco || 0), 0);
 };
 
+// Helper para verificar se um agendamento deve ser exibido
+const shouldDisplaySchedule = (schedule: CompletedScheduleType): boolean => {
+  const exams = schedule.Exame || [];
+  if (exams.length === 0) return true; // Mostrar se não há exames
+  
+  // Verifica se todos os exames estão concluídos
+  const allExamsCompleted = exams.every(exam => exam.status === "CONCLUIDO");
+  
+  // Verifica se todos os exames estão cancelados
+  const allExamsCancelled = exams.every(exam => exam.status === "CANCELADO");
+  
+  // Mostra TODOS os agendamentos, incluindo concluídos e cancelados
+  // Se quiser ocultar os concluídos, mude para: return !allExamsCompleted && !allExamsCancelled;
+  return true; // Mostra tudo
+};
+
 export default function CompletedSchedulesPage() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [showStats, setShowStats] = useState(false);
@@ -80,7 +96,12 @@ export default function CompletedSchedulesPage() {
     return Array.from(map.values());
   }, [schedules]);
 
-  const { filteredSchedules, filters, handleSearch, handleFilterChange, clearFilters } = useCompletedScheduleFilters(uniqueSchedules);
+  // Filtra os agendamentos que devem ser exibidos (incluindo concluídos e cancelados)
+  const displayableSchedules = useMemo(() => {
+    return uniqueSchedules.filter(shouldDisplaySchedule);
+  }, [uniqueSchedules]);
+
+  const { filteredSchedules, filters, handleSearch, handleFilterChange, clearFilters } = useCompletedScheduleFilters(displayableSchedules);
 
   const totalCount = statistics?.totalSchedules ?? 0;
   const filteredCount = filteredSchedules.length;
@@ -210,7 +231,7 @@ export default function CompletedSchedulesPage() {
             </TabsTrigger>
           </TabsList>
           <div className="text-sm text-gray-600">
-            {filteredCount} de {totalCount} agendamentos
+            {filteredCount} de {displayableSchedules.length} agendamentos
           </div>
         </div>
 
@@ -226,7 +247,7 @@ export default function CompletedSchedulesPage() {
           <Card className="p-12 text-center">
             <AlertTriangle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-semibold">Nenhum agendamento encontrado</h3>
-            <p className="text-gray-600 mt-2">{statistics.totalSchedules === 0 ? "Não há agendamentos disponíveis." : "Ajuste os filtros ou tente novamente."}</p>
+            <p className="text-gray-600 mt-2">{displayableSchedules.length === 0 ? "Não há agendamentos disponíveis." : "Ajuste os filtros ou tente novamente."}</p>
             {filters.searchQuery && (
               <Button variant="outline" className="mt-4" onClick={() => handleSearch("")}>
                 Limpar busca
@@ -309,15 +330,6 @@ export default function CompletedSchedulesPage() {
 
                         return (
                           <tr key={schedule.id} className="hover:bg-gray-50 transition-colors">
-                            {/* <td className="px-4 py-4 whitespace-nowrap">
-                              <Checkbox
-                                checked={selectedSchedules.includes(schedule.id)}
-                                onCheckedChange={(checked) =>
-                                  handleSelectSchedule(schedule.id, checked as boolean)
-                                }
-                              />
-                            </td> */}
-
                             {/* Paciente */}
                             <td className="px-4 py-4 whitespace-nowrap">
                               <div className="flex items-center">
