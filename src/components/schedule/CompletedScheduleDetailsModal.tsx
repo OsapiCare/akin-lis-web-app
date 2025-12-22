@@ -49,7 +49,7 @@ interface ExamType {
   descricao?: string;
 }
 
-// Função para converter string no formato yy/M/d para Date - MELHORADA
+// Função para converter string no formato yy/M/d para Date
 const parseFromYYMMDD = (dateString: string): Date | null => {
   if (!dateString || dateString.trim() === "") return null;
 
@@ -75,7 +75,6 @@ const parseFromYYMMDD = (dateString: string): Date | null => {
         const month = parseInt(parts[1], 10) - 1; // Mês é 0-indexed
         const day = parseInt(parts[2], 10);
 
-        // Verifica se os valores são números válidos
         if (!isNaN(year) && !isNaN(month) && !isNaN(day)) {
           // Se ano tem 2 dígitos, assume 2000+
           if (year < 100) {
@@ -83,8 +82,6 @@ const parseFromYYMMDD = (dateString: string): Date | null => {
           }
 
           const parsed = new Date(year, month, day);
-
-          // Verifica se a data é válida
           if (isValid(parsed) && parsed.getFullYear() === year && parsed.getMonth() === month && parsed.getDate() === day) {
             return parsed;
           }
@@ -92,8 +89,8 @@ const parseFromYYMMDD = (dateString: string): Date | null => {
       }
     }
 
-    // Tenta outros formatos comuns com date-fns
-    const formats = ["dd/MM/yyyy", "dd-MM-yyyy", "yyyy/MM/dd", "yyyy-MM-dd", "yy/MM/dd", "yy-MM-dd", "yy/M/d", "yyyy/M/d"];
+    // Tenta outros formatos
+    const formats = ["dd/MM/yyyy", "dd-MM-yyyy", "yyyy/MM/dd", "yyyy-MM-dd", "dd/MM/yy", "dd-MM-yy"];
 
     for (const fmt of formats) {
       try {
@@ -126,12 +123,22 @@ const formatToYYMMDD = (date: Date | null | undefined): string => {
   }
 };
 
+// Função para formatar data para input (dd/MM/yy)
+const formatForInput = (date: Date | null | undefined): string => {
+  if (!date || !isValid(date)) return "";
+
+  try {
+    return format(date, "dd/MM/yy");
+  } catch (error) {
+    console.error("Erro ao formatar data para input:", error);
+    return "";
+  }
+};
+
 // Função para verificar se uma data é válida para agendamento
 const isValidScheduleDate = (date: Date): boolean => {
   const today = startOfDay(new Date());
   const selectedDate = startOfDay(date);
-
-  // Verifica se a data selecionada é hoje ou no futuro
   return !isBefore(selectedDate, today);
 };
 
@@ -145,6 +152,7 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
   const [calendarDate, setCalendarDate] = useState<Date | null>(null);
   const [inputValue, setInputValue] = useState("");
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const queryClient = useQueryClient();
   const userRole = getAllDataInCookies().userRole;
@@ -170,116 +178,134 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
     enabled: isReceptionist || isLabChief || isLabTechnician,
   });
 
-  const handleInputChange = (e: any) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setInputValue(value);
 
-    // Tentar parsear a data no formato dd/MM/yy ou dd/MM/yyyy
+    // Tentar parsear a data no formato dd/MM/yy
     const formats = ["dd/MM/yy", "dd/MM/yyyy", "dd-MM-yy", "dd-MM-yyyy"];
-    let parsedDate = null;
+    let parsedDate: Date | null = null;
 
     for (const fmt of formats) {
-      parsedDate = parse(value, fmt, new Date());
-      if (isValid(parsedDate) && !isBefore(startOfDay(parsedDate), startOfDay(new Date()))) {
-        setCalendarDate(parsedDate ?? null);
-        break;
+      try {
+        parsedDate = parse(value, fmt, new Date());
+        if (isValid(parsedDate)) {
+          break;
+        }
+      } catch {
+        continue;
       }
     }
 
-    // Se não for válido, limpar a data
-    if (!parsedDate || !isValid(parsedDate)) {
+    if (parsedDate && isValid(parsedDate)) {
+      // Valida se a data não é anterior a hoje
+      if (isValidScheduleDate(parsedDate)) {
+        setCalendarDate(parsedDate);
+        
+        // Atualiza o editedExam se estiver editando
+        if (editedExam && editingExam) {
+          const formattedDate = formatToYYMMDD(parsedDate);
+          setEditedExam({
+            ...editedExam,
+            data_agendamento: formattedDate,
+          });
+        }
+      } else {
+        ___showErrorToastNotification({
+          message: "Não é possível agendar para uma data anterior à data atual.",
+        });
+        setCalendarDate(null);
+      }
+    } else {
       setCalendarDate(null);
     }
   };
 
-  const handleCalendarSelect = (date: any) => {
+  const handleCalendarSelect = (date: Date | undefined) => {
     if (date) {
       setCalendarDate(date);
-      setInputValue(format(date, "dd/MM/yy"));
+      setInputValue(formatForInput(date));
       setIsPopoverOpen(false);
+      
+      // Atualiza o editedExam se estiver editando
+      if (editedExam && editingExam) {
+        const formattedDate = formatToYYMMDD(date);
+        setEditedExam({
+          ...editedExam,
+          data_agendamento: formattedDate,
+        });
+      }
     }
   };
 
   const handleTodayClick = () => {
     const today = new Date();
     setCalendarDate(today);
-    setInputValue(format(today, "dd/MM/yy"));
-    setIsPopoverOpen(false);
+    setInputValue(formatForInput(today));
+    
+    if (editedExam && editingExam) {
+      const formattedDate = formatToYYMMDD(today);
+      setEditedExam({
+        ...editedExam,
+        data_agendamento: formattedDate,
+      });
+    }
   };
 
-  // Extrai o array de tipos de exame da resposta
   const examTypes = examTypesResponse?.data || [];
 
   // Atualiza os exames locais quando o schedule muda
   useEffect(() => {
     if (schedule?.Exame) {
-      // Filtra exames que não estão concluídos (conforme regra 1)
       const activeExams = schedule.Exame.filter((exam) => exam.status !== "CONCLUIDO");
 
-      // Converte as datas para o formato yy/M/d e prepara as datas para o calendar
       const examsWithFormattedDates = activeExams.map((exam) => {
         try {
-          // Tenta converter a data do backend para o formato de exibição
-          let formattedDate = "";
           let dateObj: Date | null = null;
 
           if (exam.data_agendamento) {
-            // Primeiro tenta parsear como ISO string
-            dateObj = new Date(exam.data_agendamento);
-
-            if (!isValid(dateObj)) {
-              // Se falhar, tenta nosso parser customizado
-              dateObj = parseFromYYMMDD(exam.data_agendamento);
-            }
-
-            if (dateObj && isValid(dateObj)) {
-              formattedDate = format(dateObj, "yy/M/d");
-            } else {
-              // Fallback para data atual
-              console.warn(`Data inválida para exame ${exam.id}: ${exam.data_agendamento}`);
+            dateObj = parseFromYYMMDD(exam.data_agendamento);
+            if (!dateObj || !isValid(dateObj)) {
               dateObj = new Date();
-              formattedDate = format(dateObj, "yy/M/d");
             }
           } else {
-            // Se não há data, usa data atual
             dateObj = new Date();
-            formattedDate = format(dateObj, "yy/M/d");
           }
 
           return {
             ...exam,
-            data_agendamento: formattedDate,
+            data_agendamento: formatToYYMMDD(dateObj),
             originalDate: dateObj,
           };
         } catch (error) {
           console.error(`Erro ao processar data do exame ${exam.id}:`, error);
+          const dateObj = new Date();
           return {
             ...exam,
-            data_agendamento: format(new Date(), "yy/M/d"),
-            originalDate: new Date(),
+            data_agendamento: formatToYYMMDD(dateObj),
+            originalDate: dateObj,
           };
         }
       });
 
       setLocalExams(examsWithFormattedDates);
 
-      // Inicializa as datas do calendar
       const datesMap = new Map<number, Date | null>();
       examsWithFormattedDates.forEach((exam) => {
-        const date = exam.originalDate || parseFromYYMMDD(exam.data_agendamento);
-        datesMap.set(exam.id, date);
+        datesMap.set(exam.id, exam.originalDate);
       });
       setCalendarDates(datesMap);
     }
   }, [schedule]);
 
-  // Atualiza as datas do calendar quando um exame está sendo editado
+  // Atualiza o calendarDate quando editingExam muda
   useEffect(() => {
-    if (editedExam) {
+    if (editingExam && editedExam) {
       const date = parseFromYYMMDD(editedExam.data_agendamento);
-      setCalendarDates((prevMap) => new Map(prevMap.set(editedExam.id, date)));
+      setCalendarDate(date);
+      setInputValue(date ? formatForInput(date) : "");
     }
-  }, [editedExam]);
+  }, [editingExam, editedExam]);
 
   // Limpa estados quando a modal fecha
   useEffect(() => {
@@ -288,6 +314,8 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
       setEditedExam(null);
       setSelectedTechnician(null);
       setSelectedChief(null);
+      setCalendarDate(null);
+      setInputValue("");
     }
   }, [isOpen]);
 
@@ -295,23 +323,19 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
     mutationFn: async (data: { examId: number; updates: Partial<EditableExam> }) => {
       const updatePayload: any = { ...data.updates };
 
-      // Converte a data de volta para o formato do banco se necessário
+      // Converte a data para o formato do backend
       if (updatePayload.data_agendamento) {
         try {
           const date = parseFromYYMMDD(updatePayload.data_agendamento);
           if (date && isValid(date)) {
             // Formato YYYY-MM-DD para o backend
             updatePayload.data_agendamento = format(date, "yyyy-MM-dd");
-          } else {
-            // Se não conseguir parsear, mantém o valor original
-            console.warn("Não foi possível converter a data para o formato do backend:", updatePayload.data_agendamento);
           }
         } catch (error) {
           console.error("Erro ao converter data:", error);
         }
       }
 
-      // Se o usuário é recepcionista, não pode marcar como CONCLUIDO
       if (isReceptionist && updatePayload.status === "CONCLUIDO") {
         ___showErrorToastNotification({
           message: "Recepcionistas não podem marcar exames como concluídos.",
@@ -324,28 +348,28 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
     onSuccess: (response, variables) => {
       ___showSuccessToastNotification({ message: "Exame atualizado com sucesso!" });
 
-      // Atualiza o cache do React Query AGressivamente
+      // Atualiza o cache
       queryClient.invalidateQueries({ queryKey: ["completed-schedules"] });
       queryClient.invalidateQueries({ queryKey: ["schedules"] });
       queryClient.invalidateQueries({ queryKey: ["exams"] });
 
-      // Atualiza o estado local imediatamente
+      // Atualiza o estado local
       setLocalExams((prev) =>
         prev.map((exam) => {
           if (exam.id === variables.examId) {
             const updatedExam = { ...exam, ...variables.updates };
 
-            // Formata a data para o formato yy/M/d para exibição
+            // Formata a data para exibição
             if (variables.updates.data_agendamento) {
               try {
-                // A data vem do backend no formato YYYY-MM-DD
                 const date = new Date(variables.updates.data_agendamento);
                 if (isValid(date)) {
-                  updatedExam.data_agendamento = format(date, "yy/M/d");
+                  updatedExam.data_agendamento = formatToYYMMDD(date);
+                  updatedExam.originalDate = date;
                 }
               } catch (error) {
                 console.error("Erro ao formatar data para exibição:", error);
-                updatedExam.data_agendamento = format(new Date(), "yy/M/d");
+                updatedExam.data_agendamento = formatToYYMMDD(new Date());
               }
             }
 
@@ -366,6 +390,8 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
 
       setEditingExam(null);
       setEditedExam(null);
+      setCalendarDate(null);
+      setInputValue("");
     },
     onError: (error: any) => {
       console.error("Update exam error:", error);
@@ -376,15 +402,20 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
   });
 
   const allocateTechnicianMutation = useMutation({
-    mutationFn: async (data: { examId: number; technicianId: string }) => (await _axios.patch(`/exams/${data.examId}`, { id_tecnico_alocado: data.technicianId })).data,
+    mutationFn: async (data: { examId: number; technicianId: string }) => 
+      (await _axios.patch(`/exams/${data.examId}`, { id_tecnico_alocado: data.technicianId })).data,
     onSuccess: (response, variables) => {
       ___showSuccessToastNotification({ message: "Técnico alocado com sucesso!" });
 
-      // Atualiza o cache
       queryClient.invalidateQueries({ queryKey: ["completed-schedules"] });
 
-      // Atualiza o estado local
-      setLocalExams((prev) => prev.map((exam) => (exam.id === variables.examId ? { ...exam, id_tecnico_alocado: variables.technicianId } : exam)));
+      setLocalExams((prev) => 
+        prev.map((exam) => 
+          exam.id === variables.examId 
+            ? { ...exam, id_tecnico_alocado: variables.technicianId } 
+            : exam
+        )
+      );
 
       setSelectedTechnician(null);
     },
@@ -392,7 +423,8 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
   });
 
   const allocateChiefMutation = useMutation({
-    mutationFn: async (data: { scheduleId: number; chiefId: string }) => labChiefRoutes.allocateLabChief(data.scheduleId, data.chiefId),
+    mutationFn: async (data: { scheduleId: number; chiefId: string }) => 
+      labChiefRoutes.allocateLabChief(data.scheduleId, data.chiefId),
     onSuccess: () => {
       ___showSuccessToastNotification({ message: "Chefe alocado com sucesso!" });
       queryClient.invalidateQueries({ queryKey: ["completed-schedules"] });
@@ -401,50 +433,62 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
     onError: () => ___showErrorToastNotification({ message: "Erro ao alocar chefe." }),
   });
 
-  const handleForceRefresh = () => {
-    queryClient.invalidateQueries({ queryKey: ["completed-schedules"] });
-    queryClient.refetchQueries({ queryKey: ["completed-schedules"] });
-    ___showSuccessToastNotification({ message: "Dados recarregados!" });
+  const handleForceRefresh = async () => {
+    try {
+      setIsRefreshing(true);
+      
+      queryClient.invalidateQueries({ queryKey: ["completed-schedules"] });
+      queryClient.invalidateQueries({ queryKey: ["schedules"] });
+      queryClient.invalidateQueries({ queryKey: ["exams"] });
+      
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: ["completed-schedules"], type: 'active' }),
+        queryClient.refetchQueries({ queryKey: ["schedules"], type: 'active' }),
+      ]);
+      
+      ___showSuccessToastNotification({ 
+        message: "Dados atualizados com sucesso!" 
+      });
+      
+    } catch (error) {
+      console.error("Erro ao recarregar dados:", error);
+      ___showErrorToastNotification({
+        message: "Erro ao recarregar dados. Tente novamente."
+      });
+    } finally {
+      setTimeout(() => setIsRefreshing(false), 500);
+    }
   };
 
   if (!schedule) return null;
 
-  // Verifica se há pagamento pendente (regra 02)
   const hasPendingPayment = schedule.Exame?.some((exam) => exam.status_pagamento === "PENDENTE");
 
-  // Calcula o status geral do bloco (conforme regras)
   const calculateOverallScheduleStatus = () => {
     const exams = schedule.Exame || [];
 
-    // Regra: Se pelo menos um exame está pendente, status geral é pendente
     if (exams.some((exam) => exam.status === "PENDENTE")) {
       return "PENDENTE";
     }
 
-    // Regra: Se todos os exames são concluídos, status geral é concluído
     if (exams.every((exam) => exam.status === "CONCLUIDO")) {
       return "CONCLUIDO";
     }
 
-    // Regra: Se há exame "POR_REAGENDAR" e outros "CANCELADO" ou "CONCLUIDO", status é "POR_REAGENDAR"
     if (exams.some((exam) => exam.status === "POR_REAGENDAR")) {
       return "POR_REAGENDAR";
     }
 
-    // Regra: Se todos os exames são cancelados, status geral é cancelado
     if (exams.every((exam) => exam.status === "CANCELADO")) {
       return "CANCELADO";
     }
 
-    return "PENDENTE"; // default
+    return "PENDENTE";
   };
 
   const overallStatus = calculateOverallScheduleStatus();
-
-  // Usa os exames locais (que podem ter sido atualizados) ou os originais do schedule
   const activeExams = localExams.length > 0 ? localExams : schedule.Exame?.filter((exam) => exam.status !== "CONCLUIDO") || [];
 
-  // Se todos os exames estão concluídos, não mostrar (regra 1)
   if (overallStatus === "CONCLUIDO") return null;
 
   const getPatientAge = () => {
@@ -454,14 +498,13 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
       if (!isValid(birthDate)) return "N/A";
 
       const now = new Date();
-      const diffTime = now.getTime() - birthDate.getTime();
-      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-      const diffMonths = (now.getFullYear() - birthDate.getFullYear()) * 12 + now.getMonth() - birthDate.getMonth();
       const diffYears = now.getFullYear() - birthDate.getFullYear();
-
-      if (diffYears > 0) return `${diffYears} ano${diffYears > 1 ? "s" : ""}`;
-      if (diffMonths > 0) return `${diffMonths} mês${diffMonths > 1 ? "es" : ""}`;
-      return `${diffDays} dia${diffDays > 1 ? "s" : ""}`;
+      const hasHadBirthday = 
+        now.getMonth() > birthDate.getMonth() || 
+        (now.getMonth() === birthDate.getMonth() && now.getDate() >= birthDate.getDate());
+      
+      const age = hasHadBirthday ? diffYears : diffYears - 1;
+      return `${age} ano${age !== 1 ? "s" : ""}`;
     } catch {
       return "N/A";
     }
@@ -507,6 +550,13 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
 
   const handleEditExam = (exam: any) => {
     setEditingExam(exam.id);
+    
+    // Parse a data do exame
+    const parsedDate = parseFromYYMMDD(exam.data_agendamento);
+    
+    // Formata para o input
+    const displayDate = parsedDate ? formatForInput(parsedDate) : "";
+    
     setEditedExam({
       id: exam.id,
       data_agendamento: exam.data_agendamento,
@@ -515,6 +565,10 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
       id_tipo_exame: exam.id_tipo_exame || exam.Tipo_Exame?.id,
       id_tecnico_alocado: exam.id_tecnico_alocado || null,
     });
+    
+    // CRÍTICO: Atualiza o estado do calendar e input
+    setCalendarDate(parsedDate);
+    setInputValue(displayDate);
   };
 
   const handleSaveExam = () => {
@@ -546,12 +600,13 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
   const handleCancelEdit = () => {
     setEditingExam(null);
     setEditedExam(null);
+    setCalendarDate(null);
+    setInputValue("");
   };
 
   const handleExamFieldChange = (field: keyof EditableExam, value: any) => {
     if (!editedExam) return;
 
-    // Se está mudando o tipo de exame, atualiza também o preço no estado local
     if (field === "id_tipo_exame" && Array.isArray(examTypes)) {
       const selectedExamType = examTypes.find((et: ExamType) => et.id === parseInt(value));
       if (selectedExamType) {
@@ -560,7 +615,6 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
           [field]: value,
         });
 
-        // Atualiza o exame local com o novo tipo
         setLocalExams((prev) =>
           prev.map((exam) => {
             if (exam.id === editedExam.id) {
@@ -581,46 +635,12 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
     setEditedExam({ ...editedExam, [field]: value });
   };
 
-  // Função para mudança do Calendar
-  const handleDateChange = (date: Date | null) => {
-    if (editedExam && date) {
-      try {
-        // Valida se a data é válida para agendamento
-        if (!isValidScheduleDate(date)) {
-          ___showErrorToastNotification({
-            message: "Não é possível agendar para uma data anterior à data atual.",
-          });
-          return;
-        }
-
-        // Formata a data para o formato yy/M/d
-        const formattedDate = format(date, "yy/M/d");
-
-        setEditedExam((prev) => ({
-          ...prev!,
-          data_agendamento: formattedDate,
-        }));
-
-        // Atualiza também o calendarDates
-        setCalendarDates((prev) => new Map(prev.set(editedExam.id, date)));
-
-        ___showSuccessToastNotification({
-          message: "Data selecionada com sucesso!",
-        });
-      } catch (error) {
-        console.error("Erro ao formatar data:", error);
-      }
-    }
-  };
-
-  // Função para mudança do TimePicker
   const handleTimeChange = (time: string) => {
     if (editedExam) {
       setEditedExam({ ...editedExam, hora_agendamento: time });
     }
   };
 
-  // Função para verificar se pode inicializar exame (regra 02)
   const canInitializeExam = (exam: any) => {
     if (exam.status_pagamento !== "PAGO") return false;
     if (!isLabChief && !isLabTechnician) return false;
@@ -647,10 +667,29 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
             </div>
             <div className="flex items-center gap-2">
               {getExamStatusBadge(overallStatus)}
-              <Button variant="ghost" size="sm" onClick={handleForceRefresh} className="h-8 px-2" title="Recarregar dados">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={handleForceRefresh} 
+                className="h-8 px-2" 
+                title="Recarregar dados"
+                disabled={isRefreshing}
+              >
+                {isRefreshing ? (
+                  <svg 
+                    className="w-4 h-4 animate-spin" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24" 
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                ) : (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                )}
               </Button>
               <DialogClose className="rounded-full p-1.5 hover:bg-gray-100 transition-colors">
                 <X className="w-4 h-4" />
@@ -661,7 +700,6 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
 
         <ScrollArea className="h-[calc(90vh-120px)]">
           <div className="px-6 py-4 space-y-4">
-            {/* Status Overview Card */}
             <Card className="border shadow-sm">
               <CardContent className="p-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -677,7 +715,9 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
                       <CreditCard className="w-4 h-4" />
                       Status do Pagamento
                     </div>
-                    <div className={`font-medium ${hasPendingPayment ? "text-amber-600" : "text-green-600"}`}>{hasPendingPayment ? "Pendente" : "Pago"}</div>
+                    <div className={`font-medium ${hasPendingPayment ? "text-amber-600" : "text-green-600"}`}>
+                      {hasPendingPayment ? "Pendente" : "Pago"}
+                    </div>
                   </div>
                   <div className="space-y-1">
                     <div className="flex items-center gap-2 text-sm text-gray-600">
@@ -689,7 +729,7 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
                         try {
                           const date = new Date(schedule.criado_aos);
                           if (isValid(date)) {
-                            return format(date, "dd/M/yyyy HH:mm", { locale: ptBR });
+                            return format(date, "dd/MM/yyyy HH:mm", { locale: ptBR });
                           }
                           return "Data inválida";
                         } catch {
@@ -703,13 +743,14 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
                       <DollarSign className="w-4 h-4" />
                       Valor Total
                     </div>
-                    <div className="font-medium text-green-600 text-sm">{new Intl.NumberFormat("pt-AO", { style: "currency", currency: "AOA" }).format(totalValue)}</div>
+                    <div className="font-medium text-green-600 text-sm">
+                      {new Intl.NumberFormat("pt-AO", { style: "currency", currency: "AOA" }).format(totalValue)}
+                    </div>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Informações do Paciente */}
             <Card className="border shadow-sm">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
@@ -722,7 +763,9 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
                   <div className="flex-shrink-0 flex justify-center sm:justify-start">
                     <Avatar className="w-16 h-16">
                       <AvatarImage src="" alt={schedule.Paciente?.nome_completo} />
-                      <AvatarFallback className="bg-blue-100 text-blue-600 text-lg">{getPatientInitials()}</AvatarFallback>
+                      <AvatarFallback className="bg-blue-100 text-blue-600 text-lg">
+                        {getPatientInitials()}
+                      </AvatarFallback>
                     </Avatar>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 flex-1">
@@ -736,7 +779,9 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
                     </div>
                     <div>
                       <Label className="text-xs text-gray-500">BI/Identificação</Label>
-                      <p className="font-medium mt-1 text-sm">{schedule.Paciente?.numero_identificacao || "Não informado"}</p>
+                      <p className="font-medium mt-1 text-sm">
+                        {schedule.Paciente?.numero_identificacao || "Não informado"}
+                      </p>
                     </div>
                     <div>
                       <Label className="text-xs text-gray-500">Telefone</Label>
@@ -763,7 +808,6 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
               </CardContent>
             </Card>
 
-            {/* Chefe alocado (apenas para recepcionistas) */}
             {isReceptionist && (
               <Card className="border shadow-sm">
                 <CardHeader className="pb-3">
@@ -792,7 +836,17 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
                             ))}
                         </SelectContent>
                       </Select>
-                      <Button onClick={() => selectedChief && allocateChiefMutation.mutate({ scheduleId: schedule.id, chiefId: selectedChief })} disabled={!selectedChief || allocateChiefMutation.isPending} className="sm:w-auto">
+                      <Button
+                        onClick={() => 
+                          selectedChief && 
+                          allocateChiefMutation.mutate({ 
+                            scheduleId: schedule.id, 
+                            chiefId: selectedChief 
+                          })
+                        }
+                        disabled={!selectedChief || allocateChiefMutation.isPending}
+                        className="sm:w-auto"
+                      >
                         {allocateChiefMutation.isPending ? "Alocando..." : "Alocar"}
                       </Button>
                     </div>
@@ -801,7 +855,6 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
               </Card>
             )}
 
-            {/* Exames ativos */}
             <Card className="border shadow-sm">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
@@ -810,13 +863,12 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {activeExams.map((exam, index) => {
+                {activeExams.map((exam) => {
                   const currentPrice = exam.Tipo_Exame?.preco || 0;
-                  const calendarDate = calendarDates.get(exam.id) || null;
+                  const examCalendarDate = calendarDates.get(exam.id) || null;
 
                   return (
                     <div key={exam.id} className="border rounded-lg p-4 space-y-3">
-                      {/* Cabeçalho do exame */}
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                         <div>
                           <h4 className="font-semibold">{exam.Tipo_Exame?.nome || "Exame não especificado"}</h4>
@@ -824,17 +876,29 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
                             Exame:
                             {getExamStatusBadge(exam.status)}
                             <p>Pagamento: </p>
-                            <span className={`text-xs px-2 py-0.5 rounded-full ${exam.status_pagamento === "PAGO" ? "bg-green-100 text-green-800" : "bg-amber-100 text-amber-800"}`}>{exam.status_pagamento === "PAGO" ? "Pago" : "Pendente"}</span>
+                            <span className={`text-xs px-2 py-0.5 rounded-full ${exam.status_pagamento === "PAGO" ? "bg-green-100 text-green-800" : "bg-amber-100 text-amber-800"}`}>
+                              {exam.status_pagamento === "PAGO" ? "Pago" : "Pendente"}
+                            </span>
                           </div>
                         </div>
                         <div className="flex gap-2">
                           {editingExam === exam.id ? (
                             <div className="flex gap-2">
-                              <Button variant="default" size="sm" onClick={handleSaveExam} disabled={updateExamMutation.isPending}>
+                              <Button
+                                variant="default"
+                                size="sm"
+                                onClick={handleSaveExam}
+                                disabled={updateExamMutation.isPending}
+                              >
                                 <Save className="w-3 h-3 mr-1" />
                                 {updateExamMutation.isPending ? "Salvando..." : "Salvar"}
                               </Button>
-                              <Button variant="outline" size="sm" onClick={handleCancelEdit} disabled={updateExamMutation.isPending}>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleCancelEdit}
+                                disabled={updateExamMutation.isPending}
+                              >
                                 <X className="w-3 h-3 mr-1" />
                                 Cancelar
                               </Button>
@@ -846,7 +910,6 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
                             </Button>
                           )}
 
-                          {/* Botão para inicializar exame */}
                           {(isLabChief || isLabTechnician) && canInitializeExam(exam) && (
                             <Button
                               variant="default"
@@ -865,11 +928,15 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
 
                       {editingExam === exam.id && editedExam ? (
                         <div className="space-y-4 pt-3 border-t">
-                          {/* Tipo de Exame e Status */}
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
                               <Label className="text-sm">Tipo de Exame</Label>
-                              <Select value={editedExam.id_tipo_exame?.toString() || ""} onValueChange={(value) => handleExamFieldChange("id_tipo_exame", parseInt(value))}>
+                              <Select
+                                value={editedExam.id_tipo_exame?.toString() || ""}
+                                onValueChange={(value) => 
+                                  handleExamFieldChange("id_tipo_exame", parseInt(value))
+                                }
+                              >
                                 <SelectTrigger>
                                   <SelectValue placeholder="Selecionar tipo" />
                                 </SelectTrigger>
@@ -877,7 +944,10 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
                                   {Array.isArray(examTypes) &&
                                     examTypes.map((examType: ExamType) => (
                                       <SelectItem key={examType.id} value={examType.id.toString()}>
-                                        {examType.nome} - {new Intl.NumberFormat("pt-AO", { style: "currency", currency: "AOA" }).format(examType.preco)}
+                                        {examType.nome} - {new Intl.NumberFormat("pt-AO", { 
+                                          style: "currency", 
+                                          currency: "AOA" 
+                                        }).format(examType.preco)}
                                       </SelectItem>
                                     ))}
                                 </SelectContent>
@@ -885,24 +955,29 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
                             </div>
                             <div>
                               <Label className="text-sm">Status</Label>
-                              <Select value={editedExam.status} onValueChange={(value) => handleExamFieldChange("status", value)}>
+                              <Select
+                                value={editedExam.status}
+                                onValueChange={(value) => handleExamFieldChange("status", value)}
+                              >
                                 <SelectTrigger>
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
                                   <SelectItem value="PENDENTE">Pendente</SelectItem>
                                   <SelectItem value="CANCELADO">Cancelado</SelectItem>
-                                  {!isReceptionist && <SelectItem value="CONCLUIDO">Concluído</SelectItem>}
+                                  {!isReceptionist && (
+                                    <SelectItem value="CONCLUIDO">Concluído</SelectItem>
+                                  )}
                                 </SelectContent>
                               </Select>
                             </div>
                           </div>
 
-                          {/* Calendário para Data - Com dias desabilitados visíveis */}
                           <div>
-                            <Label className="text-sm mb-2 block font-medium text-gray-700">Selecione a Data</Label>
+                            <Label className="text-sm mb-2 block font-medium text-gray-700">
+                              Selecione a Data
+                            </Label>
                             <div className="mt-2 flex gap-2">
-                              {/* Input para digitação manual */}
                               <div className="flex-1">
                                 <div className="relative">
                                   <Input
@@ -914,17 +989,25 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
                                   />
                                   <CalendarDays className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                                 </div>
-                                <p className="text-xs text-gray-500 mt-1">Formato: dd/mm/aa (ex: 25/12/24)</p>
+                                <p className="text-xs text-gray-500 mt-1">
+                                  Formato: dd/mm/aa (ex: 25/12/24)
+                                </p>
                               </div>
 
-                              {/* Botão do calendário */}
                               <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
                                 <PopoverTrigger asChild>
-                                  <Button variant="outline" className="h-10 px-3 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 hover:border-gray-400">
+                                  <Button
+                                    variant="outline"
+                                    className="h-10 px-3 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 hover:border-gray-400"
+                                  >
                                     <ChevronDown className="h-4 w-4" />
                                   </Button>
                                 </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0 z-[100] border border-gray-300 shadow-lg" align="start" sideOffset={4}>
+                                <PopoverContent
+                                  className="w-auto p-0 z-[100] border border-gray-300 shadow-lg"
+                                  align="start"
+                                  sideOffset={4}
+                                >
                                   <div className="bg-white rounded-lg">
                                     <Calendar
                                       mode="single"
@@ -932,7 +1015,9 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
                                       onSelect={handleCalendarSelect}
                                       initialFocus
                                       className="p-3"
-                                      disabled={(date) => isBefore(startOfDay(date), startOfDay(new Date()))}
+                                      disabled={(date) => 
+                                        isBefore(startOfDay(date), startOfDay(new Date()))
+                                      }
                                       classNames={{
                                         month: "flex flex-col m-auto text-center space-y-4",
                                         months: "flex flex-col m-auto justify-center items-center space-y-4",
@@ -955,9 +1040,17 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
                                     <div className="border-t border-gray-200 p-3 bg-gray-50 rounded-b-lg">
                                       <div className="flex justify-between items-center">
                                         <p className="text-xs text-gray-500">
-                                          Data atual: <span className="font-medium">{format(new Date(), "dd/MM/yyyy")}</span>
+                                          Data atual:{" "}
+                                          <span className="font-medium">
+                                            {format(new Date(), "dd/MM/yyyy")}
+                                          </span>
                                         </p>
-                                        <Button variant="ghost" size="sm" className="text-xs bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700 px-2 py-1" onClick={handleTodayClick}>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="text-xs bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700 px-2 py-1"
+                                          onClick={handleTodayClick}
+                                        >
                                           <CalendarDays className="h-3 w-3 mr-1" />
                                           Hoje
                                         </Button>
@@ -968,18 +1061,21 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
                               </Popover>
                             </div>
 
-                            {/* Exibir a data selecionada */}
                             {calendarDate && (
                               <div className="mt-2 text-sm text-gray-700">
-                                <span className="font-medium">Data selecionada:</span> {format(calendarDate, "dd/MM/yyyy")}
+                                <span className="font-medium">Data selecionada:</span>{" "}
+                                {format(calendarDate, "dd/MM/yyyy")}
                               </div>
                             )}
                           </div>
-                          {/* TimePicker para Hora */}
+
                           <div>
                             <Label className="text-sm">Selecione o Horário</Label>
                             <div className="mt-2">
-                              <TimePicker value={editedExam.hora_agendamento} onChange={handleTimeChange} />
+                              <TimePicker
+                                value={editedExam.hora_agendamento}
+                                onChange={handleTimeChange}
+                              />
                             </div>
                           </div>
                         </div>
@@ -990,7 +1086,7 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
                             <div className="flex items-center gap-2 mt-1">
                               <CalendarDays className="w-3 h-3 text-gray-500" />
                               <span className="font-medium">
-                                {exam.data_agendamento} às {exam.hora_agendamento}
+                                {format(exam.data_agendamento)} às {exam.hora_agendamento}
                               </span>
                             </div>
                           </div>
@@ -998,24 +1094,33 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
                             <Label className="text-xs text-gray-500">Preço</Label>
                             <div className="flex items-center gap-2 mt-1">
                               <DollarSign className="w-3 h-3 text-gray-500" />
-                              <span className="font-medium text-green-600">{new Intl.NumberFormat("pt-AO", { style: "currency", currency: "AOA" }).format(currentPrice)}</span>
+                              <span className="font-medium text-green-600">
+                                {new Intl.NumberFormat("pt-AO", { 
+                                  style: "currency", 
+                                  currency: "AOA" 
+                                }).format(currentPrice)}
+                              </span>
                             </div>
                           </div>
                           {(isLabChief || isLabTechnician) && (
                             <div>
                               <Label className="text-xs text-gray-500">Técnico Alocado</Label>
-                              <p className="font-medium mt-1">{getTechnicianName(exam.id_tecnico_alocado)}</p>
+                              <p className="font-medium mt-1">
+                                {getTechnicianName(exam.id_tecnico_alocado)}
+                              </p>
                             </div>
                           )}
                         </div>
                       )}
 
-                      {/* Alocação de técnico (apenas para chefe) */}
                       {isLabChief && editingExam !== exam.id && (
                         <div className="pt-3 border-t">
                           <Label className="text-sm">Alocar Técnico</Label>
                           <div className="flex flex-col sm:flex-row gap-2 mt-2">
-                            <Select value={selectedTechnician || ""} onValueChange={setSelectedTechnician}>
+                            <Select
+                              value={selectedTechnician || ""}
+                              onValueChange={setSelectedTechnician}
+                            >
                               <SelectTrigger className="flex-1">
                                 <SelectValue placeholder="Selecionar técnico" />
                               </SelectTrigger>
@@ -1028,7 +1133,17 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
                                   ))}
                               </SelectContent>
                             </Select>
-                            <Button onClick={() => selectedTechnician && allocateTechnicianMutation.mutate({ examId: exam.id, technicianId: selectedTechnician })} disabled={!selectedTechnician || allocateTechnicianMutation.isPending} className="sm:w-auto">
+                            <Button
+                              onClick={() =>
+                                selectedTechnician &&
+                                allocateTechnicianMutation.mutate({
+                                  examId: exam.id,
+                                  technicianId: selectedTechnician,
+                                })
+                              }
+                              disabled={!selectedTechnician || allocateTechnicianMutation.isPending}
+                              className="sm:w-auto"
+                            >
                               {allocateTechnicianMutation.isPending ? "Alocando..." : "Alocar"}
                             </Button>
                           </div>
