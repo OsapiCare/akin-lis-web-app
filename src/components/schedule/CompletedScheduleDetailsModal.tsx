@@ -135,13 +135,6 @@ const formatForInput = (date: Date | null | undefined): string => {
   }
 };
 
-// Função para verificar se uma data é válida para agendamento
-const isValidScheduleDate = (date: Date): boolean => {
-  const today = startOfDay(new Date());
-  const selectedDate = startOfDay(date);
-  return !isBefore(selectedDate, today);
-};
-
 // Função para verificar se uma data é anterior à data atual
 const isDateBeforeToday = (date: Date): boolean => {
   const today = startOfDay(new Date());
@@ -268,7 +261,7 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
       return;
     }
     
-    // Verifica se a data não é anterior a hoje
+    // Verifica se a data é anterior a hoje
     if (isDateBeforeToday(selectedDate)) {
       setIsSaveDisabled(true);
       setSaveDisabledReason("Não é possível agendar para uma data anterior à data atual");
@@ -372,30 +365,19 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
       // Valor completo e válido
       const parsedDate = validation.parsedDate;
       
-      // Valida se a data não é anterior a hoje
-      if (isDateBeforeToday(parsedDate)) {
-        setInputError("Não é possível agendar para uma data anterior à data atual.");
-        setCalendarDate(null);
-        
-        if (editedExam && editingExam) {
-          setEditedExam({
-            ...editedExam,
-            data_agendamento: "",
-          });
-        }
-      } else {
-        setInputError(null);
-        setCalendarDate(parsedDate);
-
-        // Atualiza o editedExam se estiver editando
-        if (editedExam && editingExam) {
-          const formattedDate = formatToYYMMDD(parsedDate);
-          setEditedExam({
-            ...editedExam,
-            data_agendamento: formattedDate,
-          });
-        }
+      // Atualiza o editedExam se estiver editando
+      if (editedExam && editingExam) {
+        const formattedDate = formatToYYMMDD(parsedDate);
+        setEditedExam({
+          ...editedExam,
+          data_agendamento: formattedDate,
+        });
       }
+
+      setCalendarDate(parsedDate);
+      
+      // Não mostra erro aqui - permitimos a entrada, mas o botão será bloqueado se for data anterior
+      setInputError(null);
     } else {
       // Valor parcial - não mostra erro, apenas limpa a data
       setInputError(null);
@@ -412,32 +394,18 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
 
   const handleCalendarSelect = (date: Date | undefined) => {
     if (date) {
-      // Verifica se a data selecionada é anterior a hoje
-      if (isDateBeforeToday(date)) {
-        setInputError("Não é possível agendar para uma data anterior à data atual.");
-        setCalendarDate(null);
-        setInputValue("");
-        
-        if (editedExam && editingExam) {
-          setEditedExam({
-            ...editedExam,
-            data_agendamento: "",
-          });
-        }
-      } else {
-        setCalendarDate(date);
-        setInputValue(formatForInput(date));
-        setInputError(null);
-        setIsPopoverOpen(false);
+      setCalendarDate(date);
+      setInputValue(formatForInput(date));
+      setInputError(null);
+      setIsPopoverOpen(false);
 
-        // Atualiza o editedExam se estiver editando
-        if (editedExam && editingExam) {
-          const formattedDate = formatToYYMMDD(date);
-          setEditedExam({
-            ...editedExam,
-            data_agendamento: formattedDate,
-          });
-        }
+      // Atualiza o editedExam se estiver editando
+      if (editedExam && editingExam) {
+        const formattedDate = formatToYYMMDD(date);
+        setEditedExam({
+          ...editedExam,
+          data_agendamento: formattedDate,
+        });
       }
     }
   };
@@ -541,6 +509,7 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
             throw new Error("Data inválida");
           }
           
+          // Verifica se a data é anterior a hoje
           if (isDateBeforeToday(date)) {
             throw new Error("Não é possível agendar para uma data anterior à data atual.");
           }
@@ -1177,7 +1146,7 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
                                 {inputError ? (
                                   <p className="text-xs text-red-500 mt-1">{inputError}</p>
                                 ) : (
-                                  <p className="text-xs text-gray-500 mt-1">Formato: dd/mm/aa (ex: 25/12/24). Data deve ser igual ou superior à data atual.</p>
+                                  <p className="text-xs text-gray-500 mt-1">Formato: dd/mm/aa (ex: 25/12/24). Datas anteriores à atual serão bloqueadas.</p>
                                 )}
                               </div>
 
@@ -1236,7 +1205,7 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
                                 <span className="font-medium">Data selecionada:</span> {format(calendarDate, "dd/MM/yyyy")}
                                 {isToday(calendarDate) && <span className="ml-2 text-blue-600">(Hoje)</span>}
                                 {isDateBeforeToday(calendarDate) && (
-                                  <span className="ml-2 text-red-600">(Data anterior à atual)</span>
+                                  <span className="ml-2 text-red-600 font-medium">(Data anterior à atual - salvar bloqueado)</span>
                                 )}
                               </div>
                             )}

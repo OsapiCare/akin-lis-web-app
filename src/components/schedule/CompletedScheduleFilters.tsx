@@ -128,9 +128,14 @@ export function CompletedScheduleFilters({ onSearch, onFilterChange, onClearFilt
               </Badge>
             )}
             {filters.examStatus && filters.examStatus !== "TODOS" && (
-              <Badge variant="outline">
-                Status Exame: {filters.examStatus} <X className="inline w-3 h-3 ml-1 cursor-pointer" onClick={() => onClearFilters("examStatus")} />
+              <>
+                <p>
+                  Status Exame:
+                </p>
+              <Badge variant="outline" className={`${filters.examStatus === "PENDENTE" ? "bg-yellow-100 text-yellow-800" : filters.examStatus === "CONCLUIDO" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
+                 {filters.examStatus} <X className="inline w-3 h-3 ml-1 cursor-pointer" onClick={() => onClearFilters("examStatus")} />
               </Badge>
+              </>
             )}
             {filters.paymentStatus && filters.paymentStatus !== "TODOS" && (
               <Badge variant="outline">
@@ -252,7 +257,7 @@ export function CompletedScheduleFilters({ onSearch, onFilterChange, onClearFilt
                   <Clock className="w-3 h-3 mr-1 text-yellow-500" /> Exames Pendentes
                 </Button>
                  <Button variant="outline" size="sm" onClick={() => handleFilterChange("examStatus", "CONCLUIDO")} className="text-xs">
-                  <Clock className="w-3 h-3 mr-1 text-green-500" /> Exames Concluídos
+                  <CheckCircle className="w-3 h-3 mr-1 text-green-500" /> Exames Concluídos
                 </Button>
                  <Button variant="outline" size="sm" onClick={() => handleFilterChange("examStatus", "CANCELADO")} className="text-xs">
                   <XCircle className="w-3 h-3 mr-1 text-red-500" /> Exames Cancelados
