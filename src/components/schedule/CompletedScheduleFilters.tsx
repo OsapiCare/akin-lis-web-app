@@ -9,7 +9,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Search, Filter, CalendarIcon, X, Users, Clock, DollarSign, CheckCircle, AlertCircle, UserCheck } from "lucide-react";
+import { Search, Filter, CalendarIcon, X, Users, Clock, DollarSign, CheckCircle, AlertCircle, UserCheck, XCircle } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -249,10 +249,16 @@ export function CompletedScheduleFilters({ onSearch, onFilterChange, onClearFilt
               <div className="flex flex-wrap gap-2 pt-4 border-t">
                 <Label className="text-sm font-medium text-gray-700">Filtros rápidos:</Label>
                 <Button variant="outline" size="sm" onClick={() => handleFilterChange("examStatus", "PENDENTE")} className="text-xs">
-                  <Clock className="w-3 h-3 mr-1" /> Exames Pendentes
+                  <Clock className="w-3 h-3 mr-1 text-yellow-500" /> Exames Pendentes
+                </Button>
+                 <Button variant="outline" size="sm" onClick={() => handleFilterChange("examStatus", "CONCLUIDO")} className="text-xs">
+                  <Clock className="w-3 h-3 mr-1 text-green-500" /> Exames Concluídos
+                </Button>
+                 <Button variant="outline" size="sm" onClick={() => handleFilterChange("examStatus", "CANCELADO")} className="text-xs">
+                  <XCircle className="w-3 h-3 mr-1 text-red-500" /> Exames Cancelados
                 </Button>
                 <Button variant="outline" size="sm" onClick={() => handleFilterChange("paymentStatus", "PENDENTE")} className="text-xs">
-                  <DollarSign className="w-3 h-3 mr-1" /> Pagamentos Pendentes
+                  <DollarSign className="w-3 h-3 mr-1 text-yellow-700" /> Pagamentos Pendentes
                 </Button>
                 {isLabChief && (
                   <Button variant="outline" size="sm" onClick={() => handleFilterChange("technicianFilter", "ALOCADO")} className="text-xs">
