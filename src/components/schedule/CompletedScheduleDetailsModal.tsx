@@ -142,63 +142,6 @@ const isDateBeforeToday = (date: Date): boolean => {
   return isBefore(selectedDate, today);
 };
 
-// Função para validar formato de data manual - mais permissiva para valores parciais
-const isValidPartialDateInput = (value: string): { isValid: boolean; isPartial: boolean; parsedDate?: Date | null } => {
-  if (!value.trim()) {
-    return { isValid: true, isPartial: false };
-  }
-
-  // Remove caracteres não numéricos e barras extras
-  const cleanValue = value.replace(/[^\d/]/g, '');
-  
-  // Verifica se é um valor parcial (menos de 8 caracteres para dd/mm/aa)
-  const isPartial = cleanValue.replace(/\//g, '').length < 6;
-  
-  if (isPartial) {
-    // Para valores parciais, apenas verifica se o formato básico está correto
-    const parts = cleanValue.split('/').filter(part => part !== '');
-    
-    // Verifica se temos algo como "30/12" ou "30/12/2"
-    if (parts.length === 2) {
-      const day = parseInt(parts[0], 10);
-      const month = parseInt(parts[1], 10) - 1;
-      
-      if (!isNaN(day) && !isNaN(month) && day >= 1 && day <= 31 && month >= 0 && month <= 11) {
-        return { isValid: true, isPartial: true };
-      }
-    }
-    
-    if (parts.length === 3) {
-      const day = parseInt(parts[0], 10);
-      const month = parseInt(parts[1], 10) - 1;
-      const year = parseInt(parts[2], 10);
-      
-      if (!isNaN(day) && !isNaN(month) && !isNaN(year) && day >= 1 && day <= 31 && month >= 0 && month <= 11) {
-        return { isValid: true, isPartial: true };
-      }
-    }
-    
-    // Se não for um formato parcial válido, não mostra erro ainda
-    return { isValid: true, isPartial: true };
-  }
-
-  // Para valores completos, tenta fazer parsing
-  const formats = ["dd/MM/yy", "dd/MM/yyyy", "dd-MM-yy", "dd-MM-yyyy"];
-  
-  for (const fmt of formats) {
-    try {
-      const parsedDate = parse(cleanValue, fmt, new Date());
-      if (isValid(parsedDate)) {
-        return { isValid: true, isPartial: false, parsedDate };
-      }
-    } catch {
-      continue;
-    }
-  }
-  
-  return { isValid: false, isPartial: false };
-};
-
 export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: CompletedScheduleDetailsModalProps) {
   const [editingExam, setEditingExam] = useState<number | null>(null);
   const [editedExam, setEditedExam] = useState<EditableExam | null>(null);
@@ -213,6 +156,8 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSaveDisabled, setIsSaveDisabled] = useState(true);
   const [saveDisabledReason, setSaveDisabledReason] = useState<string | null>(null);
+  const [isDateValid, setIsDateValid] = useState<boolean>(true);
+  const [dateValidationMessage, setDateValidationMessage] = useState<string | null>(null);
 
   const queryClient = useQueryClient();
   const userRole = getAllDataInCookies().userRole;
@@ -245,68 +190,171 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
       setSaveDisabledReason("Nenhum exame em edição");
       return;
     }
-    
-    // Verifica se há uma data válida
-    if (!editedExam.data_agendamento || editedExam.data_agendamento.trim() === "") {
-      setIsSaveDisabled(true);
-      setSaveDisabledReason("Data de agendamento é obrigatória");
-      return;
+
+    // Verifica se há uma data válida na input
+    let selectedDate: Date | null = null;
+
+    if (inputValue.trim()) {
+      // Tenta parsear a data da input
+      try {
+        const formatsToTry = ["dd/MM/yy", "dd/MM/yyyy", "d/M/yy", "d/M/yyyy"];
+        for (const fmt of formatsToTry) {
+          try {
+            selectedDate = parse(inputValue, fmt, new Date());
+            if (isValid(selectedDate)) break;
+          } catch {
+            continue;
+          }
+        }
+      } catch (error) {
+        console.error("Erro ao parsear data da input:", error);
+      }
     }
-    
-    // Parse a data para verificar se é válida
-    const selectedDate = parseFromYYMMDD(editedExam.data_agendamento);
+
+    // Se não conseguiu da input, tenta do editedExam
+    if (!selectedDate || !isValid(selectedDate)) {
+      selectedDate = parseFromYYMMDD(editedExam.data_agendamento);
+    }
+
+    // Verifica se há uma data válida
     if (!selectedDate || !isValid(selectedDate)) {
       setIsSaveDisabled(true);
-      setSaveDisabledReason("Data inválida");
+      setSaveDisabledReason("Data de agendamento inválida ou vazia");
       return;
     }
-    
+
     // Verifica se a data é anterior a hoje
     if (isDateBeforeToday(selectedDate)) {
       setIsSaveDisabled(true);
       setSaveDisabledReason("Não é possível agendar para uma data anterior à data atual");
       return;
     }
-    
+
     // Verifica se há horário
     if (!editedExam.hora_agendamento || editedExam.hora_agendamento.trim() === "") {
       setIsSaveDisabled(true);
       setSaveDisabledReason("Horário de agendamento é obrigatório");
       return;
     }
-    
+
     // Verifica se há tipo de exame
     if (!editedExam.id_tipo_exame) {
       setIsSaveDisabled(true);
       setSaveDisabledReason("Tipo de exame é obrigatório");
       return;
     }
-    
+
     // Verifica se há status
     if (!editedExam.status || editedExam.status.trim() === "") {
       setIsSaveDisabled(true);
       setSaveDisabledReason("Status do exame é obrigatório");
       return;
     }
-    
+
     // Todas as validações passaram
     setIsSaveDisabled(false);
     setSaveDisabledReason(null);
   };
 
-  // Efeito para verificar status do botão de salvar quando editedExam muda
+  // Efeito para verificar status do botão de salvar quando editedExam ou inputValue muda
   useEffect(() => {
     checkSaveButtonStatus();
-  }, [editedExam]);
+  }, [editedExam, inputValue]);
+
+  // Efeito para verificar status do botão de salvar quando editedExam muda
+  // useEffect(() => {
+  //   checkSaveButtonStatus();
+  // }, [editedExam]);
+
+  const handleInputBlur = () => {
+    if (!inputValue.trim()) return;
+
+    try {
+      // Tenta parsear a data
+      const formatsToTry = ["dd/MM/yy", "dd/MM/yyyy", "d/M/yy", "d/M/yyyy"];
+      let parsedDate: Date | null = null;
+
+      for (const fmt of formatsToTry) {
+        try {
+          parsedDate = parse(inputValue, fmt, new Date());
+          if (isValid(parsedDate)) {
+            break;
+          }
+        } catch {
+          continue;
+        }
+      }
+
+      if (parsedDate && isValid(parsedDate)) {
+        setCalendarDate(parsedDate);
+
+        // Formata para exibição consistente
+        const formatted = formatForInput(parsedDate);
+        if (formatted !== inputValue) {
+          setInputValue(formatted);
+        }
+
+        // Verifica se é anterior
+        if (isDateBeforeToday(parsedDate)) {
+          setIsDateValid(false);
+          setDateValidationMessage("Data anterior à data atual");
+          setInputError(null);
+        } else {
+          setIsDateValid(true);
+          setDateValidationMessage(null);
+          setInputError(null);
+        }
+
+        // Atualiza o editedExam
+        if (editedExam && editingExam) {
+          const formattedDate = formatToYYMMDD(parsedDate);
+          setEditedExam({
+            ...editedExam,
+            data_agendamento: formattedDate,
+          });
+        }
+      } else {
+        // Data inválida
+        setInputError("Formato de data inválido");
+        setCalendarDate(null);
+        setIsDateValid(false);
+        setDateValidationMessage(null);
+
+        if (editedExam && editingExam) {
+          setEditedExam({
+            ...editedExam,
+            data_agendamento: "",
+          });
+        }
+      }
+    } catch (error) {
+      setInputError("Data inválida");
+      setCalendarDate(null);
+      setIsDateValid(false);
+      setDateValidationMessage(null);
+
+      if (editedExam && editingExam) {
+        setEditedExam({
+          ...editedExam,
+          data_agendamento: "",
+        });
+      }
+    }
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
+
+    // Permite digitação livre - apenas atualiza o valor
     setInputValue(value);
-    
+
     // Se o campo estiver vazio, limpa tudo
     if (!value.trim()) {
       setInputError(null);
       setCalendarDate(null);
+      setIsDateValid(true);
+      setDateValidationMessage(null);
+
       if (editedExam && editingExam) {
         setEditedExam({
           ...editedExam,
@@ -316,73 +364,89 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
       return;
     }
 
-    // Remove caracteres não numéricos, mantendo barras
-    const cleanValue = value.replace(/[^\d/]/g, '');
-    
-    // Formatação automática: dd/mm/aa
-    let formattedValue = cleanValue;
-    
-    // Adiciona barras automaticamente
-    if (cleanValue.length <= 2) {
-      // Apenas dia
-      formattedValue = cleanValue;
-    } else if (cleanValue.length <= 4) {
-      // Dia e mês
-      formattedValue = `${cleanValue.slice(0, 2)}/${cleanValue.slice(2)}`;
-    } else {
-      // Dia, mês e ano
-      const day = cleanValue.slice(0, 2);
-      const month = cleanValue.slice(2, 4);
-      const year = cleanValue.slice(4, 8);
-      formattedValue = `${day}/${month}${year ? '/' + year : ''}`;
-    }
-    
-    // Limita a 10 caracteres (dd/mm/aaaa)
-    if (formattedValue.length > 10) {
-      formattedValue = formattedValue.slice(0, 10);
-    }
-    
-    // Atualiza o valor formatado
-    if (formattedValue !== value) {
-      setInputValue(formattedValue);
-    }
-    
-    // Valida se é um valor parcial ou completo
-    const validation = isValidPartialDateInput(formattedValue);
-    
-    if (!validation.isValid) {
-      // Valor completo mas inválido
-      setInputError("Formato inválido. Use dd/mm/aa (ex: 25/12/24)");
-      setCalendarDate(null);
-      
-      if (editedExam && editingExam) {
-        setEditedExam({
-          ...editedExam,
-          data_agendamento: "",
-        });
-      }
-    } else if (!validation.isPartial && validation.parsedDate) {
-      // Valor completo e válido
-      const parsedDate = validation.parsedDate;
-      
-      // Atualiza o editedExam se estiver editando
-      if (editedExam && editingExam) {
-        const formattedDate = formatToYYMMDD(parsedDate);
-        setEditedExam({
-          ...editedExam,
-          data_agendamento: formattedDate,
-        });
-      }
+    // Remove o erro de formatação se o usuário estiver digitando
+    setInputError(null);
 
-      setCalendarDate(parsedDate);
-      
-      // Não mostra erro aqui - permitimos a entrada, mas o botão será bloqueado se for data anterior
-      setInputError(null);
+    // Tenta parsear a data apenas se tiver pelo menos 8 caracteres (dd/mm/aa)
+    const cleanValue = value.replace(/[^\d]/g, "");
+
+    if (cleanValue.length >= 6) {
+      // Tenta parsear
+      try {
+        // Formata para tentar parsear (dd/mm/aa)
+        let formattedForParsing = value;
+
+        // Se não tem barras e tem pelo menos 6 dígitos, tenta adicionar
+        if (!value.includes("/") && cleanValue.length >= 6) {
+          const day = cleanValue.slice(0, 2);
+          const month = cleanValue.slice(2, 4);
+          const year = cleanValue.slice(4, 6);
+          formattedForParsing = `${day}/${month}/${year}`;
+
+          // Atualiza o valor visualmente
+          setInputValue(formattedForParsing);
+        }
+
+        // Tenta parsear
+        let parsedDate: Date | null = null;
+        const formatsToTry = ["dd/MM/yy", "dd/MM/yyyy", "d/M/yy", "d/M/yyyy"];
+
+        for (const fmt of formatsToTry) {
+          try {
+            parsedDate = parse(formattedForParsing, fmt, new Date());
+            if (isValid(parsedDate)) {
+              setCalendarDate(parsedDate);
+
+              // Verifica se a data é anterior a hoje
+              if (isDateBeforeToday(parsedDate)) {
+                setIsDateValid(false);
+                setDateValidationMessage("Data anterior à data atual");
+              } else {
+                setIsDateValid(true);
+                setDateValidationMessage(null);
+              }
+
+              // Atualiza o editedExam
+              if (editedExam && editingExam) {
+                const formattedDate = formatToYYMMDD(parsedDate);
+                setEditedExam({
+                  ...editedExam,
+                  data_agendamento: formattedDate,
+                });
+              }
+              break;
+            }
+          } catch {
+            continue;
+          }
+        }
+
+        if (!parsedDate) {
+          // Não conseguiu parsear - pode ser valor incompleto
+          setCalendarDate(null);
+          setIsDateValid(true);
+          setDateValidationMessage(null);
+
+          if (editedExam && editingExam) {
+            setEditedExam({
+              ...editedExam,
+              data_agendamento: "",
+            });
+          }
+        }
+      } catch (error) {
+        // Ignora erros durante a digitação
+        console.error("Erro ao tentar parsear data:", error);
+        setCalendarDate(null);
+        setIsDateValid(true);
+        setDateValidationMessage(null);
+      }
     } else {
-      // Valor parcial - não mostra erro, apenas limpa a data
-      setInputError(null);
+      // Valor muito curto - limpa estados
       setCalendarDate(null);
-      
+      setIsDateValid(true);
+      setDateValidationMessage(null);
+
       if (editedExam && editingExam) {
         setEditedExam({
           ...editedExam,
@@ -392,29 +456,42 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
     }
   };
 
-  const handleCalendarSelect = (date: Date | undefined) => {
-    if (date) {
-      setCalendarDate(date);
-      setInputValue(formatForInput(date));
-      setInputError(null);
-      setIsPopoverOpen(false);
-
-      // Atualiza o editedExam se estiver editando
-      if (editedExam && editingExam) {
-        const formattedDate = formatToYYMMDD(date);
-        setEditedExam({
-          ...editedExam,
-          data_agendamento: formattedDate,
-        });
-      }
+const handleCalendarSelect = (date: Date | undefined) => {
+  if (date) {
+    const formattedDate = formatForInput(date);
+    setInputValue(formattedDate);
+    setCalendarDate(date);
+    setInputError(null);
+    
+    // Verifica se a data é anterior a hoje
+    if (isDateBeforeToday(date)) {
+      setIsDateValid(false);
+      setDateValidationMessage("Data anterior à data atual - o botão de salvar será bloqueado");
+    } else {
+      setIsDateValid(true);
+      setDateValidationMessage(null);
     }
-  };
+    
+    setIsPopoverOpen(false);
+
+    // Atualiza o editedExam se estiver editando
+    if (editedExam && editingExam) {
+      const formattedDateForExam = formatToYYMMDD(date);
+      setEditedExam({
+        ...editedExam,
+        data_agendamento: formattedDateForExam,
+      });
+    }
+  }
+};
 
   const handleTodayClick = () => {
     const today = new Date();
     setCalendarDate(today);
     setInputValue(formatForInput(today));
     setInputError(null);
+    setIsDateValid(true);
+    setDateValidationMessage(null);
     setIsPopoverOpen(false);
 
     if (editedExam && editingExam) {
@@ -479,6 +556,8 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
       setCalendarDate(date);
       setInputValue(date ? formatForInput(date) : "");
       setInputError(null);
+      setIsDateValid(date ? !isDateBeforeToday(date) : true);
+      setDateValidationMessage(date && isDateBeforeToday(date) ? "Data anterior à data atual" : null);
     }
   }, [editingExam, editedExam]);
 
@@ -494,6 +573,8 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
       setInputError(null);
       setIsSaveDisabled(true);
       setSaveDisabledReason(null);
+      setIsDateValid(true);
+      setDateValidationMessage(null);
     }
   }, [isOpen]);
 
@@ -508,7 +589,7 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
           if (!date || !isValid(date)) {
             throw new Error("Data inválida");
           }
-          
+
           // Verifica se a data é anterior a hoje
           if (isDateBeforeToday(date)) {
             throw new Error("Não é possível agendar para uma data anterior à data atual.");
@@ -583,6 +664,8 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
       setInputError(null);
       setIsSaveDisabled(true);
       setSaveDisabledReason(null);
+      setIsDateValid(true);
+      setDateValidationMessage(null);
     },
     onError: (error: any) => {
       console.error("Update exam error:", error);
@@ -747,6 +830,8 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
     setCalendarDate(parsedDate);
     setInputValue(displayDate);
     setInputError(null);
+    setIsDateValid(parsedDate ? !isDateBeforeToday(parsedDate) : true);
+    setDateValidationMessage(parsedDate && isDateBeforeToday(parsedDate) ? "Data anterior à data atual" : null);
   };
 
   const handleSaveExam = () => {
@@ -789,6 +874,8 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
     setInputError(null);
     setIsSaveDisabled(true);
     setSaveDisabledReason(null);
+    setIsDateValid(true);
+    setDateValidationMessage(null);
   };
 
   const handleExamFieldChange = (field: keyof EditableExam, value: any) => {
@@ -1048,10 +1135,10 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
                         <div className="flex gap-2">
                           {editingExam === exam.id ? (
                             <div className="flex gap-2">
-                              <Button 
-                                variant="default" 
-                                size="sm" 
-                                onClick={handleSaveExam} 
+                              <Button
+                                variant="default"
+                                size="sm"
+                                onClick={handleSaveExam}
                                 disabled={updateExamMutation.isPending || isSaveDisabled}
                                 className={isSaveDisabled ? "opacity-50 cursor-not-allowed" : ""}
                                 title={isSaveDisabled && saveDisabledReason ? saveDisabledReason : "Salvar alterações"}
@@ -1134,20 +1221,21 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
                                     type="text"
                                     value={inputValue}
                                     onChange={handleInputChange}
+                                    onBlur={handleInputBlur}
                                     placeholder="dd/mm/aa"
                                     className={`w-full h-10 px-3 bg-white border rounded-md shadow-sm focus:ring-1 ${
                                       inputError
                                         ? "border-red-300 hover:border-red-400 focus:border-red-500 focus:ring-red-500"
+                                        : dateValidationMessage
+                                        ? "border-amber-300 hover:border-amber-400 focus:border-amber-500 focus:ring-amber-500"
                                         : "border-gray-300 hover:border-gray-400 focus:border-blue-500 focus:ring-blue-500"
                                     }`}
                                   />
                                   <CalendarDays className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                                 </div>
-                                {inputError ? (
-                                  <p className="text-xs text-red-500 mt-1">{inputError}</p>
-                                ) : (
-                                  <p className="text-xs text-gray-500 mt-1">Formato: dd/mm/aa (ex: 25/12/24). Datas anteriores à atual serão bloqueadas.</p>
-                                )}
+                                {inputError && <p className="text-xs text-red-500 mt-1">{inputError}</p>}
+                                {dateValidationMessage && <p className="text-xs text-amber-600 mt-1">⚠️ {dateValidationMessage} - O botão de salvar será bloqueado</p>}
+                                {!inputError && !dateValidationMessage && <p className="text-xs text-gray-500 mt-1">Formato: dd/mm/aa (ex: 25/12/24). Você pode digitar qualquer data.</p>}
                               </div>
 
                               <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
@@ -1204,9 +1292,7 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
                               <div className="mt-2 text-sm text-gray-700">
                                 <span className="font-medium">Data selecionada:</span> {format(calendarDate, "dd/MM/yyyy")}
                                 {isToday(calendarDate) && <span className="ml-2 text-blue-600">(Hoje)</span>}
-                                {isDateBeforeToday(calendarDate) && (
-                                  <span className="ml-2 text-red-600 font-medium">(Data anterior à atual - salvar bloqueado)</span>
-                                )}
+                                {isDateBeforeToday(calendarDate) && <span className="ml-2 text-amber-600 font-medium">⚠️ Data anterior à atual</span>}
                               </div>
                             )}
                           </div>
@@ -1217,6 +1303,22 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
                               <TimePicker value={editedExam.hora_agendamento} onChange={handleTimeChange} />
                             </div>
                           </div>
+
+                          {/* Mensagem de aviso sobre o botão de salvar */}
+                          {isSaveDisabled && saveDisabledReason && (
+                            <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-md">
+                              <div className="flex items-start gap-2">
+                                <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                                <div>
+                                  <p className="text-sm font-medium text-amber-800">Atenção</p>
+                                  <p className="text-xs text-amber-700 mt-1">
+                                    O botão de salvar está bloqueado porque: <span className="font-semibold">{saveDisabledReason}</span>
+                                  </p>
+                                  <p className="text-xs text-amber-600 mt-1">Corrija os campos acima para poder salvar as alterações.</p>
+                                </div>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-sm pt-3 border-t">
