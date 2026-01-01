@@ -12,7 +12,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CalendarDays, Clock, User, Phone, Stethoscope, CheckCircle, XCircle, AlertCircle, Edit3, Mail, Users, Save, X, FileText, DollarSign, CreditCard, Shield, ChevronDown } from "lucide-react";
-import { format, parse, isValid, isBefore, startOfDay, isToday } from "date-fns";
+import { format, parse, isValid, isBefore, startOfDay, isToday, isAfter, isEqual } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { _axios } from "@/Api/axios.config";
 import { ___showSuccessToastNotification, ___showErrorToastNotification } from "@/lib/sonner";
@@ -142,6 +142,33 @@ const isDateBeforeToday = (date: Date): boolean => {
   return isBefore(selectedDate, today);
 };
 
+// Função para verificar se um horário é anterior ao horário atual (para datas de hoje)
+const isTimeBeforeNow = (date: Date, time: string): boolean => {
+  if (!date || !time) return false;
+  
+  try {
+    // Cria uma data com a hora selecionada
+    const [hours, minutes] = time.split(":").map(Number);
+    const selectedDateTime = new Date(date);
+    selectedDateTime.setHours(hours, minutes, 0, 0);
+    
+    // Data e hora atual
+    const now = new Date();
+    
+    // Verifica se o horário selecionado é anterior ao horário atual
+    return isBefore(selectedDateTime, now);
+  } catch (error) {
+    console.error("Erro ao verificar horário:", error);
+    return false;
+  }
+};
+
+// Função para formatar hora atual para comparação
+const getCurrentTimeString = (): string => {
+  const now = new Date();
+  return `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
+};
+
 export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: CompletedScheduleDetailsModalProps) {
   const [editingExam, setEditingExam] = useState<number | null>(null);
   const [editedExam, setEditedExam] = useState<EditableExam | null>(null);
@@ -158,6 +185,7 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
   const [saveDisabledReason, setSaveDisabledReason] = useState<string | null>(null);
   const [isDateValid, setIsDateValid] = useState<boolean>(true);
   const [dateValidationMessage, setDateValidationMessage] = useState<string | null>(null);
+  const [timeError, setTimeError] = useState<string | null>(null);
 
   const queryClient = useQueryClient();
   const userRole = getAllDataInCookies().userRole;
@@ -220,6 +248,21 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
       return;
     }
     
+    // Verifica se o horário é válido (para datas de hoje)
+    if (isToday(selectedDate)) {
+      // Verifica se o horário é anterior ao horário atual
+      if (isTimeBeforeNow(selectedDate, editedExam.hora_agendamento)) {
+        setIsSaveDisabled(true);
+        setSaveDisabledReason(`Para hoje, não é possível agendar para um horário anterior ao atual (${getCurrentTimeString()})`);
+        // setTimeError(`Horário inválido para hoje. Hora atual: ${getCurrentTimeString()}`);
+        return;
+      } else {
+        setTimeError(null);
+      }
+    } else {
+      setTimeError(null);
+    }
+    
     // Verifica se há tipo de exame
     if (!editedExam.id_tipo_exame) {
       setIsSaveDisabled(true);
@@ -237,6 +280,7 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
     // Todas as validações passaram
     setIsSaveDisabled(false);
     setSaveDisabledReason(null);
+    setTimeError(null);
   };
 
   // Efeito para verificar status do botão de salvar quando editedExam muda
@@ -252,6 +296,7 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
     // Remove erro enquanto digita
     setInputError(null);
     setDateValidationMessage(null);
+    setTimeError(null);
   };
 
   // SIMPLIFICADO: handleInputBlur - valida apenas quando o campo perde o foco
@@ -262,6 +307,7 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
       setCalendarDate(null);
       setIsDateValid(true);
       setDateValidationMessage(null);
+      setTimeError(null);
       
       if (editedExam && editingExam) {
         setEditedExam({
@@ -305,6 +351,15 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
         } else {
           setIsDateValid(true);
           setDateValidationMessage(null);
+          
+          // Se a data for hoje e já houver um horário selecionado, valida o horário
+          if (isToday(parsedDate) && editedExam?.hora_agendamento) {
+            if (isTimeBeforeNow(parsedDate, editedExam.hora_agendamento)) {
+              setTimeError(`Horário inválido para hoje. Hora atual: ${getCurrentTimeString()}`);
+            } else {
+              setTimeError(null);
+            }
+          }
         }
         
         // Atualiza o editedExam
@@ -321,6 +376,7 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
         setCalendarDate(null);
         setIsDateValid(false);
         setDateValidationMessage(null);
+        setTimeError(null);
         
         if (editedExam && editingExam) {
           setEditedExam({
@@ -334,6 +390,7 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
       setCalendarDate(null);
       setIsDateValid(false);
       setDateValidationMessage(null);
+      setTimeError(null);
       
       if (editedExam && editingExam) {
         setEditedExam({
@@ -355,9 +412,19 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
       if (isDateBeforeToday(date)) {
         setIsDateValid(false);
         setDateValidationMessage("Data anterior à data atual - o botão de salvar será bloqueado");
+        setTimeError(null);
       } else {
         setIsDateValid(true);
         setDateValidationMessage(null);
+        
+        // Se a data for hoje e já houver um horário selecionado, valida o horário
+        if (isToday(date) && editedExam?.hora_agendamento) {
+          if (isTimeBeforeNow(date, editedExam.hora_agendamento)) {
+            setTimeError(`Horário inválido para hoje. Hora atual: ${getCurrentTimeString()}`);
+          } else {
+            setTimeError(null);
+          }
+        }
       }
       
       setIsPopoverOpen(false);
@@ -381,6 +448,15 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
     setIsDateValid(true);
     setDateValidationMessage(null);
     setIsPopoverOpen(false);
+
+    // Se já houver um horário selecionado, valida-o
+    if (editedExam?.hora_agendamento) {
+      if (isTimeBeforeNow(today, editedExam.hora_agendamento)) {
+        setTimeError(`Horário inválido para hoje. Hora atual: ${getCurrentTimeString()}`);
+      } else {
+        setTimeError(null);
+      }
+    }
 
     if (editedExam && editingExam) {
       const formattedDate = formatToYYMMDD(today);
@@ -446,6 +522,15 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
       setInputError(null);
       setIsDateValid(date ? !isDateBeforeToday(date) : true);
       setDateValidationMessage(date && isDateBeforeToday(date) ? "Data anterior à data atual" : null);
+      
+      // Se a data for hoje, valida o horário
+      if (date && isToday(date) && editedExam.hora_agendamento) {
+        if (isTimeBeforeNow(date, editedExam.hora_agendamento)) {
+          setTimeError(`Horário inválido para hoje. Hora atual: ${getCurrentTimeString()}`);
+        } else {
+          setTimeError(null);
+        }
+      }
     }
   }, [editingExam, editedExam]);
 
@@ -463,6 +548,7 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
       setSaveDisabledReason(null);
       setIsDateValid(true);
       setDateValidationMessage(null);
+      setTimeError(null);
     }
   }, [isOpen]);
 
@@ -481,6 +567,13 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
           // Verifica se a data é anterior a hoje
           if (isDateBeforeToday(date)) {
             throw new Error("Não é possível agendar para uma data anterior à data atual.");
+          }
+
+          // Verifica se o horário é válido para datas de hoje
+          if (isToday(date) && updatePayload.hora_agendamento) {
+            if (isTimeBeforeNow(date, updatePayload.hora_agendamento)) {
+              throw new Error(`Para hoje, não é possível agendar para um horário anterior ao atual (${getCurrentTimeString()})`);
+            }
           }
 
           // Formato YYYY-MM-DD para o backend
@@ -554,6 +647,7 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
       setSaveDisabledReason(null);
       setIsDateValid(true);
       setDateValidationMessage(null);
+      setTimeError(null);
     },
     onError: (error: any) => {
       console.error("Update exam error:", error);
@@ -720,6 +814,17 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
     setInputError(null);
     setIsDateValid(parsedDate ? !isDateBeforeToday(parsedDate) : true);
     setDateValidationMessage(parsedDate && isDateBeforeToday(parsedDate) ? "Data anterior à data atual" : null);
+    
+    // Valida o horário se a data for hoje
+    if (parsedDate && isToday(parsedDate) && exam.hora_agendamento) {
+      if (isTimeBeforeNow(parsedDate, exam.hora_agendamento)) {
+        setTimeError(`Horário inválido para hoje. Hora atual: ${getCurrentTimeString()}`);
+      } else {
+        setTimeError(null);
+      }
+    } else {
+      setTimeError(null);
+    }
   };
 
   const handleSaveExam = () => {
@@ -740,6 +845,16 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
         message: "Não é possível agendar para uma data anterior à data atual.",
       });
       return;
+    }
+
+    // Valida o horário se a data for hoje
+    if (selectedDate && isToday(selectedDate)) {
+      if (isTimeBeforeNow(selectedDate, editedExam.hora_agendamento)) {
+        ___showErrorToastNotification({
+          message: `Para hoje, não é possível agendar para um horário anterior ao atual (${getCurrentTimeString()})`,
+        });
+        return;
+      }
     }
 
     updateExamMutation.mutate({
@@ -764,6 +879,7 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
     setSaveDisabledReason(null);
     setIsDateValid(true);
     setDateValidationMessage(null);
+    setTimeError(null);
   };
 
   const handleExamFieldChange = (field: keyof EditableExam, value: any) => {
@@ -794,11 +910,28 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
       }
     }
 
+    // Se estiver alterando o horário e a data for hoje, valida
+    if (field === "hora_agendamento" && calendarDate && isToday(calendarDate)) {
+      if (isTimeBeforeNow(calendarDate, value)) {
+        setTimeError(`Horário inválido para hoje. Hora atual: ${getCurrentTimeString()}`);
+      } else {
+        setTimeError(null);
+      }
+    }
+
     setEditedExam({ ...editedExam, [field]: value });
   };
 
   const handleTimeChange = (time: string) => {
     if (editedExam) {
+      // Valida o horário se a data for hoje
+      if (calendarDate && isToday(calendarDate)) {
+        if (isTimeBeforeNow(calendarDate, time)) {
+          setTimeError(`Horário inválido para hoje. Hora atual: ${getCurrentTimeString()}`);
+        } else {
+          setTimeError(null);
+        }
+      }
       setEditedExam({ ...editedExam, hora_agendamento: time });
     }
   };
@@ -1188,8 +1321,21 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
                           <div>
                             <Label className="text-sm">Selecione o Horário</Label>
                             <div className="mt-2">
-                              <TimePicker value={editedExam.hora_agendamento} onChange={handleTimeChange} />
+                              <TimePicker 
+                                value={editedExam.hora_agendamento} 
+                                onChange={handleTimeChange} 
+                                // Passa a data para o TimePicker validar se for hoje
+                                isToday={calendarDate ? isToday(calendarDate) : false}
+                              />
                             </div>
+                            {timeError &&  (
+                              <p className="text-xs text-red-500 mt-1">{""}</p>
+                            )}
+                            {calendarDate && isToday(calendarDate) && !timeError && (
+                              <p className="text-xs text-gray-500 mt-1">
+                                Horário válido para hoje. Hora atual: {getCurrentTimeString()}
+                              </p>
+                            )}
                           </div>
 
                           {/* Mensagem de aviso sobre o botão de salvar */}
