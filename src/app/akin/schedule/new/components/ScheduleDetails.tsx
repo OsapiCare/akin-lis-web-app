@@ -8,7 +8,7 @@ import { Calendar } from "primereact/calendar";
 import TimePicker from "@/components/ui/timepicker";
 import { IItemTipoProps } from "@/module/types";
 
-export enum TipoItem {
+enum TipoItem {
   EXAME = "EXAME",
   CONSULTA = "CONSULTA"
 }

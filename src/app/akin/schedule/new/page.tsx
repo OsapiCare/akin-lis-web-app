@@ -17,7 +17,7 @@ import { patientRoutes } from "@/Api/Routes/patients";
 export type SchemaScheduleType = z.infer<typeof schemaSchedule>;
 
 // Enum para tipos de itens
-export enum TipoItem {
+enum TipoItem {
   EXAME = "EXAME",
   CONSULTA = "CONSULTA"
 }
