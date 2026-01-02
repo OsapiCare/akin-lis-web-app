@@ -2,6 +2,47 @@ import { useMemo } from "react";
 
 // Interfaces atualizadas conforme o PDF
 
+export interface Exam {
+  data: {
+    id: number;
+    id_agendamento: number;
+    id_tipo_Exame: number;
+    status_pagamento: string;
+    data_agendamento: string;
+    hora_agendamento: string;
+    status: string;
+    exame: {
+      id: number;
+      nome: string;
+      descricao: string;
+      preco: number;
+      status: string;
+    };
+    _count: {
+      Protocolo_Exame: number;
+      Utilizacao_Material: number;
+    };
+    Tipo_Exame: {
+      id: number,
+      nome: string,
+      descricao: string,
+      preco: number,
+      status: string,
+      criado_aos: Date,
+      atualizado_aos: Date
+    },
+    Agendamento: {
+      id: number;
+      id_paciente: string;
+      id_tecnico_alocado: string | null;
+      id_unidade_de_saude: number;
+      status: string;
+      quantia_pagamento: number;
+      data_pagamento: string | null;
+      data_formatada: string;
+    };
+  }[]
+}
 // Interface para Item de Agendamento (pode ser Exame ou Consulta)
 export interface ItemAgendamento {
   id: number;

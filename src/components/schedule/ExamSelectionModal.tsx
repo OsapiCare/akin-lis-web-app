@@ -8,8 +8,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Search, FileText, DollarSign, AlertCircle } from "lucide-react";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import { any } from "zod";
-import { Exam } from "@/utils/schedule-consolidation";
 
 interface ExamSelectionModalProps {
   isOpen: boolean;
