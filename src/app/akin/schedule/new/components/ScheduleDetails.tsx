@@ -161,9 +161,8 @@ export function ScheduleDetails({
               showIcon 
               dateFormat="yy/m/d" 
               readOnlyInput 
-              className="w-full h-10 px-2 bg-white rounded-md shadow-sm border-gray-300 focus:border-none" 
+              className="w-full border h-10 px-2 bg-white rounded-md shadow-sm border-gray-300 focus:border-none" 
             />
-          </div>
 
           {/* Hora e Botão de Remover */}
           <div className="flex items-end gap-0 w-full md:gap-2 flex-wrap md:flex-nowrap">
@@ -174,8 +173,9 @@ export function ScheduleDetails({
               <TimePicker 
                 value={schedule.time} 
                 onChange={(time) => handleScheduleChange(index, "time", time)} 
-              />
+                />
             </div>
+                </div>
             
             {schedules.length > 1 && (
               <Button 
