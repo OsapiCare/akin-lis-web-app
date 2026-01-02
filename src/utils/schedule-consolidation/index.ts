@@ -1,30 +1,62 @@
 import { useMemo } from "react";
 
-// Interface para tipos de exame
-export interface Exam {
+// Interfaces atualizadas conforme o PDF
+
+// Interface para Item de Agendamento (pode ser Exame ou Consulta)
+export interface ItemAgendamento {
   id: number;
+  tipo: "EXAME" | "CONSULTA"; // Novo campo para diferenciar
   data_agendamento: string;
   hora_agendamento: string;
-  status: string;
-  status_pagamento: string;
-  id_tipo_exame?: string;
+  
+  // Estados conforme PDF
+  estado_clinico: "PENDENTE" | "EM_ANDAMENTO" | "POR_REAGENDAR" | "CONCLUIDO" | "CANCELADO";
+  estado_financeiro: "ISENTO" | "NAO_PAGO" | "PAGO";
+  estado_reembolso: "SEM_REEMBOLSO" | "POR_REEMBOLSAR" | "REEMBOLSADO";
+  
+  // Campos específicos por tipo
+  id_tipo_item?: string; // id_tipo_exame ou id_tipo_consulta
+  
   Tipo_Exame?: {
     id: string;
     nome: string;
     preco: number;
   };
+  
+  Tipo_Consulta?: {
+    id: string;
+    nome: string;
+    preco: number;
+  };
+  
   observacoes?: string;
-  id_tecnico_alocado?: string;
+  id_profissional_alocado?: string; // pode ser técnico, clínico, enfermeiro
   categoria?: string;
 }
 
-// Interface para bloco de agendamento
-export interface ScheduleBlock {
+// Interface para Processo de Agendamento
+export interface ProcessoAgendamento {
   id: number;
   id_paciente: string;
   criado_aos: string;
-  Exame: Exam[];
-  id_chefe_alocado?: string;
+  
+  // Estados do Processo conforme PDF
+  estado_clinico: "ATIVO" | "PARCIALMENTE_CONCLUIDO" | "POR_REAGENDAR" | "CONCLUIDO" | "CANCELADO";
+  estado_financeiro: "ISENTO" | "NAO_PAGO" | "PAGO_PARCIALMENTE" | "PAGO";
+  estado_reembolso: "SEM_REEMBOLSO" | "POR_REEMBOLSAR" | "REEMBOLSADO";
+  
+  // Campos financeiros
+  valor_total: number;
+  valor_pago: number;
+  valor_a_pagar: number;
+  
+  // Itens do processo (agora podem ser exames OU consultas)
+  Itens: ItemAgendamento[];
+  
+  // Campos de alocação conforme PDF
+  id_chefe_laboratorio_alocado?: string; // Para exames
+  id_clinico_geral_alocado?: string; // Para consultas
+  
   Paciente?: {
     nome_completo: string;
     numero_identificacao: string;
@@ -36,202 +68,310 @@ export interface ScheduleBlock {
 
 // Interface para resposta da consolidação
 interface ConsolidationResult {
-  consolidatedSchedules: ScheduleBlock[];
+  consolidatedSchedules: ProcessoAgendamento[];
   originalScheduleCount: number;
   consolidatedScheduleCount: number;
   consolidatedPatients: Set<string>;
 }
 
-// Helper para determinar o status geral do bloco
-export const getOverallBlockStatus = (exams: Exam[]): string => {
-  if (!exams || exams.length === 0) return "SEM_EXAMES";
+// ========== HELPERS ATUALIZADOS ==========
 
-  // Se todos os exames estão concluídos
-  if (exams.every(exam => exam.status === "CONCLUIDO")) {
-    return "CONCLUIDO";
+// Helper para calcular preço do item (agora suporta Exame ou Consulta)
+const getItemPrice = (item: ItemAgendamento): number => {
+  if (item.tipo === "EXAME" && item.Tipo_Exame) {
+    return item.Tipo_Exame.preco;
   }
+  if (item.tipo === "CONSULTA" && item.Tipo_Consulta) {
+    return item.Tipo_Consulta.preco;
+  }
+  return 0;
+};
 
-  // Se todos os exames estão cancelados
-  if (exams.every(exam => exam.status === "CANCELADO")) {
+// Helper para determinar o estado clínico geral do processo (regras do PDF)
+export const getOverallProcessStatus = (items: ItemAgendamento[]): ProcessoAgendamento["estado_clinico"] => {
+  if (!items || items.length === 0) return "CANCELADO";
+
+  // 1. Verificar Cancelado (todos os itens cancelados)
+  if (items.every(item => item.estado_clinico === "CANCELADO")) {
     return "CANCELADO";
   }
 
-  // Se pelo menos um exame está pendente
-  if (exams.some(exam => exam.status === "PENDENTE")) {
-    return "PENDENTE";
+  // 2. Verificar Concluído (todos os itens concluídos)
+  if (items.every(item => item.estado_clinico === "CONCLUIDO")) {
+    return "CONCLUIDO";
   }
 
-  // Se pelo menos um exame precisa ser reagendado
-  if (exams.some(exam => exam.status === "POR_REAGENDAR")) {
+  // 3. Verificar Por Reagendar (nenhum pendente/em andamento/concluído, pelo menos um por reagendar)
+  const hasPendente = items.some(item => item.estado_clinico === "PENDENTE");
+  const hasEmAndamento = items.some(item => item.estado_clinico === "EM_ANDAMENTO");
+  const hasConcluido = items.some(item => item.estado_clinico === "CONCLUIDO");
+  const hasPorReagendar = items.some(item => item.estado_clinico === "POR_REAGENDAR");
+  
+  if (!hasPendente && !hasEmAndamento && !hasConcluido && hasPorReagendar) {
     return "POR_REAGENDAR";
   }
 
-  // Se há exames em andamento
-  if (exams.some(exam => exam.status === "EM_ANDAMENTO")) {
-    return "EM_ANDAMENTO";
+  // 4. Verificar Parcialmente Concluído (pelo menos um concluído e um não concluído)
+  const hasAnyConcluido = items.some(item => item.estado_clinico === "CONCLUIDO");
+  const hasAnyNaoConcluido = items.some(item => 
+    item.estado_clinico !== "CONCLUIDO" && item.estado_clinico !== "CANCELADO"
+  );
+  
+  if (hasAnyConcluido && hasAnyNaoConcluido) {
+    return "PARCIALMENTE_CONCLUIDO";
   }
 
-  return "INDEFINIDO";
+  // 5. Verificar Ativo (pelo menos um pendente ou em andamento)
+  if (hasPendente || hasEmAndamento) {
+    return "ATIVO";
+  }
+
+  return "CANCELADO"; // fallback
 };
 
-// Helper para verificar se o bloco tem fatura paga
-export const isBlockPaid = (exams: Exam[]): boolean => {
-  if (!exams || exams.length === 0) return false;
+// Helper para verificar se o processo tem fatura paga (baseado nos itens)
+export const isProcessPaid = (items: ItemAgendamento[]): boolean => {
+  if (!items || items.length === 0) return true; // Sem itens = considerado pago
   
-  // Considera que o bloco está pago se NÃO há nenhum exame com pagamento pendente
-  return !exams.some(exam => exam.status_pagamento === "PENDENTE");
+  // Processo considerado pago se:
+  // 1. Não há itens com estado financeiro = "NAO_PAGO"
+  // 2. Itens ISENTOS não impedem o estado PAGO conforme PDF
+  return !items.some(item => item.estado_financeiro === "NAO_PAGO");
 };
 
-// Helper para calcular valor total do bloco
-export const calculateBlockTotal = (exams: Exam[]): number => {
-  if (!exams) return 0;
-  return exams.reduce((sum, exam) => sum + (exam.Tipo_Exame?.preco || 0), 0);
-};
+// Helper para calcular estado financeiro do processo (regras do PDF)
+export const calculateFinancialStatus = (items: ItemAgendamento[]): ProcessoAgendamento["estado_financeiro"] => {
+  if (!items || items.length === 0) return "ISENTO";
 
-// Verifica se um bloco pode receber novos exames
-export const canAcceptNewExams = (schedule: ScheduleBlock): boolean => {
-  const overallStatus = getOverallBlockStatus(schedule.Exame);
+  // Calcular totais
+  let totalDevido = 0;
+  let totalPago = 0;
   
-  // O bloco pode aceitar novos exames se estiver PENDENTE ou POR_REAGENDAR
-  return overallStatus === "PENDENTE" || overallStatus === "POR_REAGENDAR";
+  items.forEach(item => {
+    const preco = getItemPrice(item);
+    
+    if (item.estado_financeiro === "PAGO") {
+      totalPago += preco;
+      totalDevido += preco;
+    } else if (item.estado_financeiro === "NAO_PAGO") {
+      totalDevido += preco;
+    }
+    // Itens ISENTOS não contam para o total devido
+  });
+
+  // Aplicar regras do PDF
+  if (totalDevido === 0) {
+    return "ISENTO";
+  }
+  
+  if (totalPago === 0) {
+    return "NAO_PAGO";
+  }
+  
+  if (totalPago > 0 && totalPago < totalDevido) {
+    return "PAGO_PARCIALMENTE";
+  }
+  
+  if (totalDevido > 0 && totalPago === totalDevido) {
+    return "PAGO";
+  }
+  
+  return "NAO_PAGO"; // fallback
 };
 
-// Verifica se todos os exames estão concluídos ou cancelados
-export const isBlockCompletedOrCancelled = (exams: Exam[]): boolean => {
-  if (!exams || exams.length === 0) return false;
+// Helper para calcular estado de reembolso do processo (regras do PDF)
+export const calculateReimbursementStatus = (items: ItemAgendamento[]): ProcessoAgendamento["estado_reembolso"] => {
+  if (!items || items.length === 0) return "SEM_REEMBOLSO";
+
+  // Verificar se há itens pagos que foram cancelados (devem ser reembolsados)
+  const hasItemsParaReembolsar = items.some(item => 
+    item.estado_financeiro === "PAGO" && 
+    item.estado_clinico === "CANCELADO" &&
+    item.estado_reembolso !== "REEMBOLSADO"
+  );
+
+  const allReembolsados = items.every(item => 
+    item.estado_reembolso !== "POR_REEMBOLSAR"
+  );
+
+  if (hasItemsParaReembolsar) {
+    return "POR_REEMBOLSAR";
+  }
   
-  return exams.every(exam => 
-    exam.status === "CONCLUIDO" || exam.status === "CANCELADO"
+  if (allReembolsados) {
+    return "SEM_REEMBOLSO";
+  }
+  
+  return "SEM_REEMBOLSO"; // fallback
+};
+
+// Verifica se um processo pode receber novos itens
+export const canAcceptNewItems = (process: ProcessoAgendamento): boolean => {
+  const overallStatus = process.estado_clinico;
+  
+  // O processo pode aceitar novos itens se estiver ATIVO, PARCIALMENTE_CONCLUIDO ou POR_REAGENDAR
+  // Mas conforme PDF, precisa verificar os itens individuais
+  const hasPendente = process.Itens.some(item => item.estado_clinico === "PENDENTE");
+  const hasPorReagendar = process.Itens.some(item => item.estado_clinico === "POR_REAGENDAR");
+  
+  return hasPendente || hasPorReagendar;
+};
+
+// Verifica se todos os itens estão concluídos ou cancelados
+export const isProcessCompletedOrCancelled = (items: ItemAgendamento[]): boolean => {
+  if (!items || items.length === 0) return true;
+  
+  return items.every(item => 
+    item.estado_clinico === "CONCLUIDO" || item.estado_clinico === "CANCELADO"
   );
 };
 
-// Lógica principal para determinar onde adicionar novos exames
-export const determineScheduleForNewExams = (
+// Valida se um item pode ser iniciado (regra do PDF: só se PAGO ou ISENTO)
+export const canStartItem = (item: ItemAgendamento): boolean => {
+  return item.estado_financeiro === "PAGO" || item.estado_financeiro === "ISENTO";
+};
+
+// ========== LÓGICA PRINCIPAL ATUALIZADA ==========
+
+// Lógica principal para determinar onde adicionar novos itens
+export const determineScheduleForNewItems = (
   patientId: string,
-  existingSchedules: ScheduleBlock[],
-  newExams: Exam[]
+  existingProcesses: ProcessoAgendamento[],
+  newItems: ItemAgendamento[]
 ): {
-  targetScheduleId: number | null;
-  shouldCreateNewSchedule: boolean;
+  targetProcessId: number | null;
+  shouldCreateNewProcess: boolean;
   shouldUpdatePayment: boolean;
   reason: string;
 } => {
-  // Filtrar blocos do mesmo paciente
-  const patientSchedules = existingSchedules.filter(
-    schedule => schedule.id_paciente === patientId
+  // Filtrar processos do mesmo paciente
+  const patientProcesses = existingProcesses.filter(
+    process => process.id_paciente === patientId
   );
 
-  // Se não há blocos existentes, criar novo
-  if (patientSchedules.length === 0) {
+  // Se não há processos existentes, criar novo
+  if (patientProcesses.length === 0) {
     return {
-      targetScheduleId: null,
-      shouldCreateNewSchedule: true,
+      targetProcessId: null,
+      shouldCreateNewProcess: true,
       shouldUpdatePayment: false,
       reason: "Primeiro processo para este paciente"
     };
   }
 
-  // Buscar blocos que podem aceitar novos exames (PENDENTE ou POR_REAGENDAR)
-  const eligibleSchedules = patientSchedules.filter(canAcceptNewExams);
+  // Buscar processos que podem aceitar novos itens
+  const eligibleProcesses = patientProcesses.filter(canAcceptNewItems);
 
-  // Se há blocos elegíveis
-  if (eligibleSchedules.length > 0) {
-    // Usar o bloco mais recente (com base na data de criação)
-    const mostRecentSchedule = eligibleSchedules.sort((a, b) => 
+  // Se há processos elegíveis
+  if (eligibleProcesses.length > 0) {
+    // Usar o processo mais recente
+    const mostRecentProcess = eligibleProcesses.sort((a, b) => 
       new Date(b.criado_aos).getTime() - new Date(a.criado_aos).getTime()
     )[0];
 
-    const isPaid = isBlockPaid(mostRecentSchedule.Exame);
+    const isPaid = isProcessPaid(mostRecentProcess.Itens);
 
     return {
-      targetScheduleId: mostRecentSchedule.id,
-      shouldCreateNewSchedule: false,
-      shouldUpdatePayment: !isPaid, // Atualizar pagamento se já estiver pago
+      targetProcessId: mostRecentProcess.id,
+      shouldCreateNewProcess: false,
+      shouldUpdatePayment: !isPaid,
       reason: isPaid 
         ? "Processo existente pago, nova fatura será criada" 
         : "Processo existente com fatura pendente"
     };
   }
 
-  // Se todos os blocos estão concluídos/cancelados, criar novo
-  if (patientSchedules.every(schedule => 
-    isBlockCompletedOrCancelled(schedule.Exame)
+  // Se todos os processos estão concluídos/cancelados, criar novo
+  if (patientProcesses.every(process => 
+    isProcessCompletedOrCancelled(process.Itens)
   )) {
     return {
-      targetScheduleId: null,
-      shouldCreateNewSchedule: true,
+      targetProcessId: null,
+      shouldCreateNewProcess: true,
       shouldUpdatePayment: false,
       reason: "Todos os processos anteriores estão concluídos/cancelados"
     };
   }
 
-  // Caso padrão: criar novo bloco
+  // Caso padrão: criar novo processo
   return {
-    targetScheduleId: null,
-    shouldCreateNewSchedule: true,
+    targetProcessId: null,
+    shouldCreateNewProcess: true,
     shouldUpdatePayment: false,
     reason: "Nenhum processo elegível encontrado"
   };
 };
 
-// Função para consolidar blocos de agendamento por paciente
-export const consolidatePatientSchedules = (
-  schedules: ScheduleBlock[]
+// ========== FUNÇÕES DE CONSOLIDAÇÃO ATUALIZADAS ==========
+
+// Função para consolidar processos de agendamento por paciente
+export const consolidatePatientProcesses = (
+  processes: ProcessoAgendamento[]
 ): ConsolidationResult => {
-  const patientScheduleMap = new Map<string, ScheduleBlock[]>();
-  const consolidatedSchedules: ScheduleBlock[] = [];
+  const patientProcessMap = new Map<string, ProcessoAgendamento[]>();
+  const consolidatedProcesses: ProcessoAgendamento[] = [];
   const consolidatedPatients = new Set<string>();
 
-  // Agrupar agendamentos por paciente
-  schedules.forEach(schedule => {
-    const patientId = schedule.id_paciente;
-    if (!patientScheduleMap.has(patientId)) {
-      patientScheduleMap.set(patientId, []);
+  // Agrupar processos por paciente
+  processes.forEach(process => {
+    const patientId = process.id_paciente;
+    if (!patientProcessMap.has(patientId)) {
+      patientProcessMap.set(patientId, []);
     }
-    patientScheduleMap.get(patientId)!.push(schedule);
+    patientProcessMap.get(patientId)!.push(process);
   });
 
   // Processar cada paciente
-  patientScheduleMap.forEach((patientSchedules, patientId) => {
+  patientProcessMap.forEach((patientProcesses, patientId) => {
     // Ordenar por data de criação (mais recente primeiro)
-    const sortedSchedules = patientSchedules.sort((a, b) => 
+    const sortedProcesses = patientProcesses.sort((a, b) => 
       new Date(b.criado_aos).getTime() - new Date(a.criado_aos).getTime()
     );
 
-    // Encontrar blocos que podem ser consolidados
-    const activeSchedules = sortedSchedules.filter(schedule => 
-      canAcceptNewExams(schedule)
-    );
+    // Encontrar processos que podem ser consolidados
+    const activeProcesses = sortedProcesses.filter(canAcceptNewItems);
 
-    if (activeSchedules.length > 0) {
-      // Usar o bloco mais recente ativo
-      const mainSchedule = { ...activeSchedules[0] };
+    if (activeProcesses.length > 0) {
+      // Usar o processo mais recente ativo
+      const mainProcess = { ...activeProcesses[0] };
       
-      // Adicionar exames de outros blocos ativos (exceto o principal)
-      activeSchedules.slice(1).forEach(schedule => {
-        mainSchedule.Exame = [...mainSchedule.Exame, ...schedule.Exame];
+      // Adicionar itens de outros processos ativos
+      activeProcesses.slice(1).forEach(process => {
+        mainProcess.Itens = [...mainProcess.Itens, ...process.Itens];
       });
 
-      // Adicionar blocos concluídos/cancelados como separados
-      const completedCancelledSchedules = sortedSchedules.filter(schedule => 
-        !canAcceptNewExams(schedule) && !isBlockCompletedOrCancelled(schedule.Exame)
+      // Recalcular estados após consolidação
+      mainProcess.estado_clinico = getOverallProcessStatus(mainProcess.Itens);
+      mainProcess.estado_financeiro = calculateFinancialStatus(mainProcess.Itens);
+      mainProcess.estado_reembolso = calculateReimbursementStatus(mainProcess.Itens);
+      
+      // Recalcular valores
+      mainProcess.valor_total = mainProcess.Itens.reduce((sum, item) => sum + getItemPrice(item), 0);
+      mainProcess.valor_pago = mainProcess.Itens
+        .filter(item => item.estado_financeiro === "PAGO")
+        .reduce((sum, item) => sum + getItemPrice(item), 0);
+      mainProcess.valor_a_pagar = mainProcess.valor_total - mainProcess.valor_pago;
+
+      // Adicionar processos concluídos/cancelados como separados
+      const completedCancelledProcesses = sortedProcesses.filter(process => 
+        !canAcceptNewItems(process) && !isProcessCompletedOrCancelled(process.Itens)
       );
 
-      consolidatedSchedules.push(mainSchedule);
-      completedCancelledSchedules.forEach(schedule => {
-        consolidatedSchedules.push(schedule);
+      consolidatedProcesses.push(mainProcess);
+      completedCancelledProcesses.forEach(process => {
+        consolidatedProcesses.push(process);
       });
 
-      // Adicionar blocos completamente finalizados
-      sortedSchedules.filter(schedule => 
-        isBlockCompletedOrCancelled(schedule.Exame)
-      ).forEach(schedule => {
-        consolidatedSchedules.push(schedule);
+      // Adicionar processos completamente finalizados
+      sortedProcesses.filter(process => 
+        isProcessCompletedOrCancelled(process.Itens)
+      ).forEach(process => {
+        consolidatedProcesses.push(process);
       });
     } else {
-      // Se não há blocos ativos, manter todos como estão
-      sortedSchedules.forEach(schedule => {
-        consolidatedSchedules.push(schedule);
+      // Se não há processos ativos, manter todos como estão
+      sortedProcesses.forEach(process => {
+        consolidatedProcesses.push(process);
       });
     }
 
@@ -239,56 +379,58 @@ export const consolidatePatientSchedules = (
   });
 
   return {
-    consolidatedSchedules,
-    originalScheduleCount: schedules.length,
-    consolidatedScheduleCount: consolidatedSchedules.length,
+    consolidatedSchedules: consolidatedProcesses,
+    originalScheduleCount: processes.length,
+    consolidatedScheduleCount: consolidatedProcesses.length,
     consolidatedPatients
   };
 };
 
-// Função para simular adição de novos exames a um paciente
-export const simulateAddExamsToPatient = (
+// Função para simular adição de novos itens a um paciente
+export const simulateAddItemsToPatient = (
   patientId: string,
-  existingSchedules: ScheduleBlock[],
-  newExams: Exam[]
+  existingProcesses: ProcessoAgendamento[],
+  newItems: ItemAgendamento[]
 ): {
   action: "CREATE_NEW" | "ADD_TO_EXISTING" | "CREATE_NEW_WITH_PAYMENT";
-  scheduleId?: number;
+  processId?: number;
   totalValue: number;
   previousPaymentStatus: string;
   newPaymentStatus: string;
   message: string;
 } => {
-  const determination = determineScheduleForNewExams(
+  const determination = determineScheduleForNewItems(
     patientId,
-    existingSchedules,
-    newExams
+    existingProcesses,
+    newItems
   );
 
-  if (determination.shouldCreateNewSchedule) {
+  const newItemsTotal = newItems.reduce((sum, item) => sum + getItemPrice(item), 0);
+
+  if (determination.shouldCreateNewProcess) {
     return {
       action: "CREATE_NEW",
-      totalValue: calculateBlockTotal(newExams),
+      totalValue: newItemsTotal,
       previousPaymentStatus: "N/A",
       newPaymentStatus: "PENDENTE",
       message: `Novo processo criado: ${determination.reason}`
     };
   }
 
-  if (determination.targetScheduleId) {
-    const targetSchedule = existingSchedules.find(
-      s => s.id === determination.targetScheduleId
+  if (determination.targetProcessId) {
+    const targetProcess = existingProcesses.find(
+      p => p.id === determination.targetProcessId
     );
     
-    if (targetSchedule) {
-      const isPaid = isBlockPaid(targetSchedule.Exame);
-      const previousTotal = calculateBlockTotal(targetSchedule.Exame);
-      const newTotal = previousTotal + calculateBlockTotal(newExams);
+    if (targetProcess) {
+      const isPaid = isProcessPaid(targetProcess.Itens);
+      const previousTotal = targetProcess.valor_total;
+      const newTotal = previousTotal + newItemsTotal;
 
       if (isPaid && determination.shouldUpdatePayment) {
         return {
           action: "CREATE_NEW_WITH_PAYMENT",
-          scheduleId: targetSchedule.id,
+          processId: targetProcess.id,
           totalValue: newTotal,
           previousPaymentStatus: "PAGO",
           newPaymentStatus: "PENDENTE",
@@ -297,11 +439,11 @@ export const simulateAddExamsToPatient = (
       } else {
         return {
           action: "ADD_TO_EXISTING",
-          scheduleId: targetSchedule.id,
+          processId: targetProcess.id,
           totalValue: newTotal,
           previousPaymentStatus: isPaid ? "PAGO" : "PENDENTE",
           newPaymentStatus: "PENDENTE",
-          message: `Exames adicionados ao processo existente: ${determination.reason}`
+          message: `Itens adicionados ao processo existente: ${determination.reason}`
         };
       }
     }
@@ -310,7 +452,7 @@ export const simulateAddExamsToPatient = (
   // Fallback
   return {
     action: "CREATE_NEW",
-    totalValue: calculateBlockTotal(newExams),
+    totalValue: newItemsTotal,
     previousPaymentStatus: "N/A",
     newPaymentStatus: "PENDENTE",
     message: "Novo processo criado (fallback)"
@@ -318,12 +460,12 @@ export const simulateAddExamsToPatient = (
 };
 
 // Hook personalizado para usar a lógica de consolidação
-export const useConsolidatedSchedules = (schedules: ScheduleBlock[]) => {
+export const useConsolidatedProcesses = (processes: ProcessoAgendamento[]) => {
   return useMemo(() => {
-    const result = consolidatePatientSchedules(schedules);
+    const result = consolidatePatientProcesses(processes);
     
     return {
-      schedules: result.consolidatedSchedules,
+      processes: result.consolidatedSchedules,
       statistics: {
         originalCount: result.originalScheduleCount,
         consolidatedCount: result.consolidatedScheduleCount,
@@ -334,5 +476,21 @@ export const useConsolidatedSchedules = (schedules: ScheduleBlock[]) => {
         uniquePatients: result.consolidatedPatients.size
       }
     };
-  }, [schedules]);
+  }, [processes]);
+};
+
+// Função auxiliar para filtrar itens por tipo
+export const filterItemsByType = (process: ProcessoAgendamento, tipo: "EXAME" | "CONSULTA"): ItemAgendamento[] => {
+  return process.Itens.filter(item => item.tipo === tipo);
+};
+
+// Função para obter profissional responsável com base no tipo de item
+export const getResponsibleProfessional = (process: ProcessoAgendamento, tipo: "EXAME" | "CONSULTA"): string | undefined => {
+  if (tipo === "EXAME") {
+    return process.id_chefe_laboratorio_alocado;
+  }
+  if (tipo === "CONSULTA") {
+    return process.id_clinico_geral_alocado;
+  }
+  return undefined;
 };

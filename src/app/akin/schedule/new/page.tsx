@@ -11,20 +11,27 @@ import { ScheduleDetails, ScheduleItem } from "./components/ScheduleDetails";
 import { Button } from "@/components/ui/button";
 import { resetInputs } from "./utils/reset-inputs-func";
 import { getAllDataInCookies } from "@/utils/get-data-in-cookies";
-import { IExamProps, Patient } from "@/module/types";
+import { IItemTipoProps, IPaciente } from "@/module/types";
 import { patientRoutes } from "@/Api/Routes/patients";
 
 export type SchemaScheduleType = z.infer<typeof schemaSchedule>;
 
+// Enum para tipos de itens
+export enum TipoItem {
+  EXAME = "EXAME",
+  CONSULTA = "CONSULTA"
+}
+
 export default function New() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [availableExams, setAvailableExams] = useState<IExamProps[]>([]);
-  const [availablePatients, setAvailablePatients] = useState<Patient[]>([]);
+  const [availableItems, setAvailableItems] = useState<IItemTipoProps[]>([]);
+  const [availablePatients, setAvailablePatients] = useState<IPaciente[]>([]);
   const [patientAutoComplete, setPatientAutoComplete] = useState<{ value: string; id: string }[]>([]);
   const [selectedPatientId, setSelectedPatientId] = useState<string>("");
-  const [selectedPatient, setSelectedPatient] = useState<Patient | undefined>();
-  const [schedules, setSchedules] = useState<ScheduleItem[]>([{ exam: null, date: null, time: "" }]);
+  const [selectedPatient, setSelectedPatient] = useState<IPaciente | undefined>();
+  const [schedules, setSchedules] = useState<ScheduleItem[]>([{ item: null, tipo: TipoItem.EXAME, date: null, time: "" }]);
+  const [selectedTipo, setSelectedTipo] = useState<TipoItem>(TipoItem.EXAME);
   const [resetPatient, setResetPatient] = useState(false);
   const unit_health = getAllDataInCookies().userdata.health_unit_ref || 1;
 
@@ -34,14 +41,29 @@ export default function New() {
     }
   }, [selectedPatientId, availablePatients]);
 
-  const fetchPatientsAndExams = async () => {
+  const fetchPatientsAndItems = async () => {
     try {
+      // Buscar pacientes
       const patientsResponse = await patientRoutes.getAllPacients();
       setAvailablePatients(patientsResponse);
-      setPatientAutoComplete(patientsResponse.map((p: Patient) => ({ value: p.nome_completo, id: p.id })));
+      setPatientAutoComplete(patientsResponse.map((p: IPaciente) => ({ value: p.nome_completo, id: p.id })));
 
+      // Buscar exames
       const examsResponse = await _axios.get("/exam-types");
-      setAvailableExams(examsResponse.data.data);
+      const examsData = examsResponse.data.data.map((exam: any) => ({
+        ...exam,
+        tipo: TipoItem.EXAME
+      }));
+
+      // Buscar consultas (assumindo endpoint /consultation-types)
+      const consultationsResponse = await _axios.get("/consultation-types");
+      const consultationsData = consultationsResponse.data.data.map((cons: any) => ({
+        ...cons,
+        tipo: TipoItem.CONSULTA
+      }));
+
+      // Combinar exames e consultas
+      setAvailableItems([...examsData, ...consultationsData]);
 
       ___showSuccessToastNotification({ message: "Dados obtidos com sucesso!" });
     } catch (error: any) {
@@ -53,10 +75,10 @@ export default function New() {
   };
 
   useEffect(() => {
-    fetchPatientsAndExams();
+    fetchPatientsAndItems();
   }, []);
 
-  const handleSavePatient = (patient: Patient) => {
+  const handleSavePatient = (patient: IPaciente) => {
     setPatientAutoComplete((prev) => [...prev, { value: patient.nome_completo, id: patient.id }]);
     setAvailablePatients((prev) => [...prev, patient]);
     setSelectedPatient(patient);
@@ -74,7 +96,7 @@ export default function New() {
     return `${ageDays} dia${ageDays > 1 ? "s" : ""}`;
   };
 
-  /** Validação detalhada com mensagens específicas por exame */
+  /** Validação detalhada com mensagens específicas por item */
   const validateSchedule = () => {
     const errors: string[] = [];
     const today = new Date();
@@ -84,7 +106,7 @@ export default function New() {
     }
 
     schedules.forEach((schedule, index) => {
-      if (!schedule.exam) errors.push(`Agendamento ${index + 1}: Exame não selecionado.`);
+      if (!schedule.item) errors.push(`Agendamento ${index + 1}: ${schedule.tipo === TipoItem.EXAME ? "Exame" : "Consulta"} não selecionado.`);
       if (!schedule.date) errors.push(`Agendamento ${index + 1}: Data não preenchida.`);
       if (!schedule.time) errors.push(`Agendamento ${index + 1}: Hora não preenchida.`);
 
@@ -104,8 +126,9 @@ export default function New() {
       data: {
         id_paciente: selectedPatient!.id,
         id_unidade_de_saude: unit_health,
-        exames_paciente: schedules.map((schedule) => ({
-          id_tipo_exame: schedule.exam?.id,
+        itens: schedules.map((schedule) => ({
+          id_tipo_item: schedule.item?.id,
+          tipo: schedule.tipo,
           data_agendamento: schedule.date instanceof Date ? schedule.date.toISOString().split("T")[0] : schedule.date ? new Date(schedule.date).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
           hora_agendamento: schedule.time,
         })),
@@ -121,22 +144,25 @@ export default function New() {
 
     setIsSaving(true);
     try {
+      // Endpoint unificado para criar processo de agendamento
       const response = await _axios.post("/schedulings/set-schedule", validation.data);
+      
       if (response.status === 201) {
-        ___showSuccessToastNotification({ message: "Agendamento marcado com sucesso" });
-        setSchedules([{ exam: null, date: null, time: "" }]);
+        ___showSuccessToastNotification({ message: "Processo de agendamento criado com sucesso!" });
+        setSchedules([{ item: null, tipo: TipoItem.EXAME, date: null, time: "" }]);
         setSelectedPatient(undefined);
         setSelectedPatientId("");
+        setSelectedTipo(TipoItem.EXAME);
         resetInputs();
         setResetPatient(true);
       }
     } catch (error: any) {
-      // Tratamento detalhado de erro do backend por exame
+      // Tratamento detalhado de erro do backend por item
       if (error?.response?.data?.errors) {
         const backendErrors = error.response.data.errors.map((e: any, i: number) => `Agendamento ${i + 1}: ${e.message}`);
         ___showErrorToastNotification({ messages: backendErrors });
       } else {
-        const msg = error?.response?.data?.message || "Erro ao marcar agendamento. Contate o suporte.";
+        const msg = error?.response?.data?.message || "Erro ao criar processo de agendamento. Contate o suporte.";
         ___showErrorToastNotification({ message: msg });
       }
       setResetPatient(false);
@@ -144,6 +170,9 @@ export default function New() {
       setIsSaving(false);
     }
   };
+
+  // Filtrar itens por tipo selecionado
+  const filteredItems = availableItems.filter(item => item.tipo === selectedTipo);
 
   return (
     <div className="min-h-screen px-6 py-2 pb-5 overflow-x-hidden">
@@ -162,7 +191,7 @@ export default function New() {
           <div className="p-4 bg-gray-100 rounded-lg border w-full">
             <PatientDetails
               isLoading={isLoading}
-              selectedPatient={selectedPatient}
+              selectedPatient={selectedPatient ?? undefined}
               autoCompleteData={patientAutoComplete}
               onPatientSelect={(patientId) => setSelectedPatientId(patientId)}
               resetPatient={resetPatient}
@@ -170,13 +199,52 @@ export default function New() {
             />
           </div>
 
+          {/* Seletor de Tipo (Exame/Consulta) */}
+          <div className="p-4 bg-gray-100 rounded-lg border">
+            <div className="flex flex-col gap-3">
+              <label className="font-bold text-lg">Tipo de Agendamento</label>
+              <div className="flex gap-4">
+                <Button
+                  type="button"
+                  variant={selectedTipo === TipoItem.EXAME ? "default" : "outline"}
+                  onClick={() => {
+                    setSelectedTipo(TipoItem.EXAME);
+                    // Resetar itens selecionados para o novo tipo
+                    setSchedules(prev => prev.map(s => ({ ...s, tipo: TipoItem.EXAME, item: s.tipo === TipoItem.EXAME ? s.item : null })));
+                  }}
+                  className="flex-1"
+                >
+                  Exames Laboratoriais
+                </Button>
+                <Button
+                  type="button"
+                  variant={selectedTipo === TipoItem.CONSULTA ? "default" : "outline"}
+                  onClick={() => {
+                    setSelectedTipo(TipoItem.CONSULTA);
+                    // Resetar itens selecionados para o novo tipo
+                    setSchedules(prev => prev.map(s => ({ ...s, tipo: TipoItem.CONSULTA, item: s.tipo === TipoItem.CONSULTA ? s.item : null })));
+                  }}
+                  className="flex-1"
+                >
+                  Consultas Clínicas
+                </Button>
+              </div>
+            </div>
+          </div>
+
           <div className="p-4 bg-gray-100 rounded-lg border flex flex-col">
-            <ScheduleDetails isLoading={isLoading} exams={availableExams} schedules={schedules} onChange={setSchedules} />
+            <ScheduleDetails 
+              isLoading={isLoading} 
+              items={filteredItems}
+              schedules={schedules}
+              onChange={setSchedules}
+              selectedTipo={selectedTipo}
+            />
           </div>
         </div>
 
         <Button type="submit" disabled={isSaving} className="bg-akin-turquoise hover:bg-akin-turquoise/80">
-          {isSaving ? "Agendando..." : "Agendar"}
+          {isSaving ? "Criando Processo..." : "Criar Processo de Agendamento"}
         </Button>
       </form>
     </div>
