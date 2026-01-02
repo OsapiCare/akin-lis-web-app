@@ -64,6 +64,9 @@ export function ScheduleDetails({
     return <Skeleton className="w-full h-12 rounded-md" />;
   }
 
+  // Adicione um console.log para debug
+console.log("Items recebidos:", items);
+console.log("Items filtrados (tipo EXAME):", items.filter(item => item.tipo === TipoItem.EXAME));
   return (
     <div className="space-y-4">
       {/* Cabeçalho informativo */}
@@ -86,7 +89,7 @@ export function ScheduleDetails({
           
           {/* Seletor de Item (Exame ou Consulta) */}
           <div className="flex flex-col justify-between w-full">
-            <label className="font-bold  mb-2 flex items-center gap-2">
+            <label className="font-bold mb-2 flex items-center gap-2">
               {schedule.tipo === TipoItem.EXAME ? (
                 <>
                   <Microscope className="h-4 w-4" />
@@ -163,20 +166,21 @@ export function ScheduleDetails({
               readOnlyInput 
               className="w-full border h-10 px-2 bg-white rounded-md shadow-sm border-gray-300 focus:border-none" 
             />
+          </div>
 
-          {/* Hora e Botão de Remover */}
-          <div className="flex items-end gap-0 w-full md:gap-2 flex-wrap md:flex-nowrap">
-            <div className="card gap-3 w-full">
-              <label htmlFor={`time-${index}`} className="font-bold block mb-2">
-                Hora
-              </label>
-              <TimePicker 
-                value={schedule.time} 
-                onChange={(time) => handleScheduleChange(index, "time", time)} 
-                />
-            </div>
-                </div>
-            
+          {/* Hora */}
+          <div className="card gap-3 w-full">
+            <label htmlFor={`time-${index}`} className="font-bold block mb-2">
+              Hora
+            </label>
+            <TimePicker 
+              value={schedule.time} 
+              onChange={(time) => handleScheduleChange(index, "time", time)} 
+            />
+          </div>
+
+          {/* Botão de Remover */}
+          <div className="flex items-end">
             {schedules.length > 1 && (
               <Button 
                 type="button" 

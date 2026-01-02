@@ -11,12 +11,11 @@ import { ScheduleDetails, ScheduleItem } from "./components/ScheduleDetails";
 import { Button } from "@/components/ui/button";
 import { resetInputs } from "./utils/reset-inputs-func";
 import { getAllDataInCookies } from "@/utils/get-data-in-cookies";
-import { IItemTipoProps, IPaciente} from "@/module/types";
+import { IItemTipoProps, IPaciente } from "@/module/types";
 import { patientRoutes } from "@/Api/Routes/patients";
-import { Combobox } from "@/components/combobox/comboboxExam"; // Para selecionar clínico
+import { Combobox } from "@/components/combobox/comboboxExam";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { IClinicoGeral } from "@/components/schedule/NewScheduleModal";
 
 export type SchemaScheduleType = z.infer<typeof schemaSchedule>;
 
@@ -26,21 +25,30 @@ enum TipoItem {
   CONSULTA = "CONSULTA"
 }
 
+// Interface para Clínico Geral
+interface IClinicoGeral {
+  id: string;
+  nome: string;
+  especialidade?: string;
+  registro_profissional?: string;
+}
+
 export default function New() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [availableItems, setAvailableItems] = useState<IItemTipoProps[]>([]);
   const [availablePatients, setAvailablePatients] = useState<IPaciente[]>([]);
-  const [availableClinicos, setAvailableClinicos] = useState<IClinicoGeral[]>([]); // NOVO
+  const [availableClinicos, setAvailableClinicos] = useState<IClinicoGeral[]>([]);
   const [patientAutoComplete, setPatientAutoComplete] = useState<{ value: string; id: string }[]>([]);
   const [selectedPatientId, setSelectedPatientId] = useState<string>("");
   const [selectedPatient, setSelectedPatient] = useState<IPaciente | undefined>();
-  const [selectedClinicoGeral, setSelectedClinicoGeral] = useState<IClinicoGeral | null>(null); // NOVO
+  const [selectedClinicoGeral, setSelectedClinicoGeral] = useState<IClinicoGeral | null>(null);
   const [schedules, setSchedules] = useState<ScheduleItem[]>([{ item: null, tipo: TipoItem.EXAME, date: null, time: "" }]);
   const [selectedTipo, setSelectedTipo] = useState<TipoItem>(TipoItem.EXAME);
   const [resetPatient, setResetPatient] = useState(false);
-  const [showReembolsoInfo, setShowReembolsoInfo] = useState(false); // NOVO
+  const [showReembolsoInfo, setShowReembolsoInfo] = useState(false);
   const unit_health = getAllDataInCookies().userdata.health_unit_ref || 1;
+  const [hasFetchedData, setHasFetchedData] = useState(false); // Novo estado para controlar fetch
 
   useEffect(() => {
     if (selectedPatientId) {
@@ -49,7 +57,12 @@ export default function New() {
   }, [selectedPatientId, availablePatients]);
 
   const fetchAllData = async () => {
+    // Evitar chamadas duplicadas
+    if (hasFetchedData) return;
+    
     try {
+      setIsLoading(true);
+      
       // Buscar pacientes
       const patientsResponse = await patientRoutes.getAllPacients();
       setAvailablePatients(patientsResponse);
@@ -57,27 +70,56 @@ export default function New() {
 
       // Buscar exames
       const examsResponse = await _axios.get("/exam-types");
-      const examsData = examsResponse.data.data.map((exam: any) => ({
-        ...exam,
-        tipo: TipoItem.EXAME
+      const examsRaw = examsResponse.data.data || [];
+      
+      const examsData = examsRaw.map((exam: any) => ({
+        id: exam.id?.toString() || exam._id?.toString(),
+        nome: exam.nome || exam.name,
+        preco: exam.preco || exam.price || exam.valor || 0,
+        tipo: TipoItem.EXAME,
+        descricao: exam.descricao || exam.description || "",
       }));
 
       // Buscar consultas
       const consultationsResponse = await _axios.get("/consultation-types");
-      const consultationsData = consultationsResponse.data.data.map((cons: any) => ({
-        ...cons,
-        tipo: TipoItem.CONSULTA
+      const consultationsRaw = consultationsResponse.data.data || [];
+      
+      const consultationsData = consultationsRaw.map((cons: any) => ({
+        id: cons.id?.toString() || cons._id?.toString(),
+        nome: cons.nome || cons.name,
+        preco: cons.preco || cons.price || cons.valor || 0,
+        tipo: TipoItem.CONSULTA,
+        descricao: cons.descricao || cons.description || "",
       }));
 
-      // Buscar clínicos gerais (NOVO)
-      const clinicosResponse = await _axios.get("/clinical-general");
-      setAvailableClinicos(clinicosResponse.data.data);
+      // Buscar clínicos gerais
+      try {
+        const clinicosResponse = await _axios.get("/clinical-general");
+        const clinicosRaw = clinicosResponse.data.data || clinicosResponse.data || [];
+        setAvailableClinicos(clinicosRaw.map((clinico: any) => ({
+          id: clinico.id || clinico._id,
+          nome: clinico.nome || clinico.name,
+          especialidade: clinico.especialidade || clinico.specialty,
+          registro_profissional: clinico.registro_profissional || clinico.registration
+        })));
+      } catch (clinicoError: any) {
+        console.warn("Aviso: Endpoint de clínicos não disponível:", clinicoError.message);
+        // Não é crítico, o usuário pode continuar sem selecionar clínico se não houver consultas
+      }
 
       // Combinar exames e consultas
-      setAvailableItems([...examsData, ...consultationsData]);
+      const allItems = [...examsData, ...consultationsData];
+      console.log("Total de itens carregados:", allItems.length);
+      console.log("Exames:", examsData.length);
+      console.log("Consultas:", consultationsData.length);
+      
+      setAvailableItems(allItems);
+      setHasFetchedData(true); // Marcar que já fez o fetch
+      
+      ___showSuccessToastNotification({ message: "Dados carregados com sucesso!" });
 
-      ___showSuccessToastNotification({ message: "Dados obtidos com sucesso!" });
     } catch (error: any) {
+      console.error("Erro ao buscar dados:", error);
       const msg = error?.response?.data?.message || "Erro ao buscar dados. Contate o suporte.";
       ___showErrorToastNotification({ message: msg });
     } finally {
@@ -86,8 +128,13 @@ export default function New() {
   };
 
   useEffect(() => {
-    fetchAllData();
-  }, []);
+    // Usar um timeout para garantir que o componente está montado
+    const timer = setTimeout(() => {
+      fetchAllData();
+    }, 100);
+    
+    return () => clearTimeout(timer);
+  }, []); // Array de dependências vazio para executar apenas uma vez
 
   const handleSavePatient = (patient: IPaciente) => {
     setPatientAutoComplete((prev) => [...prev, { value: patient.nome_completo, id: patient.id }]);
@@ -95,7 +142,8 @@ export default function New() {
     setSelectedPatient(patient);
   };
 
-    const getPatientAge = (birthDate: string) => {
+  const getPatientAge = (birthDate: string) => {
+    if (!birthDate) return "";
     const birth = new Date(birthDate);
     const today = new Date();
     const diff = today.getTime() - birth.getTime();
@@ -106,7 +154,6 @@ export default function New() {
     const ageDays = Math.floor(diff / (1000 * 60 * 60 * 24));
     return `${ageDays} dia${ageDays > 1 ? "s" : ""}`;
   };
-
 
   // Determinar se deve mostrar campo de alocação de clínico geral
   const shouldShowClinicoGeralField = () => {
@@ -157,9 +204,9 @@ export default function New() {
         id_paciente: selectedPatient!.id,
         id_unidade_de_saude: unit_health,
         // Estado inicial conforme PDF
-        estado_clinico: "ATIVO", // Sempre ATIVO na criação
+        estado_clinico: "ATIVO",
         estado_financeiro: calculateTotalValue() > 0 ? "NAO_PAGO" : "ISENTO",
-        estado_reembolso: "SEM_REEMBOLSO", // SEMPRE SEM_REEMBOLSO na criação
+        estado_reembolso: "SEM_REEMBOLSO",
         valor_total: calculateTotalValue(),
         valor_pago: 0,
         valor_a_pagar: calculateTotalValue(),
@@ -173,7 +220,7 @@ export default function New() {
           hora_agendamento: schedule.time,
           // Estados iniciais do item conforme PDF
           estado_clinico: "PENDENTE",
-          estado_financeiro: schedule.item && schedule.item.preco > 0 ? "NAO_PAGO" : "ISENTO" ,
+          estado_financeiro: schedule.item && schedule.item.preco > 0 ? "NAO_PAGO" : "ISENTO",
           estado_reembolso: "SEM_REEMBOLSO"
         })),
       },
@@ -188,8 +235,8 @@ export default function New() {
 
     setIsSaving(true);
     try {
-      // Endpoint unificado para criar processo de agendamento
-      const response = await _axios.post("/processos-agendamento/criar", validation.data);
+      // Usar endpoint existente ou criar novo
+      const response = await _axios.post("/schedulings/set-schedule", validation.data);
       
       if (response.status === 201) {
         ___showSuccessToastNotification({ message: "Processo de agendamento criado com sucesso!" });
@@ -203,6 +250,7 @@ export default function New() {
         setResetPatient(true);
       }
     } catch (error: any) {
+      console.error("Erro ao criar processo:", error);
       if (error?.response?.data?.errors) {
         const backendErrors = error.response.data.errors.map((e: any, i: number) => `Agendamento ${i + 1}: ${e.message}`);
         ___showErrorToastNotification({ messages: backendErrors });
@@ -218,6 +266,12 @@ export default function New() {
 
   // Filtrar itens por tipo selecionado
   const filteredItems = availableItems.filter(item => item.tipo === selectedTipo);
+
+  console.log("DEBUG - Componente renderizado");
+  console.log("availableItems:", availableItems.length);
+  console.log("selectedTipo:", selectedTipo);
+  console.log("filteredItems:", filteredItems.length);
+  console.log("filteredItems data:", filteredItems);
 
   return (
     <div className="min-h-screen px-6 py-2 pb-5 overflow-x-hidden">
@@ -369,13 +423,31 @@ export default function New() {
 
           {/* Agendamentos */}
           <div className="p-4 bg-gray-100 rounded-lg border flex flex-col">
-            <ScheduleDetails 
-              isLoading={isLoading} 
-              items={filteredItems}
-              schedules={schedules}
-              onChange={setSchedules}
-              selectedTipo={selectedTipo}
-            />
+            {isLoading ? (
+              <div className="p-4 text-center">
+                <p>Carregando exames e consultas...</p>
+                <p className="text-sm text-gray-500 mt-1">
+                  {availableItems.length > 0 ? `${availableItems.length} itens carregados` : "Aguardando dados..."}
+                </p>
+              </div>
+            ) : filteredItems.length === 0 ? (
+              <div className="p-4 text-center border border-yellow-200 bg-yellow-50 rounded-md">
+                <p className="font-medium text-yellow-800">
+                  Nenhum {selectedTipo === TipoItem.EXAME ? "exame" : "consulta"} disponível
+                </p>
+                <p className="text-sm text-yellow-600 mt-1">
+                  Por favor, contacte o administrador para adicionar {selectedTipo === TipoItem.EXAME ? "exames" : "consultas"} ao sistema.
+                </p>
+              </div>
+            ) : (
+              <ScheduleDetails 
+                isLoading={isLoading} 
+                items={filteredItems}
+                schedules={schedules}
+                onChange={setSchedules}
+                selectedTipo={selectedTipo}
+              />
+            )}
           </div>
 
           {/* Resumo do Processo */}
@@ -424,6 +496,7 @@ export default function New() {
 
               <div className="mt-2 text-sm text-gray-600">
                 <p><strong>Itens no processo:</strong> {schedules.length} {schedules.length === 1 ? 'item' : 'itens'}</p>
+                <p><strong>{selectedTipo === TipoItem.EXAME ? "Exames" : "Consultas"} disponíveis:</strong> {filteredItems.length}</p>
                 {shouldShowClinicoGeralField() && selectedClinicoGeral && (
                   <p><strong>Clínico geral alocado:</strong> {selectedClinicoGeral.nome}</p>
                 )}
