@@ -7,7 +7,11 @@ import { Plus, Trash2, Stethoscope, Microscope } from "lucide-react";
 import { Calendar } from "primereact/calendar";
 import TimePicker from "@/components/ui/timepicker";
 import { IItemTipoProps } from "@/module/types";
-import { TipoItem } from "../page";
+
+export enum TipoItem {
+  EXAME = "EXAME",
+  CONSULTA = "CONSULTA"
+}
 
 export type ScheduleItem = {
   item: IItemTipoProps | null;
