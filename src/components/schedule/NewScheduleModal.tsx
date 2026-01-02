@@ -6,28 +6,70 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { AlertCircle, Calendar, DollarSign, FileText, User } from "lucide-react";
 
+// Tipos definidos conforme o modelo de dados
+interface Paciente {
+  id: string;
+  nome_completo: string;
+  numero_identificacao: string;
+  // ... outros campos do paciente
+}
+
+interface ItemAgendamento {
+  id: string;
+  tipo: "EXAME" | "CONSULTA";
+  nome: string;
+  descricao?: string;
+  preco: number;
+  estado_clinico: "PENDENTE" | "EM_ANDAMENTO" | "POR_REAGENDAR" | "CONCLUIDO" | "CANCELADO";
+  estado_financeiro: "ISENTO" | "NAO_PAGO" | "PAGO";
+  estado_reembolso: "SEM_REEMBOLSO" | "POR_REEMBOLSAR" | "REEMBOLSADO";
+  data_hora: Date;
+  // ... outros campos
+}
+
+interface ProcessoAgendamento {
+  id: string;
+  paciente_id: string;
+  estado_clinico: "ATIVO" | "PARCIALMENTE_CONCLUIDO" | "POR_REAGENDAR" | "CONCLUIDO" | "CANCELADO";
+  estado_financeiro: "ISENTO" | "NAO_PAGO" | "PAGO_PARCIALMENTE" | "PAGO";
+  estado_reembolso: "SEM_REEMBOLSO" | "POR_REEMBOLSAR" | "REEMBOLSADO";
+  data_criacao: Date;
+  valor_a_pagar: number;
+  itens: ItemAgendamento[];
+  fatura?: Fatura;
+}
+
+interface Fatura {
+  id: string;
+  processo_agendamento_id: string;
+  status: "PENDENTE" | "PAGO_PARCIALMENTE" | "PAGO" | "CANCELADA";
+  valor_total: number;
+  valor_pago: number;
+  // ... outros campos
+}
+
 interface NewScheduleModalProps {
   isOpen: boolean;
   onClose: () => void;
-  patient: any;
-  selectedExams: any[];
+  paciente: Paciente;
+  selectedExams: ItemAgendamento[];
   onConfirm: () => void;
   isProcessing: boolean;
-  activeBlock?: any;
+  activeProcess?: ProcessoAgendamento; // Nome alterado de activeBlock para activeProcess
 }
 
 export function NewScheduleModal({
   isOpen,
   onClose,
-  patient,
+  paciente,
   selectedExams,
   onConfirm,
   isProcessing,
-  activeBlock
+  activeProcess // Prop renomeada
 }: NewScheduleModalProps) {
-  const totalValue = selectedExams.reduce((sum, exam) => sum + (exam.preco || 0), 0);
-  const hasActiveBlock = !!activeBlock;
-  const invoiceStatus = activeBlock?.Exame?.[0]?.Fatura?.status || "PENDENTE";
+  const totalValue = selectedExams.reduce((sum, item) => sum + (item.preco || 0), 0);
+  const hasActiveProcess = !!activeProcess;
+  const invoiceStatus = activeProcess?.fatura?.status || "PENDENTE";
   const isInvoicePaid = invoiceStatus === "PAGO";
 
   return (
@@ -48,17 +90,17 @@ export function NewScheduleModal({
               Paciente
             </h3>
             <div className="bg-gray-50 p-3 rounded-md">
-              <p className="font-medium">{patient?.nome_completo}</p>
-              <p className="text-sm text-gray-600">{patient?.numero_identificacao}</p>
+              <p className="font-medium">{paciente?.nome_completo}</p>
+              <p className="text-sm text-gray-600">{paciente?.numero_identificacao}</p>
             </div>
           </div>
 
-          {/* Status do Bloco */}
-          {hasActiveBlock && (
+          {/* Status do Processo Ativo */}
+          {hasActiveProcess && (
             <div>
               <h3 className="text-sm font-medium text-gray-500 mb-2 flex items-center gap-1">
                 <AlertCircle className="h-4 w-4 text-yellow-500" />
-                Status do Bloco Ativo
+                Status do Processo de Agendamento Ativo
               </h3>
               <div className={`p-3 rounded-md ${
                 isInvoicePaid ? "bg-green-50 border border-green-200" : "bg-yellow-50 border border-yellow-200"
@@ -68,39 +110,60 @@ export function NewScheduleModal({
                 </p>
                 <p className="text-sm">
                   {isInvoicePaid 
-                    ? "Será criada uma nova fatura para estes exames."
-                    : "Os exames serão adicionados à fatura existente e o valor será atualizado."
+                    ? "Será criada uma nova fatura para estes itens."
+                    : "Os itens serão adicionados à fatura existente e o valor será atualizado."
                   }
                 </p>
+                {/* Mostrar estado do processo atual */}
+                <div className="mt-2 flex gap-2">
+                  <Badge variant="outline" className="text-xs">
+                    Estado: {activeProcess.estado_clinico?.replace("_", " ")}
+                  </Badge>
+                  <Badge variant="outline" className="text-xs">
+                    Financeiro: {activeProcess.estado_financeiro?.replace("_", " ")}
+                  </Badge>
+                  {activeProcess.estado_reembolso !== "SEM_REEMBOLSO" && (
+                    <Badge variant="outline" className="text-xs">
+                      Reembolso: {activeProcess.estado_reembolso?.replace("_", " ")}
+                    </Badge>
+                  )}
+                </div>
               </div>
             </div>
           )}
 
-          {/* Exames Selecionados */}
+          {/* Itens Selecionados (Exames/Consultas) */}
           <div>
             <h3 className="text-sm font-medium text-gray-500 mb-2 flex items-center gap-1">
               <FileText className="h-4 w-4" />
-              Exames Selecionados ({selectedExams.length})
+              Itens Selecionados ({selectedExams.length})
             </h3>
             <div className="border rounded-md divide-y">
-              {selectedExams.map((exam, index) => (
-                <div key={index} className="p-3 flex justify-between items-center">
+              {selectedExams.map((item, index) => (
+                <div key={item.id || index} className="p-3 flex justify-between items-center">
                   <div>
-                    <p className="font-medium">{exam.nome}</p>
-                    <p className="text-sm text-gray-600">{exam.descricao}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium">{item.nome}</p>
+                      <Badge variant="secondary" className="text-xs">
+                        {item.tipo}
+                      </Badge>
+                    </div>
+                    {item.descricao && (
+                      <p className="text-sm text-gray-600">{item.descricao}</p>
+                    )}
                   </div>
                   <Badge variant="outline" className="font-medium">
                     {new Intl.NumberFormat("pt-AO", {
                       style: "currency",
                       currency: "AOA"
-                    }).format(exam.preco)}
+                    }).format(item.preco)}
                   </Badge>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Resumo */}
+          {/* Resumo Financeiro */}
           <div className="bg-gray-50 p-4 rounded-md">
             <div className="flex justify-between items-center mb-2">
               <span className="text-gray-600">Valor Total:</span>
@@ -114,9 +177,9 @@ export function NewScheduleModal({
             </div>
             <Separator className="my-2" />
             <p className="text-sm text-gray-600">
-              {hasActiveBlock
-                ? `Os exames serão ${isInvoicePaid ? "adicionados com uma nova fatura" : "adicionados à fatura existente"} ao bloco ativo.`
-                : "Um novo bloco de agendamento será criado."}
+              {hasActiveProcess
+                ? `Os itens serão ${isInvoicePaid ? "adicionados com uma nova fatura" : "adicionados à fatura existente"} ao processo ativo.`
+                : "Um novo processo de agendamento será criado."}
             </p>
           </div>
         </div>

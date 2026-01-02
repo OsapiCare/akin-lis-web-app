@@ -127,7 +127,7 @@ export const determineScheduleForNewExams = (
       targetScheduleId: null,
       shouldCreateNewSchedule: true,
       shouldUpdatePayment: false,
-      reason: "Primeiro bloco para este paciente"
+      reason: "Primeiro processo para este paciente"
     };
   }
 
@@ -148,8 +148,8 @@ export const determineScheduleForNewExams = (
       shouldCreateNewSchedule: false,
       shouldUpdatePayment: !isPaid, // Atualizar pagamento se já estiver pago
       reason: isPaid 
-        ? "Bloco existente pago, nova fatura será criada" 
-        : "Bloco existente com fatura pendente"
+        ? "Processo existente pago, nova fatura será criada" 
+        : "Processo existente com fatura pendente"
     };
   }
 
@@ -161,7 +161,7 @@ export const determineScheduleForNewExams = (
       targetScheduleId: null,
       shouldCreateNewSchedule: true,
       shouldUpdatePayment: false,
-      reason: "Todos os blocos anteriores estão concluídos/cancelados"
+      reason: "Todos os processos anteriores estão concluídos/cancelados"
     };
   }
 
@@ -170,7 +170,7 @@ export const determineScheduleForNewExams = (
     targetScheduleId: null,
     shouldCreateNewSchedule: true,
     shouldUpdatePayment: false,
-    reason: "Nenhum bloco elegível encontrado"
+    reason: "Nenhum processo elegível encontrado"
   };
 };
 
@@ -271,7 +271,7 @@ export const simulateAddExamsToPatient = (
       totalValue: calculateBlockTotal(newExams),
       previousPaymentStatus: "N/A",
       newPaymentStatus: "PENDENTE",
-      message: `Novo bloco criado: ${determination.reason}`
+      message: `Novo processo criado: ${determination.reason}`
     };
   }
 
@@ -292,7 +292,7 @@ export const simulateAddExamsToPatient = (
           totalValue: newTotal,
           previousPaymentStatus: "PAGO",
           newPaymentStatus: "PENDENTE",
-          message: `Nova fatura criada para bloco existente: ${determination.reason}`
+          message: `Nova fatura criada para processo existente: ${determination.reason}`
         };
       } else {
         return {
@@ -301,7 +301,7 @@ export const simulateAddExamsToPatient = (
           totalValue: newTotal,
           previousPaymentStatus: isPaid ? "PAGO" : "PENDENTE",
           newPaymentStatus: "PENDENTE",
-          message: `Exames adicionados ao bloco existente: ${determination.reason}`
+          message: `Exames adicionados ao processo existente: ${determination.reason}`
         };
       }
     }
@@ -313,7 +313,7 @@ export const simulateAddExamsToPatient = (
     totalValue: calculateBlockTotal(newExams),
     previousPaymentStatus: "N/A",
     newPaymentStatus: "PENDENTE",
-    message: "Novo bloco criado (fallback)"
+    message: "Novo processo criado (fallback)"
   };
 };
 
