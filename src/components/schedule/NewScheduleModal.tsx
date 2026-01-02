@@ -39,6 +39,37 @@ interface ProcessoAgendamento {
   fatura?: Fatura;
 }
 
+// Em module/types.ts ou similar
+export interface IProcessoAgendamento {
+  id: string;
+  id_paciente: string;
+  id_unidade_de_saude: number;
+  estado_clinico: "ATIVO" | "PARCIALMENTE_CONCLUIDO" | "POR_REAGENDAR" | "CONCLUIDO" | "CANCELADO";
+  estado_financeiro: "ISENTO" | "NAO_PAGO" | "PAGO_PARCIALMENTE" | "PAGO";
+  estado_reembolso: "SEM_REEMBOLSO" | "POR_REEMBOLSAR" | "REEMBOLSADO"; // NOVO CAMPO
+  data_criacao: string;
+  valor_total: number;
+  valor_pago: number;
+  valor_a_pagar: number;
+  
+  // Campos de alocação
+  id_chefe_laboratorio_alocado?: string; // Existente
+  id_clinico_geral_alocado?: string; // NOVO CAMPO
+  
+  // Relacionamentos
+  Paciente?: Paciente;
+  Itens?: ItemAgendamento[];
+  Fatura?: Fatura;
+}
+
+export interface IClinicoGeral {
+  id: string;
+  nome: string;
+  especialidade?: string;
+  registro_profissional?: string;
+  // ... outros campos
+}
+
 interface Fatura {
   id: string;
   processo_agendamento_id: string;
