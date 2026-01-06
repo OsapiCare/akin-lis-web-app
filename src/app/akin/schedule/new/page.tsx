@@ -77,7 +77,7 @@ export default function New() {
         registro_profissional: clinico.registro_profissional || "Registro a definir",
         papel: clinico.papel || "CLINICO",
       }));
-      
+
       if (clinicosFormatados.length > 0) {
         setAvailableClinicos(clinicosFormatados);
       }
@@ -87,7 +87,7 @@ export default function New() {
   // Efeito para selecionar automaticamente o clínico quando há consultas
   useEffect(() => {
     const hasConsultas = schedules.some((schedule) => schedule.tipo === TipoItem.CONSULTA);
-    
+
     if (hasConsultas && availableClinicos.length > 0 && !selectedClinicoGeral) {
       setSelectedClinicoGeral(availableClinicos[0]);
     } else if (!hasConsultas) {
@@ -164,7 +164,6 @@ export default function New() {
 
       setAvailableItems(allItems);
       setHasFetchedData(true);
-
     } catch (error: any) {
       console.error("Erro ao buscar dados:", error);
       const msg = error?.response?.data?.message || "Erro ao buscar dados. Contate o suporte.";
@@ -225,7 +224,7 @@ export default function New() {
 
     // Verificar se há consultas
     const hasConsultas = schedules.some((schedule) => schedule.tipo === TipoItem.CONSULTA);
-    
+
     // SE HÁ CONSULTAS, O CLÍNICO DEVE ESTAR SELECIONADO
     if (hasConsultas && !selectedClinicoGeral) {
       errors.push("Selecione um clínico geral para as consultas.");
@@ -259,12 +258,12 @@ export default function New() {
     setIsSaving(true);
     try {
       // Separar exames e consultas
-      const consultas = schedules.filter(schedule => schedule.tipo === TipoItem.CONSULTA);
-      const exames = schedules.filter(schedule => schedule.tipo === TipoItem.EXAME);
+      const consultas = schedules.filter((schedule) => schedule.tipo === TipoItem.CONSULTA);
+      const exames = schedules.filter((schedule) => schedule.tipo === TipoItem.EXAME);
 
       // Preparar payload baseado no tipo de agendamento
       let payload: any;
-      
+
       if (consultas.length > 0) {
         // Se tem consultas, usar o formato correto para consultas
         if (!selectedClinicoGeral) {
@@ -279,11 +278,7 @@ export default function New() {
           id_clinico_geral: selectedClinicoGeral.id,
           consultas_paciente: consultas.map((schedule) => ({
             id_tipo_consulta: Number(schedule.item?.id), // CORRETO: id_tipo_consulta para consultas
-            data_agendamento: schedule.date instanceof Date 
-              ? schedule.date.toISOString().split("T")[0] 
-              : schedule.date 
-              ? new Date(schedule.date).toISOString().split("T")[0] 
-              : new Date().toISOString().split("T")[0],
+            data_agendamento: schedule.date instanceof Date ? schedule.date.toISOString().split("T")[0] : schedule.date ? new Date(schedule.date).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
             hora_agendamento: schedule.time,
             status_pagamento: schedule.item && schedule.item.preco > 0 ? "NAO_PAGO" : "ISENTO",
           })),
@@ -291,8 +286,8 @@ export default function New() {
 
         // Se também tem exames, podemos mostrar um aviso
         if (exames.length > 0) {
-          ___showErrorToastNotification({ 
-            message: "Não é possível agendar exames e consultas no mesmo processo. Por favor, crie processos separados." 
+          ___showErrorToastNotification({
+            message: "Não é possível agendar exames e consultas no mesmo processo. Por favor, crie processos separados.",
           });
           setIsSaving(false);
           return;
@@ -304,11 +299,7 @@ export default function New() {
           id_unidade_de_saude: unit_health.toString(),
           exames_paciente: exames.map((schedule) => ({
             id_tipo_exame: Number(schedule.item?.id), // CORRETO: id_tipo_exame para exames
-            data_agendamento: schedule.date instanceof Date 
-              ? schedule.date.toISOString().split("T")[0] 
-              : schedule.date 
-              ? new Date(schedule.date).toISOString().split("T")[0] 
-              : new Date().toISOString().split("T")[0],
+            data_agendamento: schedule.date instanceof Date ? schedule.date.toISOString().split("T")[0] : schedule.date ? new Date(schedule.date).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
             hora_agendamento: schedule.time,
             status_pagamento: schedule.item && schedule.item.preco > 0 ? "NAO_PAGO" : "ISENTO",
           })),
@@ -337,7 +328,7 @@ export default function New() {
     } catch (error: any) {
       console.error("Erro ao criar processo:", error);
       console.error("Detalhes do erro:", error.response?.data);
-      
+
       if (error?.response?.data?.errors) {
         const backendErrors = error.response.data.errors.map((e: any, i: number) => `Agendamento ${i + 1}: ${e.message}`);
         ___showErrorToastNotification({ messages: backendErrors });
@@ -372,14 +363,7 @@ export default function New() {
         <div className="flex flex-col gap-6 w-full">
           {/* Seção Paciente */}
           <div className="p-4 bg-gray-100 rounded-lg border w-full">
-            <PatientDetails 
-              isLoading={isLoading} 
-              selectedPatient={selectedPatient ?? undefined} 
-              autoCompleteData={patientAutoComplete} 
-              onPatientSelect={(patientId) => setSelectedPatientId(patientId)} 
-              resetPatient={resetPatient} 
-              getPatientAge={getPatientAge} 
-            />
+            <PatientDetails isLoading={isLoading} selectedPatient={selectedPatient ?? undefined} autoCompleteData={patientAutoComplete} onPatientSelect={(patientId) => setSelectedPatientId(patientId)} resetPatient={resetPatient} getPatientAge={getPatientAge} />
           </div>
 
           {/* Seletor de Tipo (Exame/Consulta) */}
@@ -425,14 +409,12 @@ export default function New() {
                     Obrigatório para consultas
                   </Badge>
                 </div>
-                <p className="text-sm text-gray-600">
-                  Selecione o clínico geral responsável pelas consultas deste processo
-                </p>
+                <p className="text-sm text-gray-600">Selecione o clínico geral responsável pelas consultas deste processo</p>
 
                 <div className="space-y-4">
                   <div className="flex flex-col gap-2">
                     <label className="font-medium">Clínico Geral Responsável *</label>
-                    
+
                     {isLoadingClinicos ? (
                       <div className="p-3 bg-gray-50 border border-gray-200 rounded-md">
                         <p className="text-gray-500">Carregando clínicos disponíveis...</p>
@@ -442,7 +424,7 @@ export default function New() {
                         <Select
                           value={selectedClinicoGeral?.id || ""}
                           onValueChange={(value) => {
-                            const clinico = availableClinicos.find(c => c.id === value);
+                            const clinico = availableClinicos.find((c) => c.id === value);
                             setSelectedClinicoGeral(clinico || null);
                           }}
                           required
@@ -455,15 +437,13 @@ export default function New() {
                               <SelectItem key={clinico.id} value={clinico.id}>
                                 <div className="flex flex-col">
                                   <span className="font-medium">{clinico.nome}</span>
-                                  {clinico.especialidade && (
-                                    <span className="text-xs text-gray-500">{clinico.especialidade}</span>
-                                  )}
+                                  {clinico.especialidade && <span className="text-xs text-gray-500">{clinico.especialidade}</span>}
                                 </div>
                               </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
-                        
+
                         {selectedClinicoGeral && (
                           <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-md">
                             <div className="flex items-center justify-between">
@@ -471,8 +451,7 @@ export default function New() {
                                 <p className="font-medium">{selectedClinicoGeral.nome}</p>
                                 <p className="text-sm text-gray-600">
                                   {selectedClinicoGeral.especialidade || "Clínico Geral"}
-                                  {selectedClinicoGeral.registro_profissional && 
-                                    ` • ${selectedClinicoGeral.registro_profissional}`}
+                                  {selectedClinicoGeral.registro_profissional && ` • ${selectedClinicoGeral.registro_profissional}`}
                                 </p>
                               </div>
                               <Badge variant="secondary" className="bg-green-100 text-green-800">
@@ -484,14 +463,11 @@ export default function New() {
                       </div>
                     ) : (
                       <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-                        <p className="text-yellow-700 text-sm">
-                          ⚠️ Nenhum clínico geral cadastrado no sistema. 
-                          Entre em contato com o administrador para cadastrar um clínico geral.
-                        </p>
+                        <p className="text-yellow-700 text-sm">⚠️ Nenhum clínico geral cadastrado no sistema. Entre em contato com o administrador para cadastrar um clínico geral.</p>
                       </div>
                     )}
                   </div>
-                  
+
                   <div className="text-xs text-gray-500">
                     <p>Nota: O clínico selecionado será responsável por todas as consultas deste processo.</p>
                     <p className="text-red-500 mt-1">* Campo obrigatório quando há consultas</p>
@@ -545,27 +521,15 @@ export default function New() {
             {isLoading ? (
               <div className="p-4 text-center">
                 <p>Carregando exames e consultas...</p>
-                <p className="text-sm text-gray-500 mt-1">
-                  {availableItems.length > 0 ? `${availableItems.length} itens carregados` : "Aguardando dados..."}
-                </p>
+                <p className="text-sm text-gray-500 mt-1">{availableItems.length > 0 ? `${availableItems.length} itens carregados` : "Aguardando dados..."}</p>
               </div>
             ) : filteredItems.length === 0 ? (
               <div className="p-4 text-center border border-yellow-200 bg-yellow-50 rounded-md">
-                <p className="font-medium text-yellow-800">
-                  Nenhum {selectedTipo === TipoItem.EXAME ? "exame" : "consulta"} disponível
-                </p>
-                <p className="text-sm text-yellow-600 mt-1">
-                  Por favor, contacte o administrador para adicionar {selectedTipo === TipoItem.EXAME ? "exames" : "consultas"} ao sistema.
-                </p>
+                <p className="font-medium text-yellow-800">Nenhum {selectedTipo === TipoItem.EXAME ? "exame" : "consulta"} disponível</p>
+                <p className="text-sm text-yellow-600 mt-1">Por favor, contacte o administrador para adicionar {selectedTipo === TipoItem.EXAME ? "exames" : "consultas"} ao sistema.</p>
               </div>
             ) : (
-              <ScheduleDetails 
-                isLoading={isLoading} 
-                items={filteredItems} 
-                schedules={schedules} 
-                onChange={setSchedules} 
-                selectedTipo={selectedTipo} 
-              />
+              <ScheduleDetails isLoading={isLoading} items={filteredItems} schedules={schedules} onChange={setSchedules} selectedTipo={selectedTipo} />
             )}
           </div>
 
@@ -593,10 +557,7 @@ export default function New() {
                   <CardContent className="pt-4">
                     <div className="flex flex-col items-center text-center">
                       <span className="text-sm text-gray-600">Estado Financeiro Inicial</span>
-                      <Badge 
-                        variant={calculateTotalValue() > 0 ? "outline" : "default"} 
-                        className={calculateTotalValue() > 0 ? "bg-yellow-50 text-yellow-800" : "bg-green-100 text-green-800"}
-                      >
+                      <Badge variant={calculateTotalValue() > 0 ? "outline" : "default"} className={calculateTotalValue() > 0 ? "bg-yellow-50 text-yellow-800" : "bg-green-100 text-green-800"}>
                         {calculateTotalValue() > 0 ? "NÃO PAGO" : "ISENTO"}
                       </Badge>
                     </div>
@@ -625,9 +586,7 @@ export default function New() {
                 {shouldShowClinicoGeralField() && selectedClinicoGeral && (
                   <p>
                     <strong>Clínico geral alocado:</strong> {selectedClinicoGeral.nome}
-                    {selectedClinicoGeral.id && (
-                      <span className="ml-2 text-xs text-green-600">✓ padrão</span>
-                    )}
+                    {selectedClinicoGeral.id && <span className="ml-2 text-xs text-green-600">✓ padrão</span>}
                   </p>
                 )}
                 {shouldShowClinicoGeralField() && !selectedClinicoGeral && (
@@ -640,11 +599,7 @@ export default function New() {
           </div>
         </div>
 
-        <Button 
-          type="submit" 
-          disabled={isSaving || (shouldShowClinicoGeralField() && !selectedClinicoGeral)} 
-          className="bg-akin-turquoise hover:bg-akin-turquoise/80"
-        >
+        <Button type="submit" disabled={isSaving || (shouldShowClinicoGeralField() && !selectedClinicoGeral)} className="bg-akin-turquoise hover:bg-akin-turquoise/80">
           {isSaving ? "Criando Processo..." : "Criar Processo de Agendamento"}
         </Button>
       </form>
