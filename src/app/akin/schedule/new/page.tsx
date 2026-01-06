@@ -109,9 +109,6 @@ export default function New() {
 
       // Combinar exames e consultas
       const allItems = [...examsData, ...consultationsData];
-      console.log("Total de itens carregados:", allItems.length);
-      console.log("Exames:", examsData.length);
-      console.log("Consultas:", consultationsData.length);
       
       setAvailableItems(allItems);
       setHasFetchedData(true); // Marcar que já fez o fetch
@@ -266,12 +263,6 @@ export default function New() {
 
   // Filtrar itens por tipo selecionado
   const filteredItems = availableItems.filter(item => item.tipo === selectedTipo);
-
-  console.log("DEBUG - Componente renderizado");
-  console.log("availableItems:", availableItems.length);
-  console.log("selectedTipo:", selectedTipo);
-  console.log("filteredItems:", filteredItems.length);
-  console.log("filteredItems data:", filteredItems);
 
   return (
     <div className="min-h-screen px-6 py-2 pb-5 overflow-x-hidden">

@@ -65,8 +65,6 @@ export function ScheduleDetails({
   }
 
   // Adicione um console.log para debug
-console.log("Items recebidos:", items);
-console.log("Items filtrados (tipo EXAME):", items.filter(item => item.tipo === TipoItem.EXAME));
   return (
     <div className="space-y-4">
       {/* Cabeçalho informativo */}
