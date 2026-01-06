@@ -54,7 +54,7 @@ export default function ExamsHistoryPage() {
 
   // Filtrar exames baseado nos filtros aplicados
   const filteredExams = examHistory.filter((exam) => {
-    const matchesSearch = exam.Tipo_Exame.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const matchesSearch = exam?.Tipo_Exame?.nome?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       exam.id.toString().includes(searchTerm);
 
     const matchesStatus = statusFilter === "all" || exam.status.toLowerCase() === statusFilter.toLowerCase();
@@ -86,7 +86,7 @@ export default function ExamsHistoryPage() {
   });
 
   const handleExamView = (exam: ExamsType) => {
-    toast.info(`Visualizando exame: ${exam.Tipo_Exame.nome}`);
+    toast.info(`Visualizando exame: ${exam?.Tipo_Exame?.nome}`);
   };
 
   const handleRefresh = () => {
@@ -117,7 +117,7 @@ export default function ExamsHistoryPage() {
     const pagos = examHistory.filter(exam => exam.status_pagamento === 'PAGO').length;
     const totalReceita = examHistory
       .filter(exam => exam.status_pagamento === 'PAGO')
-      .reduce((sum, exam) => sum + exam.Tipo_Exame.preco, 0);
+      .reduce((sum, exam) => sum + (exam.Tipo_Exame?.preco ?? 0), 0);
 
     return {
       total,

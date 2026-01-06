@@ -88,7 +88,7 @@ export function Combobox<T>({
           <CommandList>
             <CommandEmpty>No items found.</CommandEmpty>
             <CommandGroup>
-              {data.map((item, index) => (
+              {data?.map((item, index) => (
                 <CommandItem
                   key={index}
                   value={String(item[displayKey])}
