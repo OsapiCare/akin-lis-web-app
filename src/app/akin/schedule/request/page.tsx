@@ -9,10 +9,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Grid3X3, List, RefreshCw, Calendar, Users, Clock, AlertTriangle, CheckCircle, TrendingUp, BarChart3, AlertCircle, XCircle, ChevronDown, ChevronRight } from "lucide-react";
+import { Grid3X3, List, RefreshCw, Calendar, Users, Clock, AlertTriangle, CheckCircle, TrendingUp, BarChart3, AlertCircle, XCircle, Stethoscope, UserCheck } from "lucide-react";
 import { scheduleRoutes } from "@/Api/Routes/schedule/index.routes";
 import { PendingScheduleCard } from "@/components/schedule/PendingScheduleCard";
-import { PendingScheduleTable } from "@/components/schedule/PendingScheduleTable";
 import { ScheduleFilters } from "@/components/schedule/ScheduleFilters";
 import { ScheduleStats } from "@/components/schedule/ScheduleStats";
 import { BulkActions } from "@/components/schedule/BulkActions";
@@ -22,7 +21,21 @@ import { ptBR } from "date-fns/locale";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Collapsible, CollapsibleTrigger } from "@/components/ui/collapsible";
+
+// Função para converter ScheduleType para CompletedScheduleType (com valores padrão)
+const convertToCompletedSchedule = (schedule: ScheduleType): CompletedScheduleType => {
+  return {
+    ...schedule,
+    status_pagamento: schedule.status_pagamento || "NAO_PAGO",
+    Paciente: schedule.Paciente && {
+      ...schedule.Paciente,
+      sexo: schedule.Paciente.sexo && {
+        ...schedule.Paciente.sexo,
+        id: Number(schedule.Paciente.sexo.id), // Convert string to number
+      },
+    },
+  } as unknown as CompletedScheduleType;
+};
 
 export default function Request() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -30,7 +43,7 @@ export default function Request() {
   const [showStats, setShowStats] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
   const [showRejectDialog, setShowRejectDialog] = useState(false);
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [selectedScheduleId, setSelectedScheduleId] = useState<number | null>(null);
   const queryClient = useQueryClient();
 
   const {
@@ -43,24 +56,36 @@ export default function Request() {
   } = useQuery({
     queryKey: ["pending-schedules"],
     queryFn: () => scheduleRoutes.getPendingSchedules(),
-    refetchInterval: 30000, // Refetch every 30 seconds
+    refetchInterval: 30000,
     refetchOnWindowFocus: true,
   });
 
-  // Use custom hook for filtering
-  const { filteredSchedules, filters, handleSearch, handleFilterChange } = useScheduleFilters(schedules);
+  // Converter schedules para CompletedScheduleType para compatibilidade
+  const completedSchedules: CompletedScheduleType[] = schedules.map(convertToCompletedSchedule);
 
-  // Calculate statistics
-  const totalSchedules = schedules.length;
-  const totalExams = schedules.reduce((total, schedule) => total + (schedule.Exame?.length || 0), 0);
-  const totalRevenue = schedules.reduce((total, schedule) => total + (schedule.Exame?.reduce((examTotal, exam) => examTotal + (exam.Tipo_Exame?.preco || 0), 0) || 0), 0);
+  // Use custom hook for filtering
+  const { filteredSchedules: filteredScheduleType, filters, handleSearch, handleFilterChange } = useScheduleFilters(schedules);
+
+  // Converter filteredSchedules também para CompletedScheduleType
+  const filteredSchedules = filteredScheduleType.map(convertToCompletedSchedule);
+
+  // Calculate statistics for both exams and consultations
+  const totalSchedules = completedSchedules.length;
+  const totalExams = completedSchedules.reduce((total, schedule) => total + (schedule.Exame?.length || 0), 0);
+  const totalConsultations = completedSchedules.reduce((total, schedule) => total + (schedule.Consulta?.length || 0), 0);
+  const totalRevenue = completedSchedules.reduce((total, schedule) => {
+    const examRevenue = schedule.Exame?.reduce((examTotal, exam) => examTotal + (exam.Tipo_Exame?.preco || 0), 0) || 0;
+    const consultationRevenue = schedule.Consulta?.reduce((consultTotal, consult) => consultTotal + (consult.Tipo_Consulta?.preco || 0), 0) || 0;
+    return total + examRevenue + consultationRevenue;
+  }, 0);
 
   // Get today's schedules
-  const todaySchedules = schedules.filter((schedule) => {
-    if (!schedule.Exame || schedule.Exame.length === 0) return false;
-    const scheduleDate = new Date(schedule?.Exame[0]?.data_agendamento);
+  const todaySchedules = completedSchedules.filter((schedule) => {
+    const scheduleDate = schedule.Exame?.[0]?.data_agendamento || schedule.Consulta?.[0]?.data_agendamento;
+    if (!scheduleDate) return false;
+    const date = new Date(scheduleDate);
     const today = new Date();
-    return scheduleDate.toDateString() === today.toDateString();
+    return date.toDateString() === today.toDateString();
   });
 
   const acceptMutation = useMutation({
@@ -76,6 +101,7 @@ export default function Request() {
       queryClient.invalidateQueries({ queryKey: ["pending-schedules"] });
       setShowRejectDialog(false);
       setRejectReason("");
+      setSelectedScheduleId(null);
     },
   });
 
@@ -84,24 +110,84 @@ export default function Request() {
     acceptMutation.mutate(scheduleId);
   };
 
-  // Reject a specific schedule by id (uses the current rejectReason)
-  const handleReject = (scheduleId: number) => {
-    if (rejectReason.trim()) {
-      rejectMutation.mutate({ scheduleId });
+  // Open reject dialog for a specific schedule
+  const openRejectDialog = (scheduleId: number) => {
+    setSelectedScheduleId(scheduleId);
+    setShowRejectDialog(true);
+  };
+
+  // Confirm reject for selected schedule
+  const handleConfirmReject = () => {
+    if (selectedScheduleId && rejectReason.trim()) {
+      rejectMutation.mutate({
+        scheduleId: selectedScheduleId,
+      });
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case "pendente":
-        return "bg-yellow-100 text-yellow-800 border-yellow-200";
-      case "confirmado":
-        return "bg-green-100 text-green-800 border-green-200";
-      case "cancelado":
-        return "bg-red-100 text-red-800 border-red-200";
-      default:
-        return "bg-gray-100 text-gray-800 border-gray-200";
+  // Get schedule type badge
+  const getScheduleTypeBadge = (schedule: CompletedScheduleType) => {
+    const hasExams = schedule.Exame && schedule.Exame.length > 0;
+    const hasConsultations = schedule.Consulta && schedule.Consulta.length > 0;
+
+    if (hasExams && hasConsultations) {
+      return (
+        <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
+          <Stethoscope className="w-3 h-3 mr-1" />
+          <UserCheck className="w-3 h-3 mr-1" />
+          Exames + Consultas
+        </Badge>
+      );
+    } else if (hasExams) {
+      return (
+        <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+          <Stethoscope className="w-3 h-3 mr-1" />
+          Exames
+        </Badge>
+      );
+    } else if (hasConsultations) {
+      return (
+        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+          <UserCheck className="w-3 h-3 mr-1" />
+          Consultas
+        </Badge>
+      );
     }
+    return null;
+  };
+
+  // Get date from schedule (prioritizes first exam or consultation)
+  const getScheduleDate = (schedule: CompletedScheduleType) => {
+    if (schedule.Exame?.[0]?.data_agendamento) {
+      return new Date(schedule.Exame[0].data_agendamento);
+    }
+    if (schedule.Consulta?.[0]?.data_agendamento) {
+      return new Date(schedule.Consulta[0].data_agendamento);
+    }
+    return new Date(schedule.criado_aos);
+  };
+
+  // Get time from schedule
+  const getScheduleTime = (schedule: CompletedScheduleType) => {
+    if (schedule.Exame?.[0]?.hora_agendamento) {
+      return schedule.Exame[0].hora_agendamento;
+    }
+    if (schedule.Consulta?.[0]?.hora_agendamento) {
+      return schedule.Consulta[0].hora_agendamento;
+    }
+    return "";
+  };
+
+  // Get total items count
+  const getTotalItems = (schedule: CompletedScheduleType) => {
+    return (schedule.Exame?.length || 0) + (schedule.Consulta?.length || 0);
+  };
+
+  // Get total price
+  const getTotalPrice = (schedule: CompletedScheduleType) => {
+    const examPrice = schedule.Exame?.reduce((total, exam) => total + (exam.Tipo_Exame?.preco || 0), 0) || 0;
+    const consultationPrice = schedule.Consulta?.reduce((total, consult) => total + (consult.Tipo_Consulta?.preco || 0), 0) || 0;
+    return examPrice + consultationPrice;
   };
 
   if (isError) {
@@ -126,7 +212,7 @@ export default function Request() {
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Agendamentos Pendentes</h1>
-          <p className="text-gray-600 mt-1 text-wrap">Gerencie e processe agendamentos que aguardam aprovação</p>
+          <p className="text-gray-600 mt-1">Gerencie e processe agendamentos que aguardam aprovação</p>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
@@ -173,12 +259,16 @@ export default function Request() {
 
         <Card>
           <CardHeader className="flex items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Total Exames</CardTitle>
+            <CardTitle className="text-sm font-medium">Itens Pendentes</CardTitle>
             <CheckCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{isLoading ? <Skeleton className="h-8 w-16" /> : totalExams}</div>
-            <p className="text-xs text-muted-foreground">exames pendentes</p>
+            <div className="text-2xl font-bold text-green-600">{isLoading ? <Skeleton className="h-8 w-16" /> : totalExams + totalConsultations}</div>
+            <div className="text-xs text-muted-foreground flex gap-2">
+              <span>{totalExams} exames</span>
+              <span>•</span>
+              <span>{totalConsultations} consultas</span>
+            </div>
           </CardContent>
         </Card>
 
@@ -206,10 +296,10 @@ export default function Request() {
       </div>
 
       {/* Statistics (conditionally shown) */}
-      {showStats && <ScheduleStats schedules={schedules} isLoading={isLoading} />}
+      {showStats && <ScheduleStats schedules={completedSchedules as any} isLoading={isLoading} />}
 
       {/* Bulk Actions */}
-      {!isLoading && filteredSchedules.length > 0 && <BulkActions schedules={filteredSchedules} selectedSchedules={selectedSchedules} onSelectionChange={setSelectedSchedules} />}
+      {!isLoading && filteredSchedules.length > 0 && <BulkActions schedules={completedSchedules as any} selectedSchedules={selectedSchedules} onSelectionChange={setSelectedSchedules} />}
 
       {/* Filters */}
       <ScheduleFilters onSearch={handleSearch} onFilterChange={handleFilterChange} totalSchedules={totalSchedules} filteredCount={filteredSchedules.length} />
@@ -259,81 +349,76 @@ export default function Request() {
             <TabsContent value="grid" className="space-y-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredSchedules.map((schedule) => (
-                  <PendingScheduleCard key={schedule.id} schedule={schedule} />
+                  <PendingScheduleCard
+                    key={schedule.id}
+                    schedule={schedule as any} // Cast para ScheduleType
+                  />
                 ))}
               </div>
             </TabsContent>
 
             <TabsContent value="list" className="space-y-4">
-              {/* <div className="w-full min-w-[600px]">
-                <PendingScheduleTable schedules={filteredSchedules} />
-              </div> */}
-
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Paciente</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sm:table-cell">Tipo</th>
                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sm:table-cell">Data</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">Exames</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">Itens</th>
                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">Valor</th>
                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">Estado</th>
                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sm:table-cell">Ações</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {filteredSchedules.map((schedule) => (
-                      <tr key={schedule.id} className="hover:bg-gray-50">
-                        <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">{schedule.Paciente?.nome_completo.split(" ")[0]}</td>
-                        <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500 sm:table-cell">{new Date(schedule?.Exame[0]?.data_agendamento).toLocaleDateString("pt-AO")}</td>
-                        <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500 hidden lg:table-cell">{schedule.Exame?.length || 0}</td>
-                        <td className="px-4 py-2 whitespace-nowrap text-sm text-green-600 hidden lg:table-cell">
-                          {new Intl.NumberFormat("pt-AO", { style: "currency", currency: "AOA", notation: "compact" }).format(schedule.Exame?.reduce((total, exam) => total + (exam.Tipo_Exame?.preco || 0), 0) || 0)}
-                        </td>
-                        <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500 hidden sm:table-cell">
-                           <Badge className={getStatusColor(schedule.status)} variant="outline">
-                            <AlertCircle className="w-3 h-3 mr-1" />
-                            {schedule.status}
-                          </Badge>
-                        </td>
-                        <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500  sm:table-cell">
-                          <div className="flex gap-2 items-center justify-center md:space-x-2">
-                            <Button onClick={() => handleAccept(schedule.id)} disabled={acceptMutation.isPending} size="sm" className="w-full bg-green-600 hover:bg-green-700 text-white px-2 py-1 text-xs">
-                              <CheckCircle className="w-3 h-3 mr-1 flex items-center" />
-                              {acceptMutation.isPending ? "..." : ""}
-                            </Button>
+                    {filteredSchedules.map((schedule) => {
+                      const scheduleDate = getScheduleDate(schedule);
+                      const scheduleTime = getScheduleTime(schedule);
+                      const totalItems = getTotalItems(schedule);
+                      const totalPrice = getTotalPrice(schedule);
+                      const hasExams = schedule.Exame && schedule.Exame.length > 0;
+                      const hasConsultations = schedule.Consulta && schedule.Consulta.length > 0;
 
-                            <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
-                              <DialogTrigger asChild className="m-0">
-                                <Button variant="destructive" size="sm" disabled={rejectMutation.isPending} className="w-full px-2 py-1 text-xs">
-                                  <XCircle className="w-3 h-3 mr-1" />
-                                </Button>
-                              </DialogTrigger>
-                              <DialogContent>
-                                <DialogHeader>
-                                  <DialogTitle>Recusar Agendamento</DialogTitle>
-                                  <DialogDescription>Por favor, forneça um motivo para recusar este agendamento de {schedule.Paciente?.nome_completo}.</DialogDescription>
-                                </DialogHeader>
-                                <div className="space-y-4">
-                                  <div>
-                                    <Label htmlFor="reject-reason">Motivo da recusa</Label>
-                                    <Textarea id="reject-reason" placeholder="Digite o motivo da recusa..." value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} className="mt-2" />
-                                  </div>
-                                </div>
-                                <DialogFooter>
-                                  <Button variant="outline" onClick={() => setShowRejectDialog(false)}>
-                                    Cancelar
-                                  </Button>
-                                  <Button variant="destructive" onClick={() => handleReject(schedule.id)} disabled={!rejectReason.trim() || rejectMutation.isPending}>
-                                    {rejectMutation.isPending ? "Recusando..." : "Confirmar Recusa"}
-                                  </Button>
-                                </DialogFooter>
-                              </DialogContent>
-                            </Dialog>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                      return (
+                        <tr key={schedule.id} className="hover:bg-gray-50">
+                          <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">{schedule.Paciente?.nome_completo?.split(" ")[0] || "Paciente"}</td>
+                          <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500 sm:table-cell">{hasExams && hasConsultations ? "Exames + Consultas" : hasExams ? "Exames" : hasConsultations ? "Consultas" : "N/A"}</td>
+                          <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500 sm:table-cell">
+                            {scheduleDate.toLocaleDateString("pt-AO")}
+                            {scheduleTime && ` • ${scheduleTime}`}
+                          </td>
+                          <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500 hidden lg:table-cell">
+                            {totalItems} {totalItems === 1 ? "item" : "itens"}
+                            {hasExams && ` (${schedule.Exame?.length} ex)`}
+                            {hasConsultations && ` (${schedule.Consulta?.length} cons)`}
+                          </td>
+                          <td className="px-4 py-2 whitespace-nowrap text-sm text-green-600 hidden lg:table-cell">
+                            {new Intl.NumberFormat("pt-AO", {
+                              style: "currency",
+                              currency: "AOA",
+                            }).format(totalPrice)}
+                          </td>
+                          <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500 hidden sm:table-cell">
+                            <Badge variant="outline" className="bg-yellow-50 text-yellow-800 border-yellow-200">
+                              <AlertCircle className="w-3 h-3 mr-1" />
+                              {schedule.status || "Pendente"}
+                            </Badge>
+                          </td>
+                          <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500 sm:table-cell">
+                            <div className="flex gap-2">
+                              <Button onClick={() => handleAccept(schedule.id)} disabled={acceptMutation.isPending} size="sm" className="bg-green-600 hover:bg-green-700 text-white px-3">
+                                <CheckCircle className="w-4 h-4" />
+                              </Button>
+
+                              <Button variant="destructive" size="sm" onClick={() => openRejectDialog(schedule.id)} disabled={rejectMutation.isPending} className="px-3">
+                                <XCircle className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -341,6 +426,37 @@ export default function Request() {
           </>
         )}
       </Tabs>
+
+      {/* Reject Dialog */}
+      <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Recusar Agendamento</DialogTitle>
+            <DialogDescription>Por favor, forneça um motivo para recusar este agendamento.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="reject-reason">Motivo da recusa</Label>
+              <Textarea id="reject-reason" placeholder="Digite o motivo da recusa..." value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} className="mt-2" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowRejectDialog(false);
+                setRejectReason("");
+                setSelectedScheduleId(null);
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button variant="destructive" onClick={handleConfirmReject} disabled={!rejectReason.trim() || rejectMutation.isPending}>
+              {rejectMutation.isPending ? "Recusando..." : "Confirmar Recusa"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

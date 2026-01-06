@@ -63,6 +63,7 @@ interface ConsultasType {
   hora_agendamento: string;
   observacoes?: string;
   criado_aos: string;
+  preco?:number;
   atualizado_aos: string;
   Tipo_Consulta?: {
     id: number;
@@ -123,6 +124,7 @@ interface ScheduleType {
 interface CompletedScheduleType extends ScheduleType {
   // Status específico para agendamentos completados
   status: "CONCLUIDO";
+  criado_aos: string;
   
   // IDs de profissionais alocados
   id_recepcionista?: string | null;

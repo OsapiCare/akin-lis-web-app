@@ -9,8 +9,10 @@ interface ScheduleType {
   data_agendamento: string;
   hora_agendamento: string;
   status: StatusClinico;
+  status_pagamento?: StatusFinanceiro;
   id_tecnico_alocado: number|null;//after remove null
   data_pagamento: string|null //after remove null;
   Exame: ExamsType[];
   Paciente:PatientType
+  Consulta: ConsultasType[];
 }

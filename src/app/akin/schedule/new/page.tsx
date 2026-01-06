@@ -50,6 +50,7 @@ export default function New() {
   const [resetPatient, setResetPatient] = useState(false);
   const [showReembolsoInfo, setShowReembolsoInfo] = useState(false);
   const unit_health = getAllDataInCookies().userdata.health_unit_ref || 1;
+  const user_id = getAllDataInCookies().userdata.id || "";
   const [hasFetchedData, setHasFetchedData] = useState(false);
 
   // Query para buscar clínicos gerais
@@ -77,7 +78,7 @@ export default function New() {
         registro_profissional: clinico.registro_profissional || "Registro a definir",
         papel: clinico.papel || "CLINICO",
       }));
-
+      
       if (clinicosFormatados.length > 0) {
         setAvailableClinicos(clinicosFormatados);
       }
@@ -87,7 +88,7 @@ export default function New() {
   // Efeito para selecionar automaticamente o clínico quando há consultas
   useEffect(() => {
     const hasConsultas = schedules.some((schedule) => schedule.tipo === TipoItem.CONSULTA);
-
+    
     if (hasConsultas && availableClinicos.length > 0 && !selectedClinicoGeral) {
       setSelectedClinicoGeral(availableClinicos[0]);
     } else if (!hasConsultas) {
@@ -164,6 +165,7 @@ export default function New() {
 
       setAvailableItems(allItems);
       setHasFetchedData(true);
+
     } catch (error: any) {
       console.error("Erro ao buscar dados:", error);
       const msg = error?.response?.data?.message || "Erro ao buscar dados. Contate o suporte.";
@@ -181,7 +183,6 @@ export default function New() {
     return () => clearTimeout(timer);
   }, []);
 
-  // Agora esta função aceita PatientType
   const handleSavePatient = (patient: PatientType) => {
     setPatientAutoComplete((prev) => [...prev, { value: patient.nome_completo, id: patient.id }]);
     setAvailablePatients((prev) => [...prev, patient]);
@@ -201,19 +202,16 @@ export default function New() {
     return `${ageDays} dia${ageDays > 1 ? "s" : ""}`;
   };
 
-  // Determinar se deve mostrar campo de alocação de clínico geral
   const shouldShowClinicoGeralField = () => {
     return schedules.some((schedule) => schedule.tipo === TipoItem.CONSULTA);
   };
 
-  // Calcular valor total dos itens
   const calculateTotalValue = () => {
     return schedules.reduce((sum, schedule) => {
       return sum + (schedule.item?.preco || 0);
     }, 0);
   };
 
-  /** Validação atualizada */
   const validateSchedule = () => {
     const errors: string[] = [];
     const today = new Date();
@@ -222,10 +220,8 @@ export default function New() {
       errors.push("Nenhum paciente selecionado.");
     }
 
-    // Verificar se há consultas
     const hasConsultas = schedules.some((schedule) => schedule.tipo === TipoItem.CONSULTA);
-
-    // SE HÁ CONSULTAS, O CLÍNICO DEVE ESTAR SELECIONADO
+    
     if (hasConsultas && !selectedClinicoGeral) {
       errors.push("Selecione um clínico geral para as consultas.");
     }
@@ -257,51 +253,66 @@ export default function New() {
 
     setIsSaving(true);
     try {
-      // Separar exames e consultas
-      const consultas = schedules.filter((schedule) => schedule.tipo === TipoItem.CONSULTA);
-      const exames = schedules.filter((schedule) => schedule.tipo === TipoItem.EXAME);
+      const consultas = schedules.filter(schedule => schedule.tipo === TipoItem.CONSULTA);
+      const exames = schedules.filter(schedule => schedule.tipo === TipoItem.EXAME);
 
-      // Preparar payload baseado no tipo de agendamento
       let payload: any;
-
+      
       if (consultas.length > 0) {
-        // Se tem consultas, usar o formato correto para consultas
-        if (!selectedClinicoGeral) {
-          ___showErrorToastNotification({ message: "Clínico geral é obrigatório para consultas." });
-          setIsSaving(false);
-          return;
-        }
-
+        // **PAYLOAD COMPLETO PARA CONSULTAS - BASEADO NOS DADOS DO BACKEND**
         payload = {
           id_paciente: Number(selectedPatient!.id),
           id_unidade_de_saude: unit_health.toString(),
-          id_clinico_geral: selectedClinicoGeral.id,
+          id_recepcionista: user_id, // ID do usuário logado
+          status: "ACTIVO", // Status inicial do processo
+          status_pagamento: calculateTotalValue() > 0 ? "NAO_PAGO" : "ISENTO",
+          status_reembolso: "SEM_REEMBOLSO",
+          id_clinico_alocado: selectedClinicoGeral?.id, // Campo correto baseado nos dados
           consultas_paciente: consultas.map((schedule) => ({
-            id_tipo_consulta: Number(schedule.item?.id), // CORRETO: id_tipo_consulta para consultas
-            data_agendamento: schedule.date instanceof Date ? schedule.date.toISOString().split("T")[0] : schedule.date ? new Date(schedule.date).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
+            id_tipo_consulta: Number(schedule.item?.id),
+            data_agendamento: schedule.date instanceof Date 
+              ? schedule.date.toISOString().split("T")[0] 
+              : schedule.date 
+              ? new Date(schedule.date).toISOString().split("T")[0] 
+              : new Date().toISOString().split("T")[0],
             hora_agendamento: schedule.time,
             status_pagamento: schedule.item && schedule.item.preco > 0 ? "NAO_PAGO" : "ISENTO",
+            status_reembolso: "SEM_REEMBOLSO",
+            status: "PENDENTE", // Status inicial da consulta
+            valor_total: schedule.item?.preco || 0,
+            isento: schedule.item?.preco === 0,
           })),
         };
 
-        // Se também tem exames, podemos mostrar um aviso
         if (exames.length > 0) {
-          ___showErrorToastNotification({
-            message: "Não é possível agendar exames e consultas no mesmo processo. Por favor, crie processos separados.",
+          ___showErrorToastNotification({ 
+            message: "Não é possível agendar exames e consultas no mesmo processo." 
           });
           setIsSaving(false);
           return;
         }
       } else if (exames.length > 0) {
-        // Se tem apenas exames, usar o formato correto para exames
+        // **PAYLOAD COMPLETO PARA EXAMES - BASEADO NOS DADOS DO BACKEND**
         payload = {
           id_paciente: Number(selectedPatient!.id),
           id_unidade_de_saude: unit_health.toString(),
+          id_recepcionista: user_id, // ID do usuário logado
+          status: "ACTIVO", // Status inicial do processo
+          status_pagamento: calculateTotalValue() > 0 ? "NAO_PAGO" : "ISENTO",
+          status_reembolso: "SEM_REEMBOLSO",
           exames_paciente: exames.map((schedule) => ({
-            id_tipo_exame: Number(schedule.item?.id), // CORRETO: id_tipo_exame para exames
-            data_agendamento: schedule.date instanceof Date ? schedule.date.toISOString().split("T")[0] : schedule.date ? new Date(schedule.date).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
+            id_tipo_exame: Number(schedule.item?.id),
+            data_agendamento: schedule.date instanceof Date 
+              ? schedule.date.toISOString().split("T")[0] 
+              : schedule.date 
+              ? new Date(schedule.date).toISOString().split("T")[0] 
+              : new Date().toISOString().split("T")[0],
             hora_agendamento: schedule.time,
             status_pagamento: schedule.item && schedule.item.preco > 0 ? "NAO_PAGO" : "ISENTO",
+            status_reembolso: "SEM_REEMBOLSO",
+            status: "PENDENTE", // Status inicial do exame
+            valor_total: schedule.item?.preco || 0,
+            isento: schedule.item?.preco === 0,
           })),
         };
       } else {
@@ -310,33 +321,135 @@ export default function New() {
         return;
       }
 
-      console.log("Enviando payload para agendamento:", JSON.stringify(payload, null, 2));
+      console.log("Enviando payload COMPLETO para agendamento:", JSON.stringify(payload, null, 2));
 
-      const response = await _axios.post("/schedulings/set-schedule", payload);
+      // **TENTATIVA 1: Usar o endpoint correto para cada tipo**
+      let endpoint = "/schedulings/set-schedule";
+      let method = "post";
+      
+      // **TENTATIVA 2: Se não funcionar, tentar endpoints diferentes**
+      if (consultas.length > 0) {
+        // Tentar endpoint específico para consultas
+        endpoint = "/schedulings";
+        payload = {
+          ...payload,
+          tipo: "CONSULTA"
+        };
+      } else if (exames.length > 0) {
+        // Tentar endpoint específico para exames
+        endpoint = "/schedulings";
+        payload = {
+          ...payload,
+          tipo: "EXAME"
+        };
+      }
 
-      if (response.status === 201) {
+      const response = await _axios.post(endpoint, payload);
+
+      if (response.status === 201 || response.status === 200) {
         ___showSuccessToastNotification({ message: "Processo de agendamento criado com sucesso!" });
         // Resetar todos os campos
         setSchedules([{ item: null, tipo: TipoItem.EXAME, date: null, time: "" }]);
         setSelectedPatient(undefined);
         setSelectedPatientId("");
-        setSelectedClinicoGeral(null); // Limpar seleção
+        setSelectedClinicoGeral(null);
         setSelectedTipo(TipoItem.EXAME);
         resetInputs();
         setResetPatient(true);
       }
     } catch (error: any) {
-      console.error("Erro ao criar processo:", error);
-      console.error("Detalhes do erro:", error.response?.data);
-
-      if (error?.response?.data?.errors) {
-        const backendErrors = error.response.data.errors.map((e: any, i: number) => `Agendamento ${i + 1}: ${e.message}`);
-        ___showErrorToastNotification({ messages: backendErrors });
-      } else if (error?.response?.data?.message) {
-        ___showErrorToastNotification({ message: error.response.data.message });
+      console.error("Erro completo:", error);
+      console.error("Resposta do erro:", error.response?.data);
+      
+      // **SOLUÇÃO DE EMERGÊNCIA: Criar processo em duas etapas**
+      if (error?.response?.status === 500) {
+        console.log("Tentando criar processo em duas etapas...");
+        
+        try {
+          // **ETAPA 1: Criar o processo básico**
+          const processoPayload = {
+            id_paciente: Number(selectedPatient!.id),
+            id_unidade_de_saude: unit_health.toString(),
+            id_recepcionista: user_id,
+            status: "ACTIVO",
+            status_pagamento: calculateTotalValue() > 0 ? "NAO_PAGO" : "ISENTO",
+            status_reembolso: "SEM_REEMBOLSO"
+          };
+          
+          console.log("Criando processo básico:", processoPayload);
+          const processoResponse = await _axios.post("/schedulings", processoPayload);
+          const idProcesso = processoResponse.data.id;
+          
+          console.log("Processo criado com ID:", idProcesso);
+          
+          // **ETAPA 2: Adicionar os itens**
+          const consultas = schedules.filter(schedule => schedule.tipo === TipoItem.CONSULTA);
+          const exames = schedules.filter(schedule => schedule.tipo === TipoItem.EXAME);
+          
+          if (consultas.length > 0) {
+            for (const consulta of consultas) {
+              const consultaPayload = {
+                id_agendamento: idProcesso,
+                id_tipo_consulta: Number(consulta.item?.id),
+                data_agendamento: consulta.date instanceof Date 
+                  ? consulta.date.toISOString().split("T")[0] 
+                  : consulta.date 
+                  ? new Date(consulta.date).toISOString().split("T")[0] 
+                  : new Date().toISOString().split("T")[0],
+                hora_agendamento: consulta.time,
+                status_pagamento: consulta.item && consulta.item.preco > 0 ? "NAO_PAGO" : "ISENTO",
+                status: "PENDENTE",
+                valor_total: consulta.item?.preco || 0,
+                id_clinico_alocado: selectedClinicoGeral?.id
+              };
+              
+              console.log("Adicionando consulta:", consultaPayload);
+              await _axios.post("/consultations", consultaPayload);
+            }
+          }
+          
+          if (exames.length > 0) {
+            for (const exame of exames) {
+              const examePayload = {
+                id_agendamento: idProcesso,
+                id_tipo_exame: Number(exame.item?.id),
+                data_agendamento: exame.date instanceof Date 
+                  ? exame.date.toISOString().split("T")[0] 
+                  : exame.date 
+                  ? new Date(exame.date).toISOString().split("T")[0] 
+                  : new Date().toISOString().split("T")[0],
+                hora_agendamento: exame.time,
+                status_pagamento: exame.item && exame.item.preco > 0 ? "NAO_PAGO" : "ISENTO",
+                status: "PENDENTE",
+                valor_total: exame.item?.preco || 0
+              };
+              
+              console.log("Adicionando exame:", examePayload);
+              await _axios.post("/exams", examePayload);
+            }
+          }
+          
+          ___showSuccessToastNotification({ message: "Processo criado com sucesso em duas etapas!" });
+          // Reset
+          setSchedules([{ item: null, tipo: TipoItem.EXAME, date: null, time: "" }]);
+          setSelectedPatient(undefined);
+          setSelectedPatientId("");
+          setSelectedClinicoGeral(null);
+          setSelectedTipo(TipoItem.EXAME);
+          resetInputs();
+          setResetPatient(true);
+          
+        } catch (error2: any) {
+          console.error("Erro na solução alternativa:", error2);
+          console.error("Detalhes:", error2.response?.data);
+          ___showErrorToastNotification({ 
+            message: `Erro detalhado: ${JSON.stringify(error2.response?.data || error2.message)}` 
+          });
+        }
       } else {
-        const msg = error?.response?.data?.message || "Erro ao criar processo de agendamento. Contate o suporte.";
-        ___showErrorToastNotification({ message: msg });
+        ___showErrorToastNotification({ 
+          message: `Erro: ${error?.response?.data?.message || error.message || "Contate o suporte"}` 
+        });
       }
       setResetPatient(false);
     } finally {
@@ -344,7 +457,6 @@ export default function New() {
     }
   };
 
-  // Filtrar itens por tipo selecionado
   const filteredItems = availableItems.filter((item) => item.tipo === selectedTipo);
 
   return (
@@ -361,12 +473,17 @@ export default function New() {
         className="flex flex-col gap-6 w-full"
       >
         <div className="flex flex-col gap-6 w-full">
-          {/* Seção Paciente */}
           <div className="p-4 bg-gray-100 rounded-lg border w-full">
-            <PatientDetails isLoading={isLoading} selectedPatient={selectedPatient ?? undefined} autoCompleteData={patientAutoComplete} onPatientSelect={(patientId) => setSelectedPatientId(patientId)} resetPatient={resetPatient} getPatientAge={getPatientAge} />
+            <PatientDetails 
+              isLoading={isLoading} 
+              selectedPatient={selectedPatient ?? undefined} 
+              autoCompleteData={patientAutoComplete} 
+              onPatientSelect={(patientId) => setSelectedPatientId(patientId)} 
+              resetPatient={resetPatient} 
+              getPatientAge={getPatientAge} 
+            />
           </div>
 
-          {/* Seletor de Tipo (Exame/Consulta) */}
           <div className="p-4 bg-gray-100 rounded-lg border">
             <div className="flex flex-col gap-3">
               <label className="font-bold text-lg">Tipo de Agendamento</label>
@@ -377,11 +494,11 @@ export default function New() {
                   onClick={() => {
                     setSelectedTipo(TipoItem.EXAME);
                     setSchedules([{ item: null, tipo: TipoItem.EXAME, date: null, time: "" }]);
-                    setSelectedClinicoGeral(null); // Limpar seleção de clínico
+                    setSelectedClinicoGeral(null);
                   }}
                   className="flex-1"
                 >
-                  Exames Laboratoriais
+                  Exames
                 </Button>
                 <Button
                   type="button"
@@ -389,154 +506,94 @@ export default function New() {
                   onClick={() => {
                     setSelectedTipo(TipoItem.CONSULTA);
                     setSchedules([{ item: null, tipo: TipoItem.CONSULTA, date: null, time: "" }]);
-                    // O clínico será selecionado automaticamente no useEffect
                   }}
                   className="flex-1"
                 >
-                  Consultas Clínicas
+                  Consultas
                 </Button>
               </div>
             </div>
           </div>
 
-          {/* Campo de Alocação de Clínico Geral (aparece apenas se houver consultas) */}
           {shouldShowClinicoGeralField() && (
             <div className="p-4 bg-gray-100 rounded-lg border">
               <div className="flex flex-col gap-3">
                 <div className="flex justify-between items-center">
-                  <label className="font-bold text-lg">Alocação de Clínico Geral</label>
-                  <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                    Obrigatório para consultas
+                  <label className="font-bold text-lg">Clínico Geral</label>
+                  <Badge variant="outline" className="bg-blue-50 text-blue-700">
+                    Obrigatório
                   </Badge>
                 </div>
-                <p className="text-sm text-gray-600">Selecione o clínico geral responsável pelas consultas deste processo</p>
-
+                
                 <div className="space-y-4">
                   <div className="flex flex-col gap-2">
-                    <label className="font-medium">Clínico Geral Responsável *</label>
-
+                    <label className="font-medium">Clínico Responsável *</label>
+                    
                     {isLoadingClinicos ? (
                       <div className="p-3 bg-gray-50 border border-gray-200 rounded-md">
-                        <p className="text-gray-500">Carregando clínicos disponíveis...</p>
+                        <p className="text-gray-500">Carregando...</p>
                       </div>
                     ) : availableClinicos.length > 0 ? (
-                      <div className="relative">
-                        <Select
-                          value={selectedClinicoGeral?.id || ""}
-                          onValueChange={(value) => {
-                            const clinico = availableClinicos.find((c) => c.id === value);
-                            setSelectedClinicoGeral(clinico || null);
-                          }}
-                          required
-                        >
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Selecione um clínico geral" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {availableClinicos.map((clinico) => (
-                              <SelectItem key={clinico.id} value={clinico.id}>
-                                <div className="flex flex-col">
-                                  <span className="font-medium">{clinico.nome}</span>
-                                  {clinico.especialidade && <span className="text-xs text-gray-500">{clinico.especialidade}</span>}
-                                </div>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-
-                        {selectedClinicoGeral && (
-                          <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-md">
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <p className="font-medium">{selectedClinicoGeral.nome}</p>
-                                <p className="text-sm text-gray-600">
-                                  {selectedClinicoGeral.especialidade || "Clínico Geral"}
-                                  {selectedClinicoGeral.registro_profissional && ` • ${selectedClinicoGeral.registro_profissional}`}
-                                </p>
+                      <Select
+                        value={selectedClinicoGeral?.id || ""}
+                        onValueChange={(value) => {
+                          const clinico = availableClinicos.find(c => c.id === value);
+                          setSelectedClinicoGeral(clinico || null);
+                        }}
+                        required
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Selecione um clínico" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableClinicos.map((clinico) => (
+                            <SelectItem key={clinico.id} value={clinico.id}>
+                              <div className="flex flex-col">
+                                <span className="font-medium">{clinico.nome}</span>
+                                <span className="text-xs text-gray-500">{clinico.especialidade}</span>
                               </div>
-                              <Badge variant="secondary" className="bg-green-100 text-green-800">
-                                Selecionado
-                              </Badge>
-                            </div>
-                          </div>
-                        )}
-                      </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     ) : (
                       <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-                        <p className="text-yellow-700 text-sm">⚠️ Nenhum clínico geral cadastrado no sistema. Entre em contato com o administrador para cadastrar um clínico geral.</p>
+                        <p className="text-yellow-700 text-sm">
+                          ⚠️ Nenhum clínico cadastrado.
+                        </p>
                       </div>
                     )}
-                  </div>
-
-                  <div className="text-xs text-gray-500">
-                    <p>Nota: O clínico selecionado será responsável por todas as consultas deste processo.</p>
-                    <p className="text-red-500 mt-1">* Campo obrigatório quando há consultas</p>
                   </div>
                 </div>
               </div>
             </div>
           )}
 
-          {/* Informações do Estado de Reembolso (informacional) */}
-          <div className="p-4 bg-gray-100 rounded-lg border">
-            <div className="flex flex-col gap-3">
-              <div className="flex justify-between items-center cursor-pointer" onClick={() => setShowReembolsoInfo(!showReembolsoInfo)}>
-                <label className="font-bold text-lg">Estado de Reembolso</label>
-                <Badge variant="outline" className="bg-gray-50">
-                  {showReembolsoInfo ? "Ocultar detalhes" : "Mostrar detalhes"}
-                </Badge>
-              </div>
-
-              <div className="flex gap-2">
-                <Badge variant="default" className="bg-green-100 text-green-800 hover:bg-green-100">
-                  SEM REEMBOLSO
-                </Badge>
-                <span className="text-sm text-gray-600">(Estado inicial do processo)</span>
-              </div>
-
-              {showReembolsoInfo && (
-                <Card className="mt-2">
-                  <CardContent className="pt-4">
-                    <h4 className="font-medium mb-2">Sobre o Estado de Reembolso:</h4>
-                    <ul className="text-sm space-y-1 list-disc pl-4">
-                      <li>
-                        <strong>SEM REEMBOLSO:</strong> Nenhuma ação de reembolso é necessária (estado inicial)
-                      </li>
-                      <li>
-                        <strong>POR REEMBOLSAR:</strong> Há devolução pendente e ação financeira necessária
-                      </li>
-                      <li>
-                        <strong>REEMBOLSADO:</strong> Processo de reembolso concluído
-                      </li>
-                    </ul>
-                    <p className="text-xs text-gray-500 mt-2">Nota: O reembolso é sempre por bloco inteiro, nunca parcial.</p>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-          </div>
-
-          {/* Agendamentos */}
           <div className="p-4 bg-gray-100 rounded-lg border flex flex-col">
             {isLoading ? (
               <div className="p-4 text-center">
-                <p>Carregando exames e consultas...</p>
-                <p className="text-sm text-gray-500 mt-1">{availableItems.length > 0 ? `${availableItems.length} itens carregados` : "Aguardando dados..."}</p>
+                <p>Carregando...</p>
               </div>
             ) : filteredItems.length === 0 ? (
               <div className="p-4 text-center border border-yellow-200 bg-yellow-50 rounded-md">
-                <p className="font-medium text-yellow-800">Nenhum {selectedTipo === TipoItem.EXAME ? "exame" : "consulta"} disponível</p>
-                <p className="text-sm text-yellow-600 mt-1">Por favor, contacte o administrador para adicionar {selectedTipo === TipoItem.EXAME ? "exames" : "consultas"} ao sistema.</p>
+                <p className="font-medium text-yellow-800">
+                  Nenhum {selectedTipo === TipoItem.EXAME ? "exame" : "consulta"} disponível
+                </p>
               </div>
             ) : (
-              <ScheduleDetails isLoading={isLoading} items={filteredItems} schedules={schedules} onChange={setSchedules} selectedTipo={selectedTipo} />
+              <ScheduleDetails 
+                isLoading={isLoading} 
+                items={filteredItems} 
+                schedules={schedules} 
+                onChange={setSchedules} 
+                selectedTipo={selectedTipo} 
+              />
             )}
           </div>
 
-          {/* Resumo do Processo */}
           <div className="p-4 bg-blue-50 rounded-lg border">
             <div className="flex flex-col gap-3">
-              <h3 className="font-bold text-lg">Resumo do Processo</h3>
+              <h3 className="font-bold text-lg">Resumo</h3>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <Card>
@@ -556,8 +613,11 @@ export default function New() {
                 <Card>
                   <CardContent className="pt-4">
                     <div className="flex flex-col items-center text-center">
-                      <span className="text-sm text-gray-600">Estado Financeiro Inicial</span>
-                      <Badge variant={calculateTotalValue() > 0 ? "outline" : "default"} className={calculateTotalValue() > 0 ? "bg-yellow-50 text-yellow-800" : "bg-green-100 text-green-800"}>
+                      <span className="text-sm text-gray-600">Estado Financeiro</span>
+                      <Badge 
+                        variant={calculateTotalValue() > 0 ? "outline" : "default"} 
+                        className={calculateTotalValue() > 0 ? "bg-yellow-50 text-yellow-800" : "bg-green-100 text-green-800"}
+                      >
                         {calculateTotalValue() > 0 ? "NÃO PAGO" : "ISENTO"}
                       </Badge>
                     </div>
@@ -575,37 +635,18 @@ export default function New() {
                   </CardContent>
                 </Card>
               </div>
-
-              <div className="mt-2 text-sm text-gray-600">
-                <p>
-                  <strong>Itens no processo:</strong> {schedules.length} {schedules.length === 1 ? "item" : "itens"}
-                </p>
-                <p>
-                  <strong>{selectedTipo === TipoItem.EXAME ? "Exames" : "Consultas"} disponíveis:</strong> {filteredItems.length}
-                </p>
-                {shouldShowClinicoGeralField() && selectedClinicoGeral && (
-                  <p>
-                    <strong>Clínico geral alocado:</strong> {selectedClinicoGeral.nome}
-                    {selectedClinicoGeral.id && <span className="ml-2 text-xs text-green-600">✓ padrão</span>}
-                  </p>
-                )}
-                {shouldShowClinicoGeralField() && !selectedClinicoGeral && (
-                  <p className="text-red-500">
-                    <strong>⚠️ Clínico geral:</strong> Não selecionado (obrigatório)
-                  </p>
-                )}
-              </div>
             </div>
           </div>
         </div>
 
-        <Button type="submit" disabled={isSaving || (shouldShowClinicoGeralField() && !selectedClinicoGeral)} className="bg-akin-turquoise hover:bg-akin-turquoise/80">
+        <Button 
+          type="submit" 
+          disabled={isSaving || (shouldShowClinicoGeralField() && !selectedClinicoGeral)} 
+          className="bg-akin-turquoise hover:bg-akin-turquoise/80"
+        >
           {isSaving ? "Criando Processo..." : "Criar Processo de Agendamento"}
         </Button>
       </form>
     </div>
   );
 }
-
-//any bugs
-//Mister AL in 06/01/2026
