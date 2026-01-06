@@ -51,11 +51,11 @@ export function BlockMode({ patientList }: { patientList: PatientType[] }) {
               </p>
               <p className="text-gray-700">
                 <strong className="font-medium">Idade:</strong>{" "}
-                {getAgeText(patient.data_nascimento)}
+                {getAgeText(patient?.data_nascimento ?? "")}
               </p>
               <p className="text-gray-700">
                 <strong className="font-medium">Data de Nascimento:</strong>{" "}
-                {new Date(patient.data_nascimento).toLocaleDateString()}
+                {new Date(patient?.data_nascimento ?? "").toLocaleDateString()}
               </p>
               <p className="text-gray-700">
                 <strong className="font-medium">Contacto:</strong> {patient.contacto_telefonico}
