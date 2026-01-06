@@ -606,8 +606,8 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
       setCalendarDates(datesMap);
     }
 
-    if (schedule?.Consultas) {
-      const activeConsultas = schedule.Consultas.filter((consulta) => consulta.status !== "CONCLUIDO");
+    if (schedule?.Consulta) {
+      const activeConsultas = schedule.Consulta.filter((consulta: any) => consulta.status !== "CONCLUIDO");
 
       const consultasWithFormattedDates = activeConsultas.map((consulta) => {
         try {
@@ -966,11 +966,11 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
   if (!schedule) return null;
 
   const hasPendingPayment = schedule.Exame?.some((exam) => exam.status_pagamento === "PENDENTE") || 
-                           schedule.Consultas?.some((consulta) => consulta.status_pagamento === "PENDENTE");
+                           schedule.Consulta?.some((consulta: any) => consulta.status_pagamento === "PENDENTE");
 
   const calculateOverallScheduleStatus = () => {
     const exams = schedule.Exame || [];
-    const consultas = schedule.Consultas || [];
+    const consultas = schedule.Consulta || [];
     const allItems = [...exams, ...consultas];
 
     if (allItems.some((item) => item.status === "PENDENTE")) {
@@ -994,7 +994,7 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
 
   const overallStatus = calculateOverallScheduleStatus();
   const activeExams = localExams.length > 0 ? localExams : schedule.Exame?.filter((exam) => exam.status !== "CONCLUIDO") || [];
-  const activeConsultas = localConsultas.length > 0 ? localConsultas : schedule.Consultas?.filter((consulta) => consulta.status !== "CONCLUIDO") || [];
+  const activeConsultas = localConsultas.length > 0 ? localConsultas : schedule.Consulta?.filter((consulta: any) => consulta.status !== "CONCLUIDO") || [];
 
   if (overallStatus === "CONCLUIDO") return null;
 
@@ -1053,7 +1053,7 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
 
   const getClinicoName = (id: string | null) => {
     if (!id || !clinicos) return "Não alocado";
-    return clinicos.find((c) => c.id === id)?.nome || "Clínico não encontrado";
+    return clinicos.find((c:any) => c.id === id)?.nome || "Clínico não encontrado";
   };
 
   const getFinanceiroStatusBadge = (status: string) => {
