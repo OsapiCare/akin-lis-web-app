@@ -60,10 +60,24 @@ export function useCompletedSchedules() {
       pendingExams,
       completedExams,
       cancelledExams,
+      totalConsultas: 0,           // valor padrão
+      pendingConsultas: 0,
+      completedConsultas: 0,
+      cancelledConsultas: 0,
+      porReagendarExams: 0,
+      emAndamentoExams: 0,
+      porReagendarConsultas: 0,
+      emAndamentoConsultas: 0,
       totalRevenue,
       paidRevenue,
       pendingRevenue,
+      exemptRevenue: 0,
       averageExamsPerSchedule,
+      averageConsultasPerSchedule: 0,
+      averageValuePerSchedule: 0,
+      totalReembolsosPendentes: 0,
+      totalReembolsosProcessados: 0,
+      valorTotalReembolsar: 0,
     };
   }, [schedules]);
 

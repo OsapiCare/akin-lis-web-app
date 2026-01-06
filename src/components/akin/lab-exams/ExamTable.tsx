@@ -165,7 +165,7 @@ export function ExamTable({ exams, onEdit, onView, onStart, showActions = true }
                       </AvatarFallback>
                     </Avatar>
                     <div>
-                      <div className="font-medium">{exam.Tipo_Exame.nome}</div>
+                      <div className="font-medium">{exam?.Tipo_Exame?.nome}</div>
                       <div className="text-sm text-gray-500">Paciente: {exam.Agendamento.Paciente.nome_completo}</div>
                     </div>
                   </div>
@@ -183,7 +183,7 @@ export function ExamTable({ exams, onEdit, onView, onStart, showActions = true }
                     {formatPaymentStatus(exam.status_pagamento)}
                   </Badge>
                 </TableCell>
-                <TableCell className="font-medium"> {formatCurrency(exam.Tipo_Exame.preco)}</TableCell>
+                <TableCell className="font-medium"> {formatCurrency(exam?.Tipo_Exame?.preco ?? 0)}</TableCell>
                 {showActions && (
                   <TableCell className="text-right">
                     <div className="flex justify-end space-x-2">
@@ -214,7 +214,7 @@ export function ExamTable({ exams, onEdit, onView, onStart, showActions = true }
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <p className="text-sm font-medium text-gray-700">Tipo de Exame:</p>
-                          <p className="text-sm text-gray-600">{exam.Tipo_Exame.nome}</p>
+                          <p className="text-sm text-gray-600">{exam?.Tipo_Exame?.nome}</p>
                         </div>
                         <div>
                           <p className="text-sm font-medium text-gray-700">Técnico Alocado:</p>

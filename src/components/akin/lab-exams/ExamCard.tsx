@@ -112,7 +112,7 @@ export function ExamCard({ exam, onEdit, onView, onStart, showActions = true }: 
               </AvatarFallback>
             </Avatar>
             <div>
-              <CardTitle className="text-lg">{exam.Tipo_Exame.nome}</CardTitle>
+              <CardTitle className="text-lg">{exam?.Tipo_Exame?.nome}</CardTitle>
               <p className="text-sm text-gray-600">ID: #{exam.id}</p>
             </div>
           </div>
@@ -149,7 +149,7 @@ export function ExamCard({ exam, onEdit, onView, onStart, showActions = true }: 
           <div className="space-y-2">
             <div className="flex items-center text-sm text-gray-600">
               <CreditCard className="h-4 w-4 mr-2" />
-              <span>Preço: {formatCurrency(exam.Tipo_Exame.preco)}</span>
+              <span>Preço: {formatCurrency(exam?.Tipo_Exame?.preco ?? 0)}</span>
             </div>
             <div className="flex items-center text-sm">
               <Badge variant="outline" className={getPaymentStatusColor(exam.status_pagamento)}>
@@ -163,7 +163,7 @@ export function ExamCard({ exam, onEdit, onView, onStart, showActions = true }: 
 
         <div className="space-y-2">
           <p className="text-sm font-medium text-gray-700">Tipo de Exame:</p>
-          <p className="text-sm text-gray-600">{exam.Tipo_Exame.nome}</p>
+          <p className="text-sm text-gray-600">{exam?.Tipo_Exame?.nome}</p>
         </div>
 
         {exam.id_tecnico_alocado && (

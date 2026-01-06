@@ -1,52 +1,10 @@
-import { useQuery } from "@tanstack/react-query";
-import { _axios } from "@/Api/axios.config";
 
-interface ExamHistoryFilters {
-  status?: string;
-  dateFrom?: string;
-  dateTo?: string;
-  patientId?: string;
-  examType?: string;
-}
-
-export const useExamHistory = (filters: ExamHistoryFilters = {}) => {
-  return useQuery({
-    queryKey: ["exam-history", filters],
-    queryFn: async () => {
-      const params = new URLSearchParams();
-
-      if (filters.status && filters.status !== 'all') {
-        params.append('status', filters.status);
-      }
-
-      if (filters.dateFrom) {
-        params.append('date_from', filters.dateFrom);
-      }
-
-      if (filters.dateTo) {
-        params.append('date_to', filters.dateTo);
-      }
-
-      if (filters.patientId) {
-        params.append('patient_id', filters.patientId);
-      }
-
-      if (filters.examType) {
-        params.append('exam_type', filters.examType);
-      }
-
-      const response = await _axios.get(`/exams/history?${params.toString()}`);
-      return response.data;
-    },
-    staleTime: 5 * 60 * 1000, // 5 minutos
-  });
-};
-
-// Mock data para desenvolvimento
 export const mockExamHistory: ExamsType[] = [
   {
     id: 1,
     status: "CONCLUIDO",
+    status_financeiro: "PAGO",
+    status_reembolso: "SEM_REEMBOLSO",
     data_agendamento: "2024-01-15",
     hora_agendamento: "09:00",
     data_formatada: "2024-01-15T09:00:00.000Z",
@@ -60,7 +18,7 @@ export const mockExamHistory: ExamsType[] = [
     Tipo_Exame: {
       id: 1,
       nome: "Hemograma Completo",
-      preco: 150.00
+      preco: 150.0
     },
     Tecnico_Laboratorio: {
       id: "TEC001",
@@ -87,7 +45,8 @@ export const mockExamHistory: ExamsType[] = [
       Paciente: {
         id: 1,
         nome_completo: "Maria Silva",
-        id_sexo: 2
+        id_sexo: 2,
+        criado_aos: new Date(),
       },
       Chefe_Laboratorio: null
     }
@@ -95,6 +54,8 @@ export const mockExamHistory: ExamsType[] = [
   {
     id: 2,
     status: "CONCLUIDO",
+    status_financeiro: "PAGO",
+    status_reembolso: "POR_REEMBOLSAR",
     data_agendamento: "2024-01-14",
     hora_agendamento: "10:30",
     data_formatada: "2024-01-14T10:30:00.000Z",
@@ -108,7 +69,7 @@ export const mockExamHistory: ExamsType[] = [
     Tipo_Exame: {
       id: 2,
       nome: "Glicemia de Jejum",
-      preco: 80.00
+      preco: 80.0
     },
     Tecnico_Laboratorio: {
       id: "TEC002",
@@ -135,7 +96,8 @@ export const mockExamHistory: ExamsType[] = [
       Paciente: {
         id: 2,
         nome_completo: "João Santos",
-        id_sexo: 1
+        id_sexo: 1,
+        criado_aos: new Date(),
       },
       Chefe_Laboratorio: null
     }
@@ -143,6 +105,8 @@ export const mockExamHistory: ExamsType[] = [
   {
     id: 3,
     status: "CANCELADO",
+    status_financeiro: "CANCELADO",
+    status_reembolso: "REEMBOLSADO",
     data_agendamento: "2024-01-13",
     hora_agendamento: "14:00",
     data_formatada: "2024-01-13T14:00:00.000Z",
@@ -156,7 +120,7 @@ export const mockExamHistory: ExamsType[] = [
     Tipo_Exame: {
       id: 3,
       nome: "Urina Tipo I",
-      preco: 120.00
+      preco: 120.0
     },
     Tecnico_Laboratorio: {
       id: "TEC001",
@@ -183,7 +147,8 @@ export const mockExamHistory: ExamsType[] = [
       Paciente: {
         id: 3,
         nome_completo: "Ana Costa",
-        id_sexo: 2
+        id_sexo: 2,
+        criado_aos: new Date(),
       },
       Chefe_Laboratorio: null
     }

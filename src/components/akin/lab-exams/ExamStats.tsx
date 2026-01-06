@@ -48,11 +48,11 @@ export function ExamStats({ exams, period = 'month' }: ExamStatsProps) {
 
     const receita = filteredExams
       .filter(exam => exam.status_pagamento === 'PAGO')
-      .reduce((sum, exam) => sum + exam.Tipo_Exame.preco, 0);
+      .reduce((sum, exam) => sum + (exam?.Tipo_Exame?.preco ?? 0), 0);
 
     const receitaPotencial = filteredExams
       .filter(exam => exam.status_pagamento === 'NAO_PAGO')
-      .reduce((sum, exam) => sum + exam.Tipo_Exame.preco, 0);
+      .reduce((sum, exam) => sum + (exam?.Tipo_Exame?.preco ?? 0), 0);
 
     const taxaConclusao = total > 0 ? (concluidos / total) * 100 : 0;
     const taxaPagamento = total > 0 ? (pagos / total) * 100 : 0;
