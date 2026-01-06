@@ -35,25 +35,16 @@ interface IClinicoGeral {
   papel?: string;
 }
 
-// Clínico padrão que você já tem registrado - DEFINIDO FORA DO COMPONENTE
-const defaultClinico: IClinicoGeral = {
-  id: "cmk172zk20001gn0z9blntfll",
-  nome: "Bernardo Francisco",
-  papel: "CLINICO",
-  especialidade: "Clínico Geral",
-  registro_profissional: "Registro a definir",
-};
-
 export default function New() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [availableItems, setAvailableItems] = useState<IItemTipoProps[]>([]);
   const [availablePatients, setAvailablePatients] = useState<PatientType[]>([]);
-  const [availableClinicos, setAvailableClinicos] = useState<IClinicoGeral[]>([defaultClinico]); // JÁ COMEÇA COM O DEFAULT
+  const [availableClinicos, setAvailableClinicos] = useState<IClinicoGeral[]>([]);
   const [patientAutoComplete, setPatientAutoComplete] = useState<{ value: string; id: string }[]>([]);
   const [selectedPatientId, setSelectedPatientId] = useState<string>("");
   const [selectedPatient, setSelectedPatient] = useState<PatientType | undefined>();
-  const [selectedClinicoGeral, setSelectedClinicoGeral] = useState<IClinicoGeral | null>(null); // Inicia como null
+  const [selectedClinicoGeral, setSelectedClinicoGeral] = useState<IClinicoGeral | null>(null);
   const [schedules, setSchedules] = useState<ScheduleItem[]>([{ item: null, tipo: TipoItem.EXAME, date: null, time: "" }]);
   const [selectedTipo, setSelectedTipo] = useState<TipoItem>(TipoItem.EXAME);
   const [resetPatient, setResetPatient] = useState(false);
@@ -61,20 +52,26 @@ export default function New() {
   const unit_health = getAllDataInCookies().userdata.health_unit_ref || 1;
   const [hasFetchedData, setHasFetchedData] = useState(false);
 
-  // Query para buscar clínicos gerais - USANDO O DADO REAL DA API
+  // Query para buscar clínicos gerais
   const { data: clinicoGeralData, isLoading: isLoadingClinicos } = useQuery({
     queryKey: ["clinico-geral"],
     queryFn: async () => {
-      const response = await _axios.get("/general-practitioners");
-      return response.data;
+      try {
+        const response = await _axios.get("/general-practitioners");
+        console.log("Resposta da API de clínicos:", response.data);
+        return response.data;
+      } catch (error) {
+        console.error("Erro ao buscar clínicos:", error);
+        throw error;
+      }
     },
-    staleTime: 5 * 60 * 1000, // 5 minutos
+    staleTime: 5 * 60 * 1000,
   });
 
   // Efeito para atualizar a lista de clínicos quando os dados são carregados
   useEffect(() => {
-    if (clinicoGeralData) {
-      console.log("Dados dos clínicos:", clinicoGeralData);
+    if (clinicoGeralData && Array.isArray(clinicoGeralData)) {
+      console.log("Dados dos clínicos recebidos:", clinicoGeralData);
       
       // Converter os dados da API para o formato IClinicoGeral
       const clinicosFormatados: IClinicoGeral[] = clinicoGeralData.map((clinico: any) => ({
@@ -86,17 +83,24 @@ export default function New() {
       }));
 
       console.log("Clínicos formatados:", clinicosFormatados);
-
-      // Verificar se o clínico padrão já está na lista
-      const clinicoPadraoExiste = clinicosFormatados.some(c => c.id === defaultClinico.id);
       
-      // Se não existe, adicionar o clínico padrão à lista
-      const todosClinicos = clinicoPadraoExiste 
-        ? clinicosFormatados 
-        : [defaultClinico, ...clinicosFormatados];
-      
-      setAvailableClinicos(todosClinicos);
-      console.log("Todos clínicos disponíveis:", todosClinicos);
+      if (clinicosFormatados.length > 0) {
+        setAvailableClinicos(clinicosFormatados);
+        
+        // Se há consultas e nenhum clínico selecionado, selecionar o primeiro
+        const hasConsultas = schedules.some(schedule => schedule.tipo === TipoItem.CONSULTA);
+        if (hasConsultas && !selectedClinicoGeral) {
+          setSelectedClinicoGeral(clinicosFormatados[0]);
+          ___showSuccessToastNotification({ 
+            message: `Clínico ${clinicosFormatados[0].nome} automaticamente selecionado para as consultas.` 
+          });
+        }
+      } else {
+        console.warn("Nenhum clínico encontrado na resposta da API");
+        setAvailableClinicos([]);
+      }
+    } else {
+      console.warn("Dados dos clínicos inválidos ou não é um array:", clinicoGeralData);
     }
   }, [clinicoGeralData]);
 
@@ -181,8 +185,6 @@ export default function New() {
         tipo: TipoItem.CONSULTA,
         descricao: cons.descricao || cons.description || "",
       }));
-
-      // Já temos os clínicos sendo buscados via useQuery
 
       // Combinar exames e consultas
       const allItems = [...examsData, ...consultationsData];
@@ -276,6 +278,15 @@ export default function New() {
     return { isValid: true };
   };
 
+    const {data: process} = useQuery({
+        queryKey: ["process"],
+        queryFn: async () => {
+          const response = await _axios.get("/schedulings")
+          return response.data;
+        }
+      })
+      console.log("Processos: ", process);
+
   const handleSubmit = async () => {
     if (isSaving) return;
 
@@ -300,8 +311,6 @@ export default function New() {
           return;
         }
 
-        // IMPORTANTE: O backend provavelmente espera o ID como string, não como número
-        // Não converta para Number se for um ID complexo como "cmk172zk20001gn0z9blntfll"
         payload = {
           id_paciente: Number(selectedPatient!.id),
           id_unidade_de_saude: unit_health.toString(),
@@ -349,7 +358,9 @@ export default function New() {
         return;
       }
 
-      console.log("Enviando payload:", JSON.stringify(payload, null, 2));
+      console.log("Enviando payload para agendamento:", JSON.stringify(payload, null, 2));
+
+    
 
       const response = await _axios.post("/schedulings/set-schedule", payload);
 
@@ -368,13 +379,20 @@ export default function New() {
       console.error("Erro ao criar processo:", error);
       console.error("Detalhes do erro:", error.response?.data);
       
-      if (error?.response?.data?.errors) {
-        const backendErrors = error.response.data.errors.map((e: any, i: number) => `Agendamento ${i + 1}: ${e.message}`);
-        ___showErrorToastNotification({ messages: backendErrors });
-      } else if (error?.response?.data?.message) {
-        ___showErrorToastNotification({ message: error.response.data.message });
+      // Verificar se há mais detalhes no erro
+      if (error?.response?.data) {
+        console.error("Resposta completa do servidor:", error.response.data);
+        
+        if (error.response.data.errors) {
+          const backendErrors = error.response.data.errors.map((e: any, i: number) => `Agendamento ${i + 1}: ${e.message}`);
+          ___showErrorToastNotification({ messages: backendErrors });
+        } else if (error.response.data.message) {
+          ___showErrorToastNotification({ message: error.response.data.message });
+        } else {
+          ___showErrorToastNotification({ message: "Erro interno do servidor. Verifique os logs para mais detalhes." });
+        }
       } else {
-        const msg = error?.response?.data?.message || "Erro ao criar processo de agendamento. Contate o suporte.";
+        const msg = error?.message || "Erro ao criar processo de agendamento. Contate o suporte.";
         ___showErrorToastNotification({ message: msg });
       }
       setResetPatient(false);
@@ -467,12 +485,14 @@ export default function New() {
                       <div className="p-3 bg-gray-50 border border-gray-200 rounded-md">
                         <p className="text-gray-500">Carregando clínicos disponíveis...</p>
                       </div>
-                    ) : (
+                    ) : availableClinicos.length > 0 ? (
                       <div className="relative">
                         <Select
                           value={selectedClinicoGeral?.id || ""}
                           onValueChange={(value) => {
+                            console.log("Clínico selecionado - ID:", value);
                             const clinico = availableClinicos.find(c => c.id === value);
+                            console.log("Clínico encontrado:", clinico);
                             setSelectedClinicoGeral(clinico || null);
                           }}
                           required
@@ -510,20 +530,14 @@ export default function New() {
                                 Selecionado
                               </Badge>
                             </div>
-                            {selectedClinicoGeral.id === defaultClinico.id && (
-                              <p className="text-xs text-green-700 mt-2">
-                                ✓ Clínico padrão do sistema.
-                              </p>
-                            )}
                           </div>
                         )}
                       </div>
-                    )}
-                    
-                    {availableClinicos.length === 0 && !isLoadingClinicos && (
-                      <div className="p-3 bg-red-50 border border-red-200 rounded-md">
-                        <p className="text-red-700 text-sm">
-                          ⚠️ Nenhum clínico geral disponível. Não é possível agendar consultas.
+                    ) : (
+                      <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                        <p className="text-yellow-700 text-sm">
+                          ⚠️ Nenhum clínico geral cadastrado no sistema. 
+                          Entre em contato com o administrador para cadastrar um clínico geral.
                         </p>
                       </div>
                     )}
@@ -538,7 +552,6 @@ export default function New() {
             </div>
           )}
 
-          {/* Restante do código... */}
           {/* Informações do Estado de Reembolso (informacional) */}
           <div className="p-4 bg-gray-100 rounded-lg border">
             <div className="flex flex-col gap-3">
@@ -663,9 +676,6 @@ export default function New() {
                 {shouldShowClinicoGeralField() && selectedClinicoGeral && (
                   <p>
                     <strong>Clínico geral alocado:</strong> {selectedClinicoGeral.nome}
-                    {selectedClinicoGeral.id === defaultClinico.id && (
-                      <span className="ml-2 text-xs text-green-600">✓ padrão</span>
-                    )}
                     <span className="block text-xs text-gray-500">ID: {selectedClinicoGeral.id}</span>
                   </p>
                 )}

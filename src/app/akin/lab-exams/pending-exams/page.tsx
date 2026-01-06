@@ -75,7 +75,7 @@ export default function PendingExamsPage() {
 
   // Filtrar exames baseado nos filtros aplicados
   const filteredExams = pendingExams?.filter((exam: ExamsType) => {
-    const matchesSearch = exam.Tipo_Exame.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const matchesSearch = exam?.Tipo_Exame?.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
       exam.id.toString().includes(searchTerm);
 
     const matchesStatus = statusFilter === "all" || exam.status.toLowerCase() === statusFilter;
@@ -107,7 +107,7 @@ export default function PendingExamsPage() {
   });
 
   const handleExamEdit = (exam: ExamsType) => {
-    toast.info(`Editando exame: ${exam.Tipo_Exame.nome}`);
+    toast.info(`Editando exame: ${exam?.Tipo_Exame?.nome}`);
   };
 
   const handleExamStart = (exam: ExamsType) => {
@@ -135,7 +135,7 @@ export default function PendingExamsPage() {
     if (selectedExam) {
       setIsMaterialsModalOpen(false);
       // Usar router.push do Next.js para navegação sem reload
-      router.push(`/akin/lab-exams/ready-exam/${selectedExam.Agendamento.Paciente.id}/${selectedExam.Tipo_Exame.id}`);
+      router.push(`/akin/lab-exams/ready-exam/${selectedExam.Agendamento.Paciente.id}/${selectedExam?.Tipo_Exame?.id}`);
     }
   };
 
@@ -413,9 +413,9 @@ export default function PendingExamsPage() {
             isOpen={isMaterialsModalOpen}
             onClose={handleMaterialsClose}
             onContinue={handleMaterialsContinue}
-            exam_id={String(selectedExam.Tipo_Exame.id)}
+            exam_id={String(selectedExam?.Tipo_Exame?.id)}
             patient_name={selectedExam.Agendamento.Paciente.nome_completo}
-            exam_name={selectedExam.Tipo_Exame.nome}
+            exam_name={selectedExam?.Tipo_Exame?.nome ?? ""}
           />
         </>
       )}
