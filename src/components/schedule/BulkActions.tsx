@@ -377,7 +377,7 @@ export function BulkActions({
                 <div className="flex items-center space-x-2 text-xs text-gray-500">
                   <Calendar className="w-3 h-3" />
                   <span>
-                    {new Date(schedule.Exame[0].data_agendamento).toLocaleDateString('pt-AO')}
+                    {new Date(schedule.Exame[0]?.data_agendamento).toLocaleDateString('pt-AO')}
                   </span>
                   <span className="font-semibold text-green-600">
                     {new Intl.NumberFormat('pt-AO', {

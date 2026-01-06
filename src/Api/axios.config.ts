@@ -2,6 +2,7 @@
 import { useAuthStore } from "@/utils/zustand-store/authStore";
 import axios from "axios";
 // export const API_BASE_URL = "http://localhost:3300";
+// export const API_BASE_URL = "https://drab-pig-osapicare-790df34d.koyeb.app";
 export const API_BASE_URL = "https://magnetic-buzzard-osapicare-a83d5229.koyeb.app";
 import Cookies from "js-cookie";
 

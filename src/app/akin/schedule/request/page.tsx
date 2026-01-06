@@ -58,7 +58,7 @@ export default function Request() {
   // Get today's schedules
   const todaySchedules = schedules.filter((schedule) => {
     if (!schedule.Exame || schedule.Exame.length === 0) return false;
-    const scheduleDate = new Date(schedule.Exame[0].data_agendamento);
+    const scheduleDate = new Date(schedule?.Exame[0]?.data_agendamento);
     const today = new Date();
     return scheduleDate.toDateString() === today.toDateString();
   });
@@ -285,7 +285,7 @@ export default function Request() {
                     {filteredSchedules.map((schedule) => (
                       <tr key={schedule.id} className="hover:bg-gray-50">
                         <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">{schedule.Paciente?.nome_completo.split(" ")[0]}</td>
-                        <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500 sm:table-cell">{new Date(schedule.Exame[0].data_agendamento).toLocaleDateString("pt-AO")}</td>
+                        <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500 sm:table-cell">{new Date(schedule?.Exame[0]?.data_agendamento).toLocaleDateString("pt-AO")}</td>
                         <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500 hidden lg:table-cell">{schedule.Exame?.length || 0}</td>
                         <td className="px-4 py-2 whitespace-nowrap text-sm text-green-600 hidden lg:table-cell">
                           {new Intl.NumberFormat("pt-AO", { style: "currency", currency: "AOA", notation: "compact" }).format(schedule.Exame?.reduce((total, exam) => total + (exam.Tipo_Exame?.preco || 0), 0) || 0)}

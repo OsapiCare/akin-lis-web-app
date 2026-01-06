@@ -94,7 +94,7 @@ export default function New() {
 
       // Buscar clínicos gerais
       try {
-        const clinicosResponse = await _axios.get("/clinical-general");
+        const clinicosResponse = await _axios.get("/schedulings/general-practitioner");
         const clinicosRaw = clinicosResponse.data.data || clinicosResponse.data || [];
         setAvailableClinicos(clinicosRaw.map((clinico: any) => ({
           id: clinico.id || clinico._id,
