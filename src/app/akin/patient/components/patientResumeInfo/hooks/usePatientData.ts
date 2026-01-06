@@ -21,12 +21,12 @@ export const usePatientData = (patient: PatientType) => {
     },
     {
       label: "Data de nascimento",
-      value: new Date(patient.data_nascimento).toLocaleDateString("pt-BR"),
+      value: new Date(patient.data_nascimento ?? "").toLocaleDateString("pt-BR"),
       icon: "calendar"
     },
     {
       label: "Idade",
-      value: `${getAgeText(patient.data_nascimento)}`,
+      value: `${getAgeText(patient.data_nascimento ?? "")}`,
       icon: "clock"
     },
     {

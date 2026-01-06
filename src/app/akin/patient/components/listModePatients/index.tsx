@@ -48,10 +48,10 @@ export function ListMode({ patientList }: { patientList: PatientType[] }) {
               <td className="px-4 py-3 text-gray-700">{patient.nome_completo}</td>
               <td className="px-4 py-3 text-gray-700">{patient.numero_identificacao}</td>
               <td className="px-4 py-3 text-gray-700">
-                {getAgeText(patient.data_nascimento)}
+                {getAgeText(patient?.data_nascimento ?? "")}
               </td>
               <td className="px-4 py-3 text-gray-700">
-                {new Date(patient.data_nascimento).toLocaleDateString()}
+                {new Date(patient?.data_nascimento ?? "").toLocaleDateString()}
               </td>
               <td className="px-4 py-3 text-gray-700">{patient.contacto_telefonico}</td>
               <td className="px-4 py-3 text-right">
