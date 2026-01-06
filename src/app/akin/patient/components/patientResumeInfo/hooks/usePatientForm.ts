@@ -30,12 +30,12 @@ export const usePatientForm = (
 
   const [formData, setFormData] = useState<PatientFormData>({
     nome_completo: patient.nome_completo,
-    numero_identificacao: patient.numero_identificacao,
+    numero_identificacao: patient.numero_identificacao ?? "",
     id_sexo: patient.id_sexo,
-    data_nascimento: patient.data_nascimento,
-    contacto_telefonico: patient.contacto_telefonico,
+    data_nascimento: patient.data_nascimento ?? "",
+    contacto_telefonico: patient.contacto_telefonico ?? "",
     sexo: {
-      nome: patient.sexo.nome
+      nome: patient?.sexo?.nome ?? ""
     }
   });
 
@@ -149,12 +149,12 @@ export const usePatientForm = (
     // Restaurar dados originais ao fechar
     setFormData({
       nome_completo: patient.nome_completo,
-      numero_identificacao: patient.numero_identificacao,
+      numero_identificacao: patient.numero_identificacao ?? "",
       id_sexo: patient.id_sexo,
-      data_nascimento: patient.data_nascimento,
-      contacto_telefonico: patient.contacto_telefonico,
+      data_nascimento: patient.data_nascimento ?? "",
+      contacto_telefonico: patient.contacto_telefonico ?? "",
       sexo: {
-        nome: patient.sexo.nome
+        nome: patient?.sexo?.nome ?? ""
       }
     });
   };

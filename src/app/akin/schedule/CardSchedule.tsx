@@ -19,6 +19,12 @@ interface ICardSchedule {
   data: ScheduleType;
 }
 
+enum StatusClinico {
+  ATIVO = "ATIVO",
+  INATIVO = "INATIVO",
+}
+
+
 export default function CardSchedule({ data }: ICardSchedule) {
   const [showExams, setShowExams] = useState(false);
   const [groupedExams, setGroupedExams] = useState<Exam[]>([]);
@@ -97,7 +103,7 @@ export default function CardSchedule({ data }: ICardSchedule) {
             {data.Exame.map((exame) => (
               <div key={exame.id} className="w-full pb-4 border-b border-gray-200">
                 <div className="font-semibold text-lg flex justify-between items-start gap-2 mr-3">
-                  <span className="break-words flex-1">{exame.Tipo_Exame.nome || "Nome não disponível"}</span>
+                  <span className="break-words flex-1">{exame?.Tipo_Exame?.nome || "Nome não disponível"}</span>
                   {/* <EditScheduleFormModal> */}
                   <div className="relative group flex-shrink-0">
                     <>
@@ -145,7 +151,7 @@ export default function CardSchedule({ data }: ICardSchedule) {
                   <p className="pl-6 text-gray-500 text-sm font-semibold">
                     Estado:{" "}
                     <span
-                      className={`text-xs font-medium ${exame.status === "ATIVO" ? "text-green-500" : "text-red-500"}`}
+                      className={`text-xs font-medium ${exame.status === "CONCLUIDO" ? "text-green-500" : "text-red-500"}`}
                     >
                       {exame.status}
                     </span>
@@ -153,7 +159,7 @@ export default function CardSchedule({ data }: ICardSchedule) {
                   <p className="pl-6 text-gray-500 text-sm font-semibold">
                     Data de Agendamento:{" "}
                     <span
-                      className={`text-xs font-medium ${exame.status === "ATIVO" ? "text-green-500" : "text-red-500"}`}
+                      className={`text-xs font-medium ${exame.status === "EM_ANDAMENTO" ? "text-green-500" : "text-red-500"}`}
                     >
                       {exame.data_agendamento}
                     </span>
@@ -161,7 +167,7 @@ export default function CardSchedule({ data }: ICardSchedule) {
                   <p className="pl-6 text-gray-500 text-sm font-semibold">
                     Hora de Agendamento:{" "}
                     <span
-                      className={`text-xs font-medium ${exame.status === "ATIVO" ? "text-green-500" : "text-red-500"}`}
+                      className={`text-xs font-medium ${exame.status === "EM_ANDAMENTO" ? "text-green-500" : "text-red-500"}`}
                     >
                       {exame.hora_agendamento}
                     </span>
@@ -169,7 +175,7 @@ export default function CardSchedule({ data }: ICardSchedule) {
                   <p className="pl-6 text-gray-500 text-sm font-semibold">
                     Técnicos Alocados:{" "}
                     <span
-                      className={`text-xs font-medium break-words ${exame.status === "ATIVO" ? "text-green-500" : "text-red-500"}`}
+                      className={`text-xs font-medium break-words ${exame.status === "EM_ANDAMENTO" ? "text-green-500" : "text-red-500"}`}
                     >
                       {getTecnicoNome(exame.id_tecnico_alocado)}
                     </span>
