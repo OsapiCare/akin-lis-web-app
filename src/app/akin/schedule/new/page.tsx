@@ -310,7 +310,6 @@ export default function New() {
           setIsSaving(false);
           return;
         }
-
         payload = {
           id_paciente: Number(selectedPatient!.id),
           id_unidade_de_saude: unit_health.toString(),
