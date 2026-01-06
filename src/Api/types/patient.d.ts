@@ -1,13 +1,13 @@
 interface PatientType {
   id: string;
-  numero_identificacao: string;
+  numero_identificacao?: string;
   email?: string | undefined;
   nome_completo: string;
-  data_nascimento: string;
+  data_nascimento?: string;
   contacto_telefonico: string;
-  data_registro: string;
-  data_ultima_visita: string;
-  dias_desde_ultima_visita:string;
+  data_registro?: string;
+  data_ultima_visita?: string;
+  dias_desde_ultima_visita?:string;
   id_sexo: number;
   id_usuario: string;
   sexo: sexoType;
@@ -15,5 +15,6 @@ interface PatientType {
 }
 
 interface sexoType {
-  nome: string;
+    id: number;
+    nome: string;
 }

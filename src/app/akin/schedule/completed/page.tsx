@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Grid3X3, List, RefreshCw, Calendar, AlertTriangle, CheckCircle, FileText, TrendingUp, MoreHorizontal, Eye, User, CreditCard, DollarSign, CalendarDays, Clock, Users } from "lucide-react";
+import { Grid3X3, List, RefreshCw, Calendar, AlertTriangle, CheckCircle, FileText, TrendingUp, MoreHorizontal, Eye, User, CreditCard, DollarSign, CalendarDays, Clock, Users, Stethoscope } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 

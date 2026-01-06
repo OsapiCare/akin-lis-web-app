@@ -11,7 +11,7 @@ import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CalendarDays, Clock, User, Phone, Stethoscope, CheckCircle, XCircle, AlertCircle, Edit3, Mail, Users, Save, X, FileText, DollarSign, CreditCard, Shield, ChevronDown } from "lucide-react";
+import { CalendarDays, Clock, User, Phone, Stethoscope, CheckCircle, XCircle, AlertCircle, Edit3, Mail, Users, Save, X, FileText, DollarSign, CreditCard, Shield, ChevronDown, ClipboardList } from "lucide-react";
 import { format, parse, isValid, isBefore, startOfDay, isToday, isAfter, isEqual } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { _axios } from "@/Api/axios.config";
@@ -23,7 +23,6 @@ import { examRoutes } from "@/Api/Routes/Exam/index.route";
 import TimePicker from "@/components/ui/timepicker";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
 import { Input } from "../ui/input";
 
 interface CompletedScheduleDetailsModalProps {
@@ -37,12 +36,33 @@ interface EditableExam {
   data_agendamento: string;
   hora_agendamento: string;
   status: string;
+  status_financeiro: string;
+  status_reembolso: string;
   id_tipo_exame?: number;
   observacoes?: string;
   id_tecnico_alocado?: string | null;
 }
 
+interface EditableConsulta {
+  id: number;
+  data_agendamento: string;
+  hora_agendamento: string;
+  status: string;
+  status_financeiro: string;
+  status_reembolso: string;
+  id_tipo_consulta?: number;
+  observacoes?: string;
+  id_clinico_alocado?: string | null;
+}
+
 interface ExamType {
+  id: number;
+  nome: string;
+  preco: number;
+  descricao?: string;
+}
+
+interface ConsultaType {
   id: number;
   nome: string;
   preco: number;
@@ -171,10 +191,14 @@ const getCurrentTimeString = (): string => {
 
 export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: CompletedScheduleDetailsModalProps) {
   const [editingExam, setEditingExam] = useState<number | null>(null);
+  const [editingConsulta, setEditingConsulta] = useState<number | null>(null);
   const [editedExam, setEditedExam] = useState<EditableExam | null>(null);
+  const [editedConsulta, setEditedConsulta] = useState<EditableConsulta | null>(null);
   const [selectedTechnician, setSelectedTechnician] = useState<string | null>(null);
   const [selectedChief, setSelectedChief] = useState<string | null>(null);
+  const [selectedClinico, setSelectedClinico] = useState<string | null>(null);
   const [localExams, setLocalExams] = useState<any[]>([]);
+  const [localConsultas, setLocalConsultas] = useState<any[]>([]);
   const [calendarDates, setCalendarDates] = useState<Map<number, Date | null>>(new Map());
   const [calendarDate, setCalendarDate] = useState<Date | null>(null);
   const [inputValue, setInputValue] = useState("");
@@ -192,6 +216,7 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
   const isReceptionist = userRole === "RECEPCIONISTA";
   const isLabChief = userRole === "CHEFE";
   const isLabTechnician = userRole === "TECNICO";
+  const isClinico = userRole === "CLINICO";
 
   const { data: technicians } = useQuery({
     queryKey: ["lab-technicians"],
@@ -205,29 +230,48 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
     enabled: isReceptionist,
   });
 
+  const { data: clinicos } = useQuery({
+    queryKey: ["clinicos"],
+    queryFn: async () => (await _axios.get("/clinicos")).data,
+    enabled: isReceptionist || isClinico,
+  });
+
   const { data: examTypesResponse } = useQuery({
     queryKey: ["exam-types"],
     queryFn: async () => await examRoutes.getExamTypes(),
     enabled: isReceptionist || isLabChief || isLabTechnician,
   });
 
+  const { data: consultaTypesResponse } = useQuery({
+    queryKey: ["consulta-types"],
+    queryFn: async () => (await _axios.get("/tipos-consulta")).data,
+    enabled: isReceptionist || isClinico,
+  });
+
   // Função para verificar se o botão de salvar deve estar habilitado
   const checkSaveButtonStatus = () => {
-    if (!editedExam) {
+    if (!editedExam && !editedConsulta) {
       setIsSaveDisabled(true);
-      setSaveDisabledReason("Nenhum exame em edição");
+      setSaveDisabledReason("Nenhum item em edição");
+      return;
+    }
+    
+    const item = editedExam || editedConsulta;
+    if (!item) {
+      setIsSaveDisabled(true);
+      setSaveDisabledReason("Nenhum item em edição");
       return;
     }
     
     // Verifica se há uma data válida
-    if (!editedExam.data_agendamento || editedExam.data_agendamento.trim() === "") {
+    if (!item.data_agendamento || item.data_agendamento.trim() === "") {
       setIsSaveDisabled(true);
       setSaveDisabledReason("Data de agendamento é obrigatória");
       return;
     }
     
     // Parse a data para verificar se é válida
-    const selectedDate = parseFromYYMMDD(editedExam.data_agendamento);
+    const selectedDate = parseFromYYMMDD(item.data_agendamento);
     if (!selectedDate || !isValid(selectedDate)) {
       setIsSaveDisabled(true);
       setSaveDisabledReason("Data inválida");
@@ -242,7 +286,7 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
     }
     
     // Verifica se há horário
-    if (!editedExam.hora_agendamento || editedExam.hora_agendamento.trim() === "") {
+    if (!item.hora_agendamento || item.hora_agendamento.trim() === "") {
       setIsSaveDisabled(true);
       setSaveDisabledReason("Horário de agendamento é obrigatório");
       return;
@@ -251,10 +295,9 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
     // Verifica se o horário é válido (para datas de hoje)
     if (isToday(selectedDate)) {
       // Verifica se o horário é anterior ao horário atual
-      if (isTimeBeforeNow(selectedDate, editedExam.hora_agendamento)) {
+      if (isTimeBeforeNow(selectedDate, item.hora_agendamento)) {
         setIsSaveDisabled(true);
         setSaveDisabledReason(`Para hoje, não é possível agendar para um horário anterior ao atual (${getCurrentTimeString()})`);
-        // setTimeError(`Horário inválido para hoje. Hora atual: ${getCurrentTimeString()}`);
         return;
       } else {
         setTimeError(null);
@@ -263,17 +306,23 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
       setTimeError(null);
     }
     
-    // Verifica se há tipo de exame
-    if (!editedExam.id_tipo_exame) {
+    // Verifica se há tipo de exame/consulta
+    if (editedExam && !editedExam.id_tipo_exame) {
       setIsSaveDisabled(true);
       setSaveDisabledReason("Tipo de exame é obrigatório");
       return;
     }
     
-    // Verifica se há status
-    if (!editedExam.status || editedExam.status.trim() === "") {
+    if (editedConsulta && !editedConsulta.id_tipo_consulta) {
       setIsSaveDisabled(true);
-      setSaveDisabledReason("Status do exame é obrigatório");
+      setSaveDisabledReason("Tipo de consulta é obrigatório");
+      return;
+    }
+    
+    // Verifica se há status
+    if (!item.status || item.status.trim() === "") {
+      setIsSaveDisabled(true);
+      setSaveDisabledReason("Status do item é obrigatório");
       return;
     }
     
@@ -286,7 +335,7 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
   // Efeito para verificar status do botão de salvar quando editedExam muda
   useEffect(() => {
     checkSaveButtonStatus();
-  }, [editedExam]);
+  }, [editedExam, editedConsulta]);
 
   // SIMPLIFICADO: handleInputChange - apenas atualiza o valor
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -312,6 +361,12 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
       if (editedExam && editingExam) {
         setEditedExam({
           ...editedExam,
+          data_agendamento: "",
+        });
+      }
+      if (editedConsulta && editingConsulta) {
+        setEditedConsulta({
+          ...editedConsulta,
           data_agendamento: "",
         });
       }
@@ -353,8 +408,9 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
           setDateValidationMessage(null);
           
           // Se a data for hoje e já houver um horário selecionado, valida o horário
-          if (isToday(parsedDate) && editedExam?.hora_agendamento) {
-            if (isTimeBeforeNow(parsedDate, editedExam.hora_agendamento)) {
+          const currentItem = editedExam || editedConsulta;
+          if (isToday(parsedDate) && currentItem?.hora_agendamento) {
+            if (isTimeBeforeNow(parsedDate, currentItem.hora_agendamento)) {
               setTimeError(`Horário inválido para hoje. Hora atual: ${getCurrentTimeString()}`);
             } else {
               setTimeError(null);
@@ -362,11 +418,18 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
           }
         }
         
-        // Atualiza o editedExam
+        // Atualiza o editedExam ou editedConsulta
         if (editedExam && editingExam) {
           const formattedDate = formatToYYMMDD(parsedDate);
           setEditedExam({
             ...editedExam,
+            data_agendamento: formattedDate,
+          });
+        }
+        if (editedConsulta && editingConsulta) {
+          const formattedDate = formatToYYMMDD(parsedDate);
+          setEditedConsulta({
+            ...editedConsulta,
             data_agendamento: formattedDate,
           });
         }
@@ -384,6 +447,12 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
             data_agendamento: "",
           });
         }
+        if (editedConsulta && editingConsulta) {
+          setEditedConsulta({
+            ...editedConsulta,
+            data_agendamento: "",
+          });
+        }
       }
     } catch (error) {
       setInputError("Data inválida");
@@ -395,6 +464,12 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
       if (editedExam && editingExam) {
         setEditedExam({
           ...editedExam,
+          data_agendamento: "",
+        });
+      }
+      if (editedConsulta && editingConsulta) {
+        setEditedConsulta({
+          ...editedConsulta,
           data_agendamento: "",
         });
       }
@@ -418,8 +493,9 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
         setDateValidationMessage(null);
         
         // Se a data for hoje e já houver um horário selecionado, valida o horário
-        if (isToday(date) && editedExam?.hora_agendamento) {
-          if (isTimeBeforeNow(date, editedExam.hora_agendamento)) {
+        const currentItem = editedExam || editedConsulta;
+        if (isToday(date) && currentItem?.hora_agendamento) {
+          if (isTimeBeforeNow(date, currentItem.hora_agendamento)) {
             setTimeError(`Horário inválido para hoje. Hora atual: ${getCurrentTimeString()}`);
           } else {
             setTimeError(null);
@@ -429,12 +505,18 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
       
       setIsPopoverOpen(false);
 
-      // Atualiza o editedExam se estiver editando
+      // Atualiza o editedExam ou editedConsulta se estiver editando
+      const formattedDateForItem = formatToYYMMDD(date);
       if (editedExam && editingExam) {
-        const formattedDateForExam = formatToYYMMDD(date);
         setEditedExam({
           ...editedExam,
-          data_agendamento: formattedDateForExam,
+          data_agendamento: formattedDateForItem,
+        });
+      }
+      if (editedConsulta && editingConsulta) {
+        setEditedConsulta({
+          ...editedConsulta,
+          data_agendamento: formattedDateForItem,
         });
       }
     }
@@ -450,26 +532,34 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
     setIsPopoverOpen(false);
 
     // Se já houver um horário selecionado, valida-o
-    if (editedExam?.hora_agendamento) {
-      if (isTimeBeforeNow(today, editedExam.hora_agendamento)) {
+    const currentItem = editedExam || editedConsulta;
+    if (currentItem?.hora_agendamento) {
+      if (isTimeBeforeNow(today, currentItem.hora_agendamento)) {
         setTimeError(`Horário inválido para hoje. Hora atual: ${getCurrentTimeString()}`);
       } else {
         setTimeError(null);
       }
     }
 
+    const formattedDate = formatToYYMMDD(today);
     if (editedExam && editingExam) {
-      const formattedDate = formatToYYMMDD(today);
       setEditedExam({
         ...editedExam,
+        data_agendamento: formattedDate,
+      });
+    }
+    if (editedConsulta && editingConsulta) {
+      setEditedConsulta({
+        ...editedConsulta,
         data_agendamento: formattedDate,
       });
     }
   };
 
   const examTypes = examTypesResponse?.data || [];
+  const consultaTypes = consultaTypesResponse?.data || [];
 
-  // Atualiza os exames locais quando o schedule muda
+  // Atualiza os exames e consultas locais quando o schedule muda
   useEffect(() => {
     if (schedule?.Exame) {
       const activeExams = schedule.Exame.filter((exam) => exam.status !== "CONCLUIDO");
@@ -491,6 +581,8 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
             ...exam,
             data_agendamento: formatToYYMMDD(dateObj),
             originalDate: dateObj,
+            status_financeiro: exam.status_pagamento || "NAO_PAGO",
+            status_reembolso: exam.status || "SEM_REEMBOLSO",
           };
         } catch (error) {
           console.error(`Erro ao processar data do exame ${exam.id}:`, error);
@@ -499,6 +591,8 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
             ...exam,
             data_agendamento: formatToYYMMDD(dateObj),
             originalDate: dateObj,
+            status_financeiro: exam.status_pagamento || "NAO_PAGO",
+            status_reembolso: exam.status || "SEM_REEMBOLSO",
           };
         }
       });
@@ -511,9 +605,48 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
       });
       setCalendarDates(datesMap);
     }
+
+    if (schedule?.Consultas) {
+      const activeConsultas = schedule.Consultas.filter((consulta) => consulta.status !== "CONCLUIDO");
+
+      const consultasWithFormattedDates = activeConsultas.map((consulta) => {
+        try {
+          let dateObj: Date | null = null;
+
+          if (consulta.data_agendamento) {
+            dateObj = parseFromYYMMDD(consulta.data_agendamento);
+            if (!dateObj || !isValid(dateObj)) {
+              dateObj = new Date();
+            }
+          } else {
+            dateObj = new Date();
+          }
+
+          return {
+            ...consulta,
+            data_agendamento: formatToYYMMDD(dateObj),
+            originalDate: dateObj,
+            status_financeiro: consulta.status_financeiro || "NAO_PAGO",
+            status_reembolso: consulta.status_reembolso || "SEM_REEMBOLSO",
+          };
+        } catch (error) {
+          console.error(`Erro ao processar data da consulta ${consulta.id}:`, error);
+          const dateObj = new Date();
+          return {
+            ...consulta,
+            data_agendamento: formatToYYMMDD(dateObj),
+            originalDate: dateObj,
+            status_financeiro: consulta.status_financeiro || "NAO_PAGO",
+            status_reembolso: consulta.status_reembolso || "SEM_REEMBOLSO",
+          };
+        }
+      });
+
+      setLocalConsultas(consultasWithFormattedDates);
+    }
   }, [schedule]);
 
-  // Atualiza o calendarDate quando editingExam muda
+  // Atualiza o calendarDate quando editingExam ou editingConsulta muda
   useEffect(() => {
     if (editingExam && editedExam) {
       const date = parseFromYYMMDD(editedExam.data_agendamento);
@@ -532,15 +665,36 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
         }
       }
     }
-  }, [editingExam, editedExam]);
+    
+    if (editingConsulta && editedConsulta) {
+      const date = parseFromYYMMDD(editedConsulta.data_agendamento);
+      setCalendarDate(date);
+      setInputValue(date ? formatForInput(date) : "");
+      setInputError(null);
+      setIsDateValid(date ? !isDateBeforeToday(date) : true);
+      setDateValidationMessage(date && isDateBeforeToday(date) ? "Data anterior à data atual" : null);
+      
+      // Se a data for hoje, valida o horário
+      if (date && isToday(date) && editedConsulta.hora_agendamento) {
+        if (isTimeBeforeNow(date, editedConsulta.hora_agendamento)) {
+          setTimeError(`Horário inválido para hoje. Hora atual: ${getCurrentTimeString()}`);
+        } else {
+          setTimeError(null);
+        }
+      }
+    }
+  }, [editingExam, editedExam, editingConsulta, editedConsulta]);
 
   // Limpa estados quando a modal fecha
   useEffect(() => {
     if (!isOpen) {
       setEditingExam(null);
+      setEditingConsulta(null);
       setEditedExam(null);
+      setEditedConsulta(null);
       setSelectedTechnician(null);
       setSelectedChief(null);
+      setSelectedClinico(null);
       setCalendarDate(null);
       setInputValue("");
       setInputError(null);
@@ -657,6 +811,93 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
     },
   });
 
+  const updateConsultaMutation = useMutation({
+    mutationFn: async (data: { consultaId: number; updates: Partial<EditableConsulta> }) => {
+      const updatePayload: any = { ...data.updates };
+
+      // Valida se a data é válida
+      if (updatePayload.data_agendamento) {
+        try {
+          const date = parseFromYYMMDD(updatePayload.data_agendamento);
+          if (!date || !isValid(date)) {
+            throw new Error("Data inválida");
+          }
+          
+          // Verifica se a data é anterior a hoje
+          if (isDateBeforeToday(date)) {
+            throw new Error("Não é possível agendar para uma data anterior à data atual.");
+          }
+
+          // Verifica se o horário é válido para datas de hoje
+          if (isToday(date) && updatePayload.hora_agendamento) {
+            if (isTimeBeforeNow(date, updatePayload.hora_agendamento)) {
+              throw new Error(`Para hoje, não é possível agendar para um horário anterior ao atual (${getCurrentTimeString()})`);
+            }
+          }
+
+          // Formato YYYY-MM-DD para o backend
+          updatePayload.data_agendamento = format(date, "yyyy-MM-dd");
+        } catch (error: any) {
+          ___showErrorToastNotification({
+            message: error.message || "Data inválida",
+          });
+          throw error;
+        }
+      }
+
+      return await _axios.patch(`/consultas/${data.consultaId}`, updatePayload);
+    },
+    onSuccess: (response, variables) => {
+      ___showSuccessToastNotification({ message: "Consulta atualizada com sucesso!" });
+
+      // Atualiza o cache
+      queryClient.invalidateQueries({ queryKey: ["completed-schedules"] });
+
+      // Atualiza o estado local
+      setLocalConsultas((prev) =>
+        prev.map((consulta) => {
+          if (consulta.id === variables.consultaId) {
+            const updatedConsulta = { ...consulta, ...variables.updates };
+
+            // Formata a data para exibição
+            if (variables.updates.data_agendamento) {
+              try {
+                const date = new Date(variables.updates.data_agendamento);
+                if (isValid(date)) {
+                  updatedConsulta.data_agendamento = formatToYYMMDD(date);
+                  updatedConsulta.originalDate = date;
+                }
+              } catch (error) {
+                console.error("Erro ao formatar data para exibição:", error);
+                updatedConsulta.data_agendamento = formatToYYMMDD(new Date());
+              }
+            }
+
+            return updatedConsulta;
+          }
+          return consulta;
+        })
+      );
+
+      setEditingConsulta(null);
+      setEditedConsulta(null);
+      setCalendarDate(null);
+      setInputValue("");
+      setInputError(null);
+      setIsSaveDisabled(true);
+      setSaveDisabledReason(null);
+      setIsDateValid(true);
+      setDateValidationMessage(null);
+      setTimeError(null);
+    },
+    onError: (error: any) => {
+      console.error("Update consulta error:", error);
+      ___showErrorToastNotification({
+        message: error.response?.data?.message || error.message || "Erro ao atualizar consulta.",
+      });
+    },
+  });
+
   const allocateTechnicianMutation = useMutation({
     mutationFn: async (data: { examId: number; technicianId: string }) => (await _axios.patch(`/exams/${data.examId}`, { id_tecnico_alocado: data.technicianId })).data,
     onSuccess: (response, variables) => {
@@ -681,6 +922,20 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
     onError: () => ___showErrorToastNotification({ message: "Erro ao alocar chefe." }),
   });
 
+  const allocateClinicoMutation = useMutation({
+    mutationFn: async (data: { consultaId: number; clinicoId: string }) => (await _axios.patch(`/consultas/${data.consultaId}`, { id_clinico_alocado: data.clinicoId })).data,
+    onSuccess: (response, variables) => {
+      ___showSuccessToastNotification({ message: "Clínico alocado com sucesso!" });
+
+      queryClient.invalidateQueries({ queryKey: ["completed-schedules"] });
+
+      setLocalConsultas((prev) => prev.map((consulta) => (consulta.id === variables.consultaId ? { ...consulta, id_clinico_alocado: variables.clinicoId } : consulta)));
+
+      setSelectedClinico(null);
+    },
+    onError: () => ___showErrorToastNotification({ message: "Erro ao alocar clínico." }),
+  });
+
   const handleForceRefresh = async () => {
     try {
       setIsRefreshing(true);
@@ -688,8 +943,12 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
       queryClient.invalidateQueries({ queryKey: ["completed-schedules"] });
       queryClient.invalidateQueries({ queryKey: ["schedules"] });
       queryClient.invalidateQueries({ queryKey: ["exams"] });
+      queryClient.invalidateQueries({ queryKey: ["consultas"] });
 
-      await Promise.all([queryClient.refetchQueries({ queryKey: ["completed-schedules"], type: "active" }), queryClient.refetchQueries({ queryKey: ["schedules"], type: "active" })]);
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: ["completed-schedules"], type: "active" }),
+        queryClient.refetchQueries({ queryKey: ["schedules"], type: "active" })
+      ]);
 
       ___showSuccessToastNotification({
         message: "Dados atualizados com sucesso!",
@@ -706,24 +965,27 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
 
   if (!schedule) return null;
 
-  const hasPendingPayment = schedule.Exame?.some((exam) => exam.status_pagamento === "PENDENTE");
+  const hasPendingPayment = schedule.Exame?.some((exam) => exam.status_pagamento === "PENDENTE") || 
+                           schedule.Consultas?.some((consulta) => consulta.status_pagamento === "PENDENTE");
 
   const calculateOverallScheduleStatus = () => {
     const exams = schedule.Exame || [];
+    const consultas = schedule.Consultas || [];
+    const allItems = [...exams, ...consultas];
 
-    if (exams.some((exam) => exam.status === "PENDENTE")) {
+    if (allItems.some((item) => item.status === "PENDENTE")) {
       return "PENDENTE";
     }
 
-    if (exams.every((exam) => exam.status === "CONCLUIDO")) {
+    if (allItems.every((item) => item.status === "CONCLUIDO")) {
       return "CONCLUIDO";
     }
 
-    if (exams.some((exam) => exam.status === "POR_REAGENDAR")) {
+    if (allItems.some((item) => item.status === "POR_REAGENDAR")) {
       return "POR_REAGENDAR";
     }
 
-    if (exams.every((exam) => exam.status === "CANCELADO")) {
+    if (allItems.every((item) => item.status === "CANCELADO")) {
       return "CANCELADO";
     }
 
@@ -732,6 +994,7 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
 
   const overallStatus = calculateOverallScheduleStatus();
   const activeExams = localExams.length > 0 ? localExams : schedule.Exame?.filter((exam) => exam.status !== "CONCLUIDO") || [];
+  const activeConsultas = localConsultas.length > 0 ? localConsultas : schedule.Consultas?.filter((consulta) => consulta.status !== "CONCLUIDO") || [];
 
   if (overallStatus === "CONCLUIDO") return null;
 
@@ -759,7 +1022,7 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
       .join("")
       .toUpperCase();
 
-  const getExamStatusBadge = (status: string) => {
+  const getItemStatusBadge = (status: string) => {
     const mapping = {
       PENDENTE: { text: "Pendente", color: "yellow", icon: AlertCircle },
       CANCELADO: { text: "Cancelado", color: "red", icon: XCircle },
@@ -788,10 +1051,48 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
     return labChiefs.find((c) => c.id === id)?.nome || "Chefe não encontrado";
   };
 
-  const totalValue = activeExams?.reduce((acc, exam) => acc + (exam.Tipo_Exame?.preco || 0), 0) || 0;
+  const getClinicoName = (id: string | null) => {
+    if (!id || !clinicos) return "Não alocado";
+    return clinicos.find((c) => c.id === id)?.nome || "Clínico não encontrado";
+  };
+
+  const getFinanceiroStatusBadge = (status: string) => {
+    const mapping = {
+      PAGO: { text: "Pago", color: "green" },
+      NAO_PAGO: { text: "Não Pago", color: "yellow" },
+      ISENTO: { text: "Isento", color: "blue" },
+    } as any;
+
+    const info = mapping[status] || { text: status, color: "gray" };
+
+    return (
+      <Badge variant="outline" className={`border-${info.color}-200 bg-${info.color}-50 text-${info.color}-700 text-xs px-2 py-0.5`}>
+        {info.text}
+      </Badge>
+    );
+  };
+
+  const getReembolsoStatusBadge = (status: string) => {
+    const mapping = {
+      REEMBOLSADO: { text: "Reembolsado", color: "green" },
+      POR_REEMBOLSAR: { text: "Por Reembolsar", color: "orange" },
+      SEM_REEMBOLSO: { text: "Sem Reembolso", color: "gray" },
+    } as any;
+
+    const info = mapping[status] || { text: status, color: "gray" };
+
+    return (
+      <Badge variant="outline" className={`border-${info.color}-200 bg-${info.color}-50 text-${info.color}-700 text-xs px-2 py-0.5`}>
+        {info.text}
+      </Badge>
+    );
+  };
+
+  const totalValue = [...activeExams, ...activeConsultas]?.reduce((acc, item) => acc + (item.Tipo_Exame?.preco || item.Tipo_Consulta?.preco || 0), 0) || 0;
 
   const handleEditExam = (exam: any) => {
     setEditingExam(exam.id);
+    setEditingConsulta(null);
 
     // Parse a data do exame
     const parsedDate = parseFromYYMMDD(exam.data_agendamento);
@@ -804,6 +1105,8 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
       data_agendamento: exam.data_agendamento,
       hora_agendamento: exam.hora_agendamento,
       status: exam.status,
+      status_financeiro: exam.status_financeiro || "NAO_PAGO",
+      status_reembolso: exam.status_reembolso || "SEM_REEMBOLSO",
       id_tipo_exame: exam.id_tipo_exame || exam.Tipo_Exame?.id,
       id_tecnico_alocado: exam.id_tecnico_alocado || null,
     });
@@ -818,6 +1121,46 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
     // Valida o horário se a data for hoje
     if (parsedDate && isToday(parsedDate) && exam.hora_agendamento) {
       if (isTimeBeforeNow(parsedDate, exam.hora_agendamento)) {
+        setTimeError(`Horário inválido para hoje. Hora atual: ${getCurrentTimeString()}`);
+      } else {
+        setTimeError(null);
+      }
+    } else {
+      setTimeError(null);
+    }
+  };
+
+  const handleEditConsulta = (consulta: any) => {
+    setEditingConsulta(consulta.id);
+    setEditingExam(null);
+
+    // Parse a data da consulta
+    const parsedDate = parseFromYYMMDD(consulta.data_agendamento);
+
+    // Formata para o input
+    const displayDate = parsedDate ? formatForInput(parsedDate) : "";
+
+    setEditedConsulta({
+      id: consulta.id,
+      data_agendamento: consulta.data_agendamento,
+      hora_agendamento: consulta.hora_agendamento,
+      status: consulta.status,
+      status_financeiro: consulta.status_financeiro || "NAO_PAGO",
+      status_reembolso: consulta.status_reembolso || "SEM_REEMBOLSO",
+      id_tipo_consulta: consulta.id_tipo_consulta || consulta.Tipo_Consulta?.id,
+      id_clinico_alocado: consulta.id_clinico_alocado || null,
+    });
+
+    // Atualiza o estado do calendar e input
+    setCalendarDate(parsedDate);
+    setInputValue(displayDate);
+    setInputError(null);
+    setIsDateValid(parsedDate ? !isDateBeforeToday(parsedDate) : true);
+    setDateValidationMessage(parsedDate && isDateBeforeToday(parsedDate) ? "Data anterior à data atual" : null);
+    
+    // Valida o horário se a data for hoje
+    if (parsedDate && isToday(parsedDate) && consulta.hora_agendamento) {
+      if (isTimeBeforeNow(parsedDate, consulta.hora_agendamento)) {
         setTimeError(`Horário inválido para hoje. Hora atual: ${getCurrentTimeString()}`);
       } else {
         setTimeError(null);
@@ -863,15 +1206,63 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
         data_agendamento: editedExam.data_agendamento,
         hora_agendamento: editedExam.hora_agendamento,
         status: editedExam.status,
+        status_financeiro: editedExam.status_financeiro,
+        status_reembolso: editedExam.status_reembolso,
         id_tipo_exame: editedExam.id_tipo_exame,
         id_tecnico_alocado: editedExam.id_tecnico_alocado,
       },
     });
   };
 
+  const handleSaveConsulta = () => {
+    if (!editedConsulta) return;
+
+    // Verifica se o botão está desabilitado e mostra o motivo
+    if (isSaveDisabled && saveDisabledReason) {
+      ___showErrorToastNotification({
+        message: saveDisabledReason,
+      });
+      return;
+    }
+
+    // Valida se a data não é anterior a hoje
+    const selectedDate = parseFromYYMMDD(editedConsulta.data_agendamento);
+    if (selectedDate && isDateBeforeToday(selectedDate)) {
+      ___showErrorToastNotification({
+        message: "Não é possível agendar para uma data anterior à data atual.",
+      });
+      return;
+    }
+
+    // Valida o horário se a data for hoje
+    if (selectedDate && isToday(selectedDate)) {
+      if (isTimeBeforeNow(selectedDate, editedConsulta.hora_agendamento)) {
+        ___showErrorToastNotification({
+          message: `Para hoje, não é possível agendar para um horário anterior ao atual (${getCurrentTimeString()})`,
+        });
+        return;
+      }
+    }
+
+    updateConsultaMutation.mutate({
+      consultaId: editedConsulta.id,
+      updates: {
+        data_agendamento: editedConsulta.data_agendamento,
+        hora_agendamento: editedConsulta.hora_agendamento,
+        status: editedConsulta.status,
+        status_financeiro: editedConsulta.status_financeiro,
+        status_reembolso: editedConsulta.status_reembolso,
+        id_tipo_consulta: editedConsulta.id_tipo_consulta,
+        id_clinico_alocado: editedConsulta.id_clinico_alocado,
+      },
+    });
+  };
+
   const handleCancelEdit = () => {
     setEditingExam(null);
+    setEditingConsulta(null);
     setEditedExam(null);
+    setEditedConsulta(null);
     setCalendarDate(null);
     setInputValue("");
     setInputError(null);
@@ -922,6 +1313,46 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
     setEditedExam({ ...editedExam, [field]: value });
   };
 
+  const handleConsultaFieldChange = (field: keyof EditableConsulta, value: any) => {
+    if (!editedConsulta) return;
+
+    if (field === "id_tipo_consulta" && Array.isArray(consultaTypes)) {
+      const selectedConsultaType = consultaTypes.find((ct: ConsultaType) => ct.id === parseInt(value));
+      if (selectedConsultaType) {
+        setEditedConsulta({
+          ...editedConsulta,
+          [field]: value,
+        });
+
+        setLocalConsultas((prev) =>
+          prev.map((consulta) => {
+            if (consulta.id === editedConsulta.id) {
+              return {
+                ...consulta,
+                Tipo_Consulta: selectedConsultaType,
+                id_tipo_consulta: selectedConsultaType.id,
+              };
+            }
+            return consulta;
+          })
+        );
+
+        return;
+      }
+    }
+
+    // Se estiver alterando o horário e a data for hoje, valida
+    if (field === "hora_agendamento" && calendarDate && isToday(calendarDate)) {
+      if (isTimeBeforeNow(calendarDate, value)) {
+        setTimeError(`Horário inválido para hoje. Hora atual: ${getCurrentTimeString()}`);
+      } else {
+        setTimeError(null);
+      }
+    }
+
+    setEditedConsulta({ ...editedConsulta, [field]: value });
+  };
+
   const handleTimeChange = (time: string) => {
     if (editedExam) {
       // Valida o horário se a data for hoje
@@ -934,17 +1365,35 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
       }
       setEditedExam({ ...editedExam, hora_agendamento: time });
     }
+    
+    if (editedConsulta) {
+      // Valida o horário se a data for hoje
+      if (calendarDate && isToday(calendarDate)) {
+        if (isTimeBeforeNow(calendarDate, time)) {
+          setTimeError(`Horário inválido para hoje. Hora atual: ${getCurrentTimeString()}`);
+        } else {
+          setTimeError(null);
+        }
+      }
+      setEditedConsulta({ ...editedConsulta, hora_agendamento: time });
+    }
   };
 
   const canInitializeExam = (exam: any) => {
-    if (exam.status_pagamento !== "PAGO") return false;
+    if (exam.status_financeiro !== "PAGO" && exam.status_financeiro !== "ISENTO") return false;
     if (!isLabChief && !isLabTechnician) return false;
+    return true;
+  };
+
+  const canInitializeConsulta = (consulta: any) => {
+    if (consulta.status_financeiro !== "PAGO" && consulta.status_financeiro !== "ISENTO") return false;
+    if (!isClinico) return false;
     return true;
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden p-0 z-[50]">
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden p-0 z-[50]">
         <DialogHeader className="sticky top-0 bg-white z-10 px-6 py-4 border-b">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -961,7 +1410,7 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
               </div>
             </div>
             <div className="flex items-center gap-2">
-              {getExamStatusBadge(overallStatus)}
+              {getItemStatusBadge(overallStatus)}
               <Button variant="ghost" size="sm" onClick={handleForceRefresh} className="h-8 px-2" title="Recarregar dados" disabled={isRefreshing}>
                 {isRefreshing ? (
                   <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -990,7 +1439,7 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
                       <Shield className="w-4 h-4" />
                       Status do Bloco
                     </div>
-                    <div className="font-medium">{getExamStatusBadge(overallStatus)}</div>
+                    <div className="font-medium">{getItemStatusBadge(overallStatus)}</div>
                   </div>
                   <div className="space-y-1">
                     <div className="flex items-center gap-2 text-sm text-gray-600">
@@ -1083,52 +1532,99 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
             </Card>
 
             {isReceptionist && (
-              <Card className="border shadow-sm">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Users className="w-4 h-4" />
-                    Chefe de Laboratório
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pb-4">
-                  <div className="space-y-3">
-                    <div>
-                      <Label className="text-sm">Chefe Atual</Label>
-                      <p className="font-medium mt-1">{getChiefName(schedule.id_chefe_alocado || null)}</p>
+              <>
+                <Card className="border shadow-sm">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Users className="w-4 h-4" />
+                      Chefe de Laboratório
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pb-4">
+                    <div className="space-y-3">
+                      <div>
+                        <Label className="text-sm">Chefe Atual</Label>
+                        <p className="font-medium mt-1">{getChiefName(schedule.id_chefe_alocado || null)}</p>
+                      </div>
+                      <div className="flex flex-col sm:flex-row gap-2">
+                        <Select value={selectedChief || ""} onValueChange={setSelectedChief}>
+                          <SelectTrigger className="flex-1">
+                            <SelectValue placeholder="Selecionar novo chefe" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Array.isArray(labChiefs) &&
+                              labChiefs.map((chief) => (
+                                <SelectItem key={chief.id} value={chief.id}>
+                                  {chief.nome} - {chief.tipo}
+                                </SelectItem>
+                              ))}
+                          </SelectContent>
+                        </Select>
+                        <Button
+                          onClick={() =>
+                            selectedChief &&
+                            allocateChiefMutation.mutate({
+                              scheduleId: schedule.id,
+                              chiefId: selectedChief,
+                            })
+                          }
+                          disabled={!selectedChief || allocateChiefMutation.isPending}
+                          className="sm:w-auto"
+                        >
+                          {allocateChiefMutation.isPending ? "Alocando..." : "Alocar"}
+                        </Button>
+                      </div>
                     </div>
-                    <div className="flex flex-col sm:flex-row gap-2">
-                      <Select value={selectedChief || ""} onValueChange={setSelectedChief}>
-                        <SelectTrigger className="flex-1">
-                          <SelectValue placeholder="Selecionar novo chefe" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {Array.isArray(labChiefs) &&
-                            labChiefs.map((chief) => (
-                              <SelectItem key={chief.id} value={chief.id}>
-                                {chief.nome} - {chief.tipo}
-                              </SelectItem>
-                            ))}
-                        </SelectContent>
-                      </Select>
-                      <Button
-                        onClick={() =>
-                          selectedChief &&
-                          allocateChiefMutation.mutate({
-                            scheduleId: schedule.id,
-                            chiefId: selectedChief,
-                          })
-                        }
-                        disabled={!selectedChief || allocateChiefMutation.isPending}
-                        className="sm:w-auto"
-                      >
-                        {allocateChiefMutation.isPending ? "Alocando..." : "Alocar"}
-                      </Button>
+                  </CardContent>
+                </Card>
+
+                <Card className="border shadow-sm">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Users className="w-4 h-4" />
+                      Clínico Geral
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pb-4">
+                    <div className="space-y-3">
+                      <div>
+                        <Label className="text-sm">Clínico Atual</Label>
+                        <p className="font-medium mt-1">{getClinicoName(schedule.id_clinico_alocado || null)}</p>
+                      </div>
+                      <div className="flex flex-col sm:flex-row gap-2">
+                        <Select value={selectedClinico || ""} onValueChange={setSelectedClinico}>
+                          <SelectTrigger className="flex-1">
+                            <SelectValue placeholder="Selecionar novo clínico" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Array.isArray(clinicos) &&
+                              clinicos.map((clinico) => (
+                                <SelectItem key={clinico.id} value={clinico.id}>
+                                  {clinico.nome} - {clinico.tipo}
+                                </SelectItem>
+                              ))}
+                          </SelectContent>
+                        </Select>
+                        <Button
+                          onClick={() => {
+                            // Implementar alocação de clínico
+                            if (selectedClinico) {
+                              ___showSuccessToastNotification({ message: "Funcionalidade em desenvolvimento" });
+                            }
+                          }}
+                          disabled={!selectedClinico}
+                          className="sm:w-auto"
+                        >
+                          Alocar
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              </>
             )}
 
+            {/* Exames */}
             <Card className="border shadow-sm">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
@@ -1147,10 +1643,12 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
                         <div>
                           <h4 className="font-semibold">{exam.Tipo_Exame?.nome || "Exame não especificado"}</h4>
                           <div className="flex items-center gap-2 mt-1 text-gray-600 text-sm">
-                            Exame:
-                            {getExamStatusBadge(exam.status)}
-                            <p>Pagamento: </p>
-                            <span className={`text-xs px-2 py-0.5 rounded-full ${exam.status_pagamento === "PAGO" ? "bg-green-100 text-green-800" : "bg-amber-100 text-amber-800"}`}>{exam.status_pagamento === "PAGO" ? "Pago" : "Pendente"}</span>
+                            <span>Status:</span>
+                            {getItemStatusBadge(exam.status)}
+                            <span>Financeiro:</span>
+                            {getFinanceiroStatusBadge(exam.status_financeiro)}
+                            <span>Reembolso:</span>
+                            {getReembolsoStatusBadge(exam.status_reembolso)}
                           </div>
                         </div>
                         <div className="flex gap-2">
@@ -1197,7 +1695,7 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
 
                       {editingExam === exam.id && editedExam ? (
                         <div className="space-y-4 pt-3 border-t">
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                             <div>
                               <Label className="text-sm">Tipo de Exame</Label>
                               <Select value={editedExam.id_tipo_exame?.toString() || ""} onValueChange={(value) => handleExamFieldChange("id_tipo_exame", parseInt(value))}>
@@ -1226,8 +1724,36 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
                                 </SelectTrigger>
                                 <SelectContent>
                                   <SelectItem value="PENDENTE">Pendente</SelectItem>
+                                  <SelectItem value="POR_REAGENDAR">Por Reagendar</SelectItem>
+                                  <SelectItem value="EM_ANDAMENTO">Em Andamento</SelectItem>
                                   <SelectItem value="CANCELADO">Cancelado</SelectItem>
                                   {!isReceptionist && <SelectItem value="CONCLUIDO">Concluído</SelectItem>}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div>
+                              <Label className="text-sm">Estado Financeiro</Label>
+                              <Select value={editedExam.status_financeiro} onValueChange={(value) => handleExamFieldChange("status_financeiro", value)}>
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="PAGO">Pago</SelectItem>
+                                  <SelectItem value="NAO_PAGO">Não Pago</SelectItem>
+                                  <SelectItem value="ISENTO">Isento</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div>
+                              <Label className="text-sm">Estado de Reembolso</Label>
+                              <Select value={editedExam.status_reembolso} onValueChange={(value) => handleExamFieldChange("status_reembolso", value)}>
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="SEM_REEMBOLSO">Sem Reembolso</SelectItem>
+                                  <SelectItem value="POR_REEMBOLSAR">Por Reembolsar</SelectItem>
+                                  <SelectItem value="REEMBOLSADO">Reembolsado</SelectItem>
                                 </SelectContent>
                               </Select>
                             </div>
@@ -1324,12 +1850,11 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
                               <TimePicker 
                                 value={editedExam.hora_agendamento} 
                                 onChange={handleTimeChange} 
-                                // Passa a data para o TimePicker validar se for hoje
                                 isToday={calendarDate ? isToday(calendarDate) : false}
                               />
                             </div>
-                            {timeError &&  (
-                              <p className="text-xs text-red-500 mt-1">{""}</p>
+                            {timeError && (
+                              <p className="text-xs text-red-500 mt-1">{timeError}</p>
                             )}
                             {calendarDate && isToday(calendarDate) && !timeError && (
                               <p className="text-xs text-gray-500 mt-1">
@@ -1426,6 +1951,340 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
                               className="sm:w-auto"
                             >
                               {allocateTechnicianMutation.isPending ? "Alocando..." : "Alocar"}
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </CardContent>
+            </Card>
+
+            {/* Consultas */}
+            <Card className="border shadow-sm">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <ClipboardList className="w-4 h-4" />
+                  Consultas ({activeConsultas.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {activeConsultas.map((consulta) => {
+                  const currentPrice = consulta.Tipo_Consulta?.preco || 0;
+
+                  return (
+                    <div key={consulta.id} className="border rounded-lg p-4 space-y-3">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div>
+                          <h4 className="font-semibold">{consulta.Tipo_Consulta?.nome || "Consulta não especificada"}</h4>
+                          <div className="flex items-center gap-2 mt-1 text-gray-600 text-sm">
+                            <span>Status:</span>
+                            {getItemStatusBadge(consulta.status)}
+                            <span>Financeiro:</span>
+                            {getFinanceiroStatusBadge(consulta.status_financeiro)}
+                            <span>Reembolso:</span>
+                            {getReembolsoStatusBadge(consulta.status_reembolso)}
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          {editingConsulta === consulta.id ? (
+                            <div className="flex gap-2">
+                              <Button
+                                variant="default"
+                                size="sm"
+                                onClick={handleSaveConsulta}
+                                disabled={updateConsultaMutation.isPending || isSaveDisabled}
+                                className={isSaveDisabled ? "opacity-50 cursor-not-allowed" : ""}
+                                title={isSaveDisabled && saveDisabledReason ? saveDisabledReason : "Salvar alterações"}
+                              >
+                                <Save className="w-3 h-3 mr-1" />
+                                {updateConsultaMutation.isPending ? "Salvando..." : "Salvar"}
+                              </Button>
+                              <Button variant="outline" size="sm" onClick={handleCancelEdit} disabled={updateConsultaMutation.isPending}>
+                                <X className="w-3 h-3 mr-1" />
+                                Cancelar
+                              </Button>
+                            </div>
+                          ) : (
+                            <Button variant="outline" size="sm" onClick={() => handleEditConsulta(consulta)}>
+                              <Edit3 className="w-3 h-3 mr-1" />
+                              Editar
+                            </Button>
+                          )}
+
+                          {isClinico && canInitializeConsulta(consulta) && (
+                            <Button
+                              variant="default"
+                              size="sm"
+                              className="bg-green-600 hover:bg-green-700"
+                              onClick={() => {
+                                console.log("Inicializar consulta:", consulta.id);
+                              }}
+                            >
+                              <Clock className="w-3 h-3 mr-1" />
+                              Iniciar
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+
+                      {editingConsulta === consulta.id && editedConsulta ? (
+                        <div className="space-y-4 pt-3 border-t">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <div>
+                              <Label className="text-sm">Tipo de Consulta</Label>
+                              <Select value={editedConsulta.id_tipo_consulta?.toString() || ""} onValueChange={(value) => handleConsultaFieldChange("id_tipo_consulta", parseInt(value))}>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Selecionar tipo" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {Array.isArray(consultaTypes) &&
+                                    consultaTypes.map((consultaType: ConsultaType) => (
+                                      <SelectItem key={consultaType.id} value={consultaType.id.toString()}>
+                                        {consultaType.nome} -{" "}
+                                        {new Intl.NumberFormat("pt-AO", {
+                                          style: "currency",
+                                          currency: "AOA",
+                                        }).format(consultaType.preco)}
+                                      </SelectItem>
+                                    ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div>
+                              <Label className="text-sm">Status</Label>
+                              <Select value={editedConsulta.status} onValueChange={(value) => handleConsultaFieldChange("status", value)}>
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="PENDENTE">Pendente</SelectItem>
+                                  <SelectItem value="POR_REAGENDAR">Por Reagendar</SelectItem>
+                                  <SelectItem value="EM_ANDAMENTO">Em Andamento</SelectItem>
+                                  <SelectItem value="CANCELADO">Cancelado</SelectItem>
+                                  {!isReceptionist && <SelectItem value="CONCLUIDO">Concluído</SelectItem>}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div>
+                              <Label className="text-sm">Estado Financeiro</Label>
+                              <Select value={editedConsulta.status_financeiro} onValueChange={(value) => handleConsultaFieldChange("status_financeiro", value)}>
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="PAGO">Pago</SelectItem>
+                                  <SelectItem value="NAO_PAGO">Não Pago</SelectItem>
+                                  <SelectItem value="ISENTO">Isento</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div>
+                              <Label className="text-sm">Estado de Reembolso</Label>
+                              <Select value={editedConsulta.status_reembolso} onValueChange={(value) => handleConsultaFieldChange("status_reembolso", value)}>
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="SEM_REEMBOLSO">Sem Reembolso</SelectItem>
+                                  <SelectItem value="POR_REEMBOLSAR">Por Reembolsar</SelectItem>
+                                  <SelectItem value="REEMBOLSADO">Reembolsado</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+
+                          <div>
+                            <Label className="text-sm mb-2 block font-medium text-gray-700">Selecione a Data</Label>
+                            <div className="mt-2 flex gap-2">
+                              <div className="flex-1">
+                                <div className="relative">
+                                  <Input
+                                    type="text"
+                                    value={inputValue}
+                                    onChange={handleInputChange}
+                                    onBlur={handleInputBlur}
+                                    placeholder="dd/mm/aa"
+                                    className={`w-full h-10 px-3 bg-white border rounded-md shadow-sm focus:ring-1 ${
+                                      inputError
+                                        ? "border-red-300 hover:border-red-400 focus:border-red-500 focus:ring-red-500"
+                                        : dateValidationMessage
+                                        ? "border-amber-300 hover:border-amber-400 focus:border-amber-500 focus:ring-amber-500"
+                                        : "border-gray-300 hover:border-gray-400 focus:border-blue-500 focus:ring-blue-500"
+                                    }`}
+                                  />
+                                  <CalendarDays className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                </div>
+                                {inputError && <p className="text-xs text-red-500 mt-1">{inputError}</p>}
+                                {dateValidationMessage && <p className="text-xs text-amber-600 mt-1">⚠️ {dateValidationMessage}</p>}
+                                {!inputError && !dateValidationMessage && <p className="text-xs text-gray-500 mt-1">Formato: dd/mm/aa (ex: 25/12/24)</p>}
+                              </div>
+
+                              <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
+                                <PopoverTrigger asChild>
+                                  <Button variant="outline" className="h-10 px-3 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 hover:border-gray-400">
+                                    <ChevronDown className="h-4 w-4" />
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0 z-[100] border border-gray-300 shadow-lg" align="start" sideOffset={4}>
+                                  <div className="bg-white rounded-lg">
+                                    <Calendar
+                                      mode="single"
+                                      selected={calendarDate || undefined}
+                                      onSelect={handleCalendarSelect}
+                                      initialFocus
+                                      className="p-3"
+                                      disabled={(date) => isDateBeforeToday(date)}
+                                      classNames={{
+                                        month: "flex flex-col m-auto text-center space-y-4",
+                                        months: "flex flex-col m-auto justify-center items-center space-y-4",
+                                        caption_label: "text-sm font-semibold text-gray-800",
+                                        caption: "flex justify-center pt-1 relative items-center",
+                                        nav: "space-x-1 flex items-center",
+                                        nav_button: "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 text-gray-600 hover:text-gray-900",
+                                        nav_button_previous: "absolute left-1",
+                                        nav_button_next: "absolute right-1",
+                                        table: "w-full border-collapse space-y-1",
+                                        head_row: "flex",
+                                        head_cell: "text-gray-500 rounded-md w-9 font-normal text-[0.8rem]",
+                                        row: "flex w-full mt-2",
+                                        cell: "h-9 w-9 text-center text-sm p-0 relative",
+                                        day: "h-9 w-9 p-0 font-normal rounded-md transition-colors hover:bg-blue-100 hover:text-blue-700 data-[disabled]:text-gray-300 data-[disabled]:bg-gray-50 data-[disabled]:cursor-not-allowed data-[outside]:text-gray-300 data-[outside]:opacity-30",
+                                        day_selected: "bg-blue-600 text-white hover:bg-blue-700 hover:text-white",
+                                        day_today: "bg-blue-100 text-blue-700 border border-blue-300",
+                                      }}
+                                    />
+                                    <div className="border-t border-gray-200 p-3 bg-gray-50 rounded-b-lg">
+                                      <div className="flex justify-between items-center">
+                                        <p className="text-xs text-gray-500">
+                                          Data atual: <span className="font-medium">{format(new Date(), "dd/MM/yyyy")}</span>
+                                        </p>
+                                        <Button variant="ghost" size="sm" className="text-xs bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700 px-2 py-1" onClick={handleTodayClick}>
+                                          <CalendarDays className="h-3 w-3 mr-1" />
+                                          Hoje
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </PopoverContent>
+                              </Popover>
+                            </div>
+
+                            {calendarDate && !inputError && (
+                              <div className="mt-2 text-sm text-gray-700">
+                                <span className="font-medium">Data selecionada:</span> {format(calendarDate, "dd/MM/yyyy")}
+                                {isToday(calendarDate) && <span className="ml-2 text-blue-600">(Hoje)</span>}
+                                {isDateBeforeToday(calendarDate) && <span className="ml-2 text-amber-600 font-medium">⚠️ Data anterior à atual</span>}
+                              </div>
+                            )}
+                          </div>
+
+                          <div>
+                            <Label className="text-sm">Selecione o Horário</Label>
+                            <div className="mt-2">
+                              <TimePicker 
+                                value={editedConsulta.hora_agendamento} 
+                                onChange={handleTimeChange} 
+                                isToday={calendarDate ? isToday(calendarDate) : false}
+                              />
+                            </div>
+                            {timeError && (
+                              <p className="text-xs text-red-500 mt-1">{timeError}</p>
+                            )}
+                            {calendarDate && isToday(calendarDate) && !timeError && (
+                              <p className="text-xs text-gray-500 mt-1">
+                                Horário válido para hoje. Hora atual: {getCurrentTimeString()}
+                              </p>
+                            )}
+                          </div>
+
+                          {/* Mensagem de aviso sobre o botão de salvar */}
+                          {isSaveDisabled && saveDisabledReason && (
+                            <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-md">
+                              <div className="flex items-start gap-2">
+                                <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                                <div>
+                                  <p className="text-sm font-medium text-amber-800">Atenção</p>
+                                  <p className="text-xs text-amber-700 mt-1">
+                                    O botão de salvar está bloqueado porque: <span className="font-semibold">{saveDisabledReason}</span>
+                                  </p>
+                                  <p className="text-xs text-amber-600 mt-1">Corrija os campos acima para poder salvar as alterações.</p>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-sm pt-3 border-t">
+                          <div>
+                            <Label className="text-xs text-gray-500">Data e Hora</Label>
+                            <div className="flex items-center gap-2 mt-1">
+                              <CalendarDays className="w-3 h-3 text-gray-500" />
+                              <span className="font-medium">
+                                {(() => {
+                                  try {
+                                    // Parse a string para Date
+                                    const date = parseFromYYMMDD(consulta.data_agendamento);
+                                    if (date && isValid(date)) {
+                                      return `${format(date, "dd/MM/yyyy")} às ${consulta.hora_agendamento}`;
+                                    }
+                                    return `${consulta.data_agendamento} às ${consulta.hora_agendamento}`;
+                                  } catch (error) {
+                                    return `${consulta.data_agendamento} às ${consulta.hora_agendamento}`;
+                                  }
+                                })()}
+                              </span>
+                            </div>
+                          </div>
+                          <div>
+                            <Label className="text-xs text-gray-500">Preço</Label>
+                            <div className="flex items-center gap-2 mt-1">
+                              <DollarSign className="w-3 h-3 text-gray-500" />
+                              <span className="font-medium text-green-600">
+                                {new Intl.NumberFormat("pt-AO", {
+                                  style: "currency",
+                                  currency: "AOA",
+                                }).format(currentPrice)}
+                              </span>
+                            </div>
+                          </div>
+                          <div>
+                            <Label className="text-xs text-gray-500">Clínico Alocado</Label>
+                            <p className="font-medium mt-1">{getClinicoName(consulta.id_clinico_alocado)}</p>
+                          </div>
+                        </div>
+                      )}
+
+                      {isReceptionist && editingConsulta !== consulta.id && (
+                        <div className="pt-3 border-t">
+                          <Label className="text-sm">Alocar Clínico</Label>
+                          <div className="flex flex-col sm:flex-row gap-2 mt-2">
+                            <Select value={selectedClinico || ""} onValueChange={setSelectedClinico}>
+                              <SelectTrigger className="flex-1">
+                                <SelectValue placeholder="Selecionar clínico" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {Array.isArray(clinicos) &&
+                                  clinicos.map((clinico) => (
+                                    <SelectItem key={clinico.id} value={clinico.id}>
+                                      {clinico.nome} - {clinico.tipo}
+                                    </SelectItem>
+                                  ))}
+                              </SelectContent>
+                            </Select>
+                            <Button
+                              onClick={() =>
+                                selectedClinico &&
+                                allocateClinicoMutation.mutate({
+                                  consultaId: consulta.id,
+                                  clinicoId: selectedClinico,
+                                })
+                              }
+                              disabled={!selectedClinico || allocateClinicoMutation.isPending}
+                              className="sm:w-auto"
+                            >
+                              {allocateClinicoMutation.isPending ? "Alocando..." : "Alocar"}
                             </Button>
                           </div>
                         </div>
