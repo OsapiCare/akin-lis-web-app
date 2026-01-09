@@ -77,9 +77,6 @@ const agruparPorPaciente = (exames: any, consultas: any): PacienteAgendamento[] 
   const examesArray = toArray(exames);
   const consultasArray = toArray(consultas);
 
-  console.log("Exames para processar (", examesArray.length, "):", examesArray);
-  console.log("Consultas para processar (", consultasArray.length, "):", consultasArray);
-
   // Processar exames
   for (const exame of examesArray) {
     try {
@@ -155,7 +152,6 @@ const agruparPorPaciente = (exames: any, consultas: any): PacienteAgendamento[] 
   }
 
   const resultado = Array.from(pacientesMap.values());
-  console.log("Pacientes agrupados com sucesso:", resultado.length);
   return resultado;
 };
 
@@ -188,10 +184,8 @@ export default function Request() {
   queryFn: async () => {
     try {
       const response = await consultaRoutes.getPendingConsultas();
-      console.log("Resposta de consultas:", response);
       
       if (Array.isArray(response)) {
-        console.log("Consulta já é array com", response.length, "itens");
         return response;
       }
       
