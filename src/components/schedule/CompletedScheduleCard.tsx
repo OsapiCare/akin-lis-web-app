@@ -131,7 +131,7 @@ export function CompletedScheduleCard({ schedule, onViewDetails, onViewReport }:
             <Label className="text-xs text-gray-600 uppercase">Contacto</Label>
             <p className="font-semibold text-gray-900 flex items-center text-sm mt-1 break-all">
               <Phone className="w-4 h-4 mr-2 text-green-600" />
-              {schedule.Paciente?.contacto_telefonico || "N/A"}
+              {schedule?.Paciente?.contacto_telefonico || "N/A"}
             </p>
           </div>
         </div>
