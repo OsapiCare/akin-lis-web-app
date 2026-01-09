@@ -46,7 +46,7 @@ export const mockExamHistory: ExamsType[] = [
         id: 1,
         nome_completo: "Maria Silva",
         id_sexo: 2,
-        criado_aos: new Date(),
+        // criado_aos: new Date(),
       },
       Chefe_Laboratorio: null
     }
@@ -97,7 +97,7 @@ export const mockExamHistory: ExamsType[] = [
         id: 2,
         nome_completo: "João Santos",
         id_sexo: 1,
-        criado_aos: new Date(),
+        // criado_aos: new Date(),
       },
       Chefe_Laboratorio: null
     }
@@ -148,7 +148,7 @@ export const mockExamHistory: ExamsType[] = [
         id: 3,
         nome_completo: "Ana Costa",
         id_sexo: 2,
-        criado_aos: new Date(),
+        // criado_aos: new Date(),
       },
       Chefe_Laboratorio: null
     }
