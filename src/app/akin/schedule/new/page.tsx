@@ -1,11 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { z } from "zod";
 import { ModalNewPatient } from "./components/ModalNewPatient";
 import { _axios } from "@/Api/axios.config";
 import { ___showErrorToastNotification, ___showSuccessToastNotification } from "@/lib/sonner";
-import { schemaSchedule } from "./utils/schemaZodNewPatient";
 import { PatientDetails } from "./components/PatientDetails";
 import { ScheduleDetails, ScheduleItem } from "./components/ScheduleDetails";
 import { Button } from "@/components/ui/button";
@@ -17,8 +15,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-
-export type SchemaScheduleType = z.infer<typeof schemaSchedule>;
 
 // Enum para tipos de itens
 enum TipoItem {
@@ -44,7 +40,6 @@ export default function New() {
   const [patientAutoComplete, setPatientAutoComplete] = useState<{ value: string; id: string }[]>([]);
   const [selectedPatientId, setSelectedPatientId] = useState<string>("");
   const [selectedPatient, setSelectedPatient] = useState<PatientType | undefined>();
-  const [selectedClinicoGeral, setSelectedClinicoGeral] = useState<IClinicoGeral | null>(null);
   const [schedules, setSchedules] = useState<ScheduleItem[]>([{ item: null, tipo: TipoItem.EXAME, date: null, time: "" }]);
   const [selectedTipo, setSelectedTipo] = useState<TipoItem>(TipoItem.EXAME);
   const [resetPatient, setResetPatient] = useState(false);
@@ -62,7 +57,7 @@ export default function New() {
         return response.data;
       } catch (error) {
         console.error("Erro ao buscar clínicos:", error);
-        throw error;
+        return [];
       }
     },
     staleTime: 5 * 60 * 1000,
@@ -72,7 +67,7 @@ export default function New() {
   useEffect(() => {
     if (clinicoGeralData && Array.isArray(clinicoGeralData)) {
       const clinicosFormatados: IClinicoGeral[] = clinicoGeralData.map((clinico: any) => ({
-        id: clinico.id?.toString() || clinico._id?.toString(),
+        id: clinico.id?.toString() || clinico._id?.toString() || Math.random().toString(),
         nome: clinico.nome || clinico.name || "Nome não disponível",
         especialidade: clinico.especialidade || "Clínico Geral",
         registro_profissional: clinico.registro_profissional || "Registro a definir",
@@ -84,17 +79,6 @@ export default function New() {
       }
     }
   }, [clinicoGeralData]);
-
-  // Efeito para selecionar automaticamente o clínico quando há consultas
-  useEffect(() => {
-    const hasConsultas = schedules.some((schedule) => schedule.tipo === TipoItem.CONSULTA);
-    
-    if (hasConsultas && availableClinicos.length > 0 && !selectedClinicoGeral) {
-      setSelectedClinicoGeral(availableClinicos[0]);
-    } else if (!hasConsultas) {
-      setSelectedClinicoGeral(null);
-    }
-  }, [schedules, availableClinicos]);
 
   useEffect(() => {
     if (selectedPatientId) {
@@ -138,11 +122,11 @@ export default function New() {
 
       // Buscar exames
       const examsResponse = await _axios.get("/exam-types");
-      const examsRaw = examsResponse.data.data || [];
+      const examsRaw = examsResponse.data?.data || examsResponse.data || [];
 
       const examsData = examsRaw.map((exam: any) => ({
-        id: exam.id?.toString() || exam._id?.toString(),
-        nome: exam.nome || exam.name,
+        id: exam.id?.toString() || exam._id?.toString() || Math.random().toString(),
+        nome: exam.nome || exam.name || "Exame",
         preco: exam.preco || exam.price || exam.valor || 0,
         tipo: TipoItem.EXAME,
         descricao: exam.descricao || exam.description || "",
@@ -150,11 +134,11 @@ export default function New() {
 
       // Buscar consultas
       const consultationsResponse = await _axios.get("/consultation-types");
-      const consultationsRaw = consultationsResponse.data.data || [];
+      const consultationsRaw = consultationsResponse.data?.data || consultationsResponse.data || [];
 
       const consultationsData = consultationsRaw.map((cons: any) => ({
-        id: cons.id?.toString() || cons._id?.toString(),
-        nome: cons.nome || cons.name,
+        id: cons.id?.toString() || cons._id?.toString() || Math.random().toString(),
+        nome: cons.nome || cons.name || "Consulta",
         preco: cons.preco || cons.price || cons.valor || 0,
         tipo: TipoItem.CONSULTA,
         descricao: cons.descricao || cons.description || "",
@@ -202,10 +186,6 @@ export default function New() {
     return `${ageDays} dia${ageDays > 1 ? "s" : ""}`;
   };
 
-  const shouldShowClinicoGeralField = () => {
-    return schedules.some((schedule) => schedule.tipo === TipoItem.CONSULTA);
-  };
-
   const calculateTotalValue = () => {
     return schedules.reduce((sum, schedule) => {
       return sum + (schedule.item?.preco || 0);
@@ -218,12 +198,6 @@ export default function New() {
 
     if (!selectedPatient) {
       errors.push("Nenhum paciente selecionado.");
-    }
-
-    const hasConsultas = schedules.some((schedule) => schedule.tipo === TipoItem.CONSULTA);
-    
-    if (hasConsultas && !selectedClinicoGeral) {
-      errors.push("Selecione um clínico geral para as consultas.");
     }
 
     schedules.forEach((schedule, index) => {
@@ -245,6 +219,137 @@ export default function New() {
     return { isValid: true };
   };
 
+  // Função para agendar CONSULTAS usando o novo endpoint
+  const handleSubmitConsultas = async () => {
+    try {
+      const consultas = schedules.filter(schedule => schedule.tipo === TipoItem.CONSULTA);
+      
+      if (consultas.length === 0) {
+        ___showErrorToastNotification({ message: "Nenhuma consulta para agendar." });
+        return;
+      }
+
+      // **PAYLOAD PARA O NOVO ENDPOINT /schedulings/set-schedules**
+      const payload = {
+        id_paciente: Number(selectedPatient!.id),
+        id_unidade_de_saude: unit_health.toString(),
+        consultas_paciente: consultas.map((schedule) => ({
+          id_tipo_consulta: Number(schedule.item?.id),
+          data_agendamento: schedule.date instanceof Date 
+            ? schedule.date.toISOString().split("T")[0] 
+            : schedule.date 
+            ? new Date(schedule.date).toISOString().split("T")[0] 
+            : new Date().toISOString().split("T")[0],
+          hora_agendamento: schedule.time,
+          status_reembolso: schedule.item && schedule.item.preco > 0 ? "NAO_PAGO" : "ISENTO",
+        })),
+      };
+
+      console.log("Enviando consultas para /schedulings/set-schedule:", JSON.stringify(payload, null, 2));
+
+      const response = await _axios.post("/schedulings/set-schedule", payload);
+
+      if (response.status === 201 || response.status === 200) {
+        ___showSuccessToastNotification({ 
+          message: `${consultas.length} consulta(s) agendada(s) com sucesso!` 
+        });
+        return true;
+      }
+      
+      return false;
+    } catch (error: any) {
+      console.error("Erro ao agendar consultas:", error);
+      console.error("Resposta do erro:", error.response?.data);
+      
+      // Tentar endpoint alternativo se o principal falhar
+      try {
+        console.log("Tentando endpoint alternativo /schedulings...");
+        const payload = {
+          id_paciente: Number(selectedPatient!.id),
+          id_unidade_de_saude: unit_health.toString(),
+          id_recepcionista: user_id,
+          status: "ACTIVO",
+          status_pagamento: "NAO_PAGO",
+          status_reembolso: "SEM_REEMBOLSO",
+          consultas_paciente: schedules.filter(schedule => schedule.tipo === TipoItem.CONSULTA).map((schedule) => ({
+            id_tipo_consulta: Number(schedule.item?.id),
+            data_agendamento: schedule.date instanceof Date 
+              ? schedule.date.toISOString().split("T")[0] 
+              : schedule.date 
+              ? new Date(schedule.date).toISOString().split("T")[0] 
+              : new Date().toISOString().split("T")[0],
+            hora_agendamento: schedule.time,
+            status_pagamento: schedule.item && schedule.item.preco > 0 ? "NAO_PAGO" : "ISENTO",
+          })),
+        };
+
+        const responseAlt = await _axios.post("/schedulings", payload);
+        
+        if (responseAlt.status === 201 || responseAlt.status === 200) {
+          ___showSuccessToastNotification({ 
+            message: "Consultas agendadas com endpoint alternativo!" 
+          });
+          return true;
+        }
+      } catch (error2: any) {
+        console.error("Erro no endpoint alternativo:", error2);
+      }
+      
+      throw error;
+    }
+  };
+
+  // Função para agendar EXAMES usando o endpoint tradicional
+  const handleSubmitExames = async () => {
+    try {
+      const exames = schedules.filter(schedule => schedule.tipo === TipoItem.EXAME);
+      
+      if (exames.length === 0) {
+        ___showErrorToastNotification({ message: "Nenhum exame para agendar." });
+        return false;
+      }
+
+      const payload = {
+        id_paciente: Number(selectedPatient!.id),
+        id_unidade_de_saude: unit_health.toString(),
+        id_recepcionista: user_id,
+        status: "ACTIVO",
+        status_pagamento: calculateTotalValue() > 0 ? "NAO_PAGO" : "ISENTO",
+        status_reembolso: "SEM_REEMBOLSO",
+        exames_paciente: exames.map((schedule) => ({
+          id_tipo_exame: Number(schedule.item?.id),
+          data_agendamento: schedule.date instanceof Date 
+            ? schedule.date.toISOString().split("T")[0] 
+            : schedule.date 
+            ? new Date(schedule.date).toISOString().split("T")[0] 
+            : new Date().toISOString().split("T")[0],
+          hora_agendamento: schedule.time,
+          status_pagamento: schedule.item && schedule.item.preco > 0 ? "NAO_PAGO" : "ISENTO",
+          status_reembolso: "SEM_REEMBOLSO",
+          status: "PENDENTE",
+          valor_total: schedule.item?.preco || 0,
+          isento: schedule.item?.preco === 0,
+        })),
+      };
+
+      console.log("Enviando exames para /schedulings:", JSON.stringify(payload, null, 2));
+
+      const response = await _axios.post("/schedulings", payload);
+
+      if (response.status === 201 || response.status === 200) {
+        ___showSuccessToastNotification({ 
+          message: `${exames.length} exame(s) agendado(s) com sucesso!` 
+        });
+        return true;
+      }
+      
+      return false;
+    } catch (error: any) {
+      console.error("Erro ao agendar exames:", error);
+      throw error;
+    }
+  };
+
   const handleSubmit = async () => {
     if (isSaving) return;
 
@@ -256,199 +361,132 @@ export default function New() {
       const consultas = schedules.filter(schedule => schedule.tipo === TipoItem.CONSULTA);
       const exames = schedules.filter(schedule => schedule.tipo === TipoItem.EXAME);
 
-      let payload: any;
-      
-      if (consultas.length > 0) {
-        // **PAYLOAD COMPLETO PARA CONSULTAS - BASEADO NOS DADOS DO BACKEND**
-        payload = {
-          id_paciente: Number(selectedPatient!.id),
-          id_unidade_de_saude: unit_health.toString(),
-          id_recepcionista: user_id, // ID do usuário logado
-          status: "ACTIVO", // Status inicial do processo
-          status_pagamento: calculateTotalValue() > 0 ? "NAO_PAGO" : "ISENTO",
-          status_reembolso: "SEM_REEMBOLSO",
-          id_clinico_alocado: selectedClinicoGeral?.id, // Campo correto baseado nos dados
-          consultas_paciente: consultas.map((schedule) => ({
-            id_tipo_consulta: Number(schedule.item?.id),
-            data_agendamento: schedule.date instanceof Date 
-              ? schedule.date.toISOString().split("T")[0] 
-              : schedule.date 
-              ? new Date(schedule.date).toISOString().split("T")[0] 
-              : new Date().toISOString().split("T")[0],
-            hora_agendamento: schedule.time,
-            status_pagamento: schedule.item && schedule.item.preco > 0 ? "NAO_PAGO" : "ISENTO",
-            status_reembolso: "SEM_REEMBOLSO",
-            status: "PENDENTE", // Status inicial da consulta
-            valor_total: schedule.item?.preco || 0,
-            isento: schedule.item?.preco === 0,
-          })),
-        };
+      let success = false;
 
-        if (exames.length > 0) {
-          ___showErrorToastNotification({ 
-            message: "Não é possível agendar exames e consultas no mesmo processo." 
-          });
-          setIsSaving(false);
-          return;
-        }
-      } else if (exames.length > 0) {
-        // **PAYLOAD COMPLETO PARA EXAMES - BASEADO NOS DADOS DO BACKEND**
-        payload = {
-          id_paciente: Number(selectedPatient!.id),
-          id_unidade_de_saude: unit_health.toString(),
-          id_recepcionista: user_id, // ID do usuário logado
-          status: "ACTIVO", // Status inicial do processo
-          status_pagamento: calculateTotalValue() > 0 ? "NAO_PAGO" : "ISENTO",
-          status_reembolso: "SEM_REEMBOLSO",
-          exames_paciente: exames.map((schedule) => ({
-            id_tipo_exame: Number(schedule.item?.id),
-            data_agendamento: schedule.date instanceof Date 
-              ? schedule.date.toISOString().split("T")[0] 
-              : schedule.date 
-              ? new Date(schedule.date).toISOString().split("T")[0] 
-              : new Date().toISOString().split("T")[0],
-            hora_agendamento: schedule.time,
-            status_pagamento: schedule.item && schedule.item.preco > 0 ? "NAO_PAGO" : "ISENTO",
-            status_reembolso: "SEM_REEMBOLSO",
-            status: "PENDENTE", // Status inicial do exame
-            valor_total: schedule.item?.preco || 0,
-            isento: schedule.item?.preco === 0,
-          })),
-        };
-      } else {
+      // Verificar se está tentando agendar ambos os tipos
+      if (consultas.length > 0 && exames.length > 0) {
+        ___showErrorToastNotification({ 
+          message: "Não é possível agendar exames e consultas no mesmo processo. Selecione apenas um tipo." 
+        });
+        setIsSaving(false);
+        return;
+      }
+
+      // Agendar CONSULTAS usando o novo endpoint
+      if (consultas.length > 0) {
+        success = await handleSubmitConsultas() ?? true;
+      }
+      // Agendar EXAMES usando o endpoint tradicional
+      else if (exames.length > 0) {
+        success = await handleSubmitExames();
+      }
+      else {
         ___showErrorToastNotification({ message: "Nenhum item selecionado para agendamento." });
         setIsSaving(false);
         return;
       }
 
-      console.log("Enviando payload COMPLETO para agendamento:", JSON.stringify(payload, null, 2));
-
-      // **TENTATIVA 1: Usar o endpoint correto para cada tipo**
-      let endpoint = "/schedulings/set-schedule";
-      let method = "post";
-      
-      // **TENTATIVA 2: Se não funcionar, tentar endpoints diferentes**
-      if (consultas.length > 0) {
-        // Tentar endpoint específico para consultas
-        endpoint = "/schedulings";
-        payload = {
-          ...payload,
-          tipo: "CONSULTA"
-        };
-      } else if (exames.length > 0) {
-        // Tentar endpoint específico para exames
-        endpoint = "/schedulings";
-        payload = {
-          ...payload,
-          tipo: "EXAME"
-        };
-      }
-
-      const response = await _axios.post(endpoint, payload);
-
-      if (response.status === 201 || response.status === 200) {
-        ___showSuccessToastNotification({ message: "Processo de agendamento criado com sucesso!" });
+      if (success) {
         // Resetar todos os campos
         setSchedules([{ item: null, tipo: TipoItem.EXAME, date: null, time: "" }]);
         setSelectedPatient(undefined);
         setSelectedPatientId("");
-        setSelectedClinicoGeral(null);
         setSelectedTipo(TipoItem.EXAME);
         resetInputs();
         setResetPatient(true);
       }
+
     } catch (error: any) {
       console.error("Erro completo:", error);
       console.error("Resposta do erro:", error.response?.data);
       
-      // **SOLUÇÃO DE EMERGÊNCIA: Criar processo em duas etapas**
-      if (error?.response?.status === 500) {
-        console.log("Tentando criar processo em duas etapas...");
+      // **SOLUÇÃO DE EMERGÊNCIA: Criar processo em duas etapas se falhar**
+      try {
+        console.log("Tentando solução de emergência...");
         
-        try {
-          // **ETAPA 1: Criar o processo básico**
-          const processoPayload = {
-            id_paciente: Number(selectedPatient!.id),
-            id_unidade_de_saude: unit_health.toString(),
-            id_recepcionista: user_id,
-            status: "ACTIVO",
-            status_pagamento: calculateTotalValue() > 0 ? "NAO_PAGO" : "ISENTO",
-            status_reembolso: "SEM_REEMBOLSO"
-          };
-          
-          console.log("Criando processo básico:", processoPayload);
-          const processoResponse = await _axios.post("/schedulings", processoPayload);
-          const idProcesso = processoResponse.data.id;
-          
-          console.log("Processo criado com ID:", idProcesso);
-          
-          // **ETAPA 2: Adicionar os itens**
-          const consultas = schedules.filter(schedule => schedule.tipo === TipoItem.CONSULTA);
-          const exames = schedules.filter(schedule => schedule.tipo === TipoItem.EXAME);
-          
-          if (consultas.length > 0) {
-            for (const consulta of consultas) {
-              const consultaPayload = {
-                id_agendamento: idProcesso,
-                id_tipo_consulta: Number(consulta.item?.id),
-                data_agendamento: consulta.date instanceof Date 
-                  ? consulta.date.toISOString().split("T")[0] 
-                  : consulta.date 
-                  ? new Date(consulta.date).toISOString().split("T")[0] 
-                  : new Date().toISOString().split("T")[0],
-                hora_agendamento: consulta.time,
-                status_pagamento: consulta.item && consulta.item.preco > 0 ? "NAO_PAGO" : "ISENTO",
-                status: "PENDENTE",
-                valor_total: consulta.item?.preco || 0,
-                id_clinico_alocado: selectedClinicoGeral?.id
-              };
-              
-              console.log("Adicionando consulta:", consultaPayload);
-              await _axios.post("/consultations", consultaPayload);
-            }
+        // **ETAPA 1: Criar o processo básico**
+        const processoPayload = {
+          id_paciente: Number(selectedPatient!.id),
+          id_unidade_de_saude: unit_health.toString(),
+          id_recepcionista: user_id,
+          status: "ACTIVO",
+          status_pagamento: calculateTotalValue() > 0 ? "NAO_PAGO" : "ISENTO",
+          status_reembolso: "SEM_REEMBOLSO"
+        };
+        
+        console.log("Criando processo básico:", processoPayload);
+        const processoResponse = await _axios.post("/schedulings", processoPayload);
+        const idProcesso = processoResponse.data.id;
+        
+        console.log("Processo criado com ID:", idProcesso);
+        
+        // **ETAPA 2: Adicionar os itens**
+        const consultas = schedules.filter(schedule => schedule.tipo === TipoItem.CONSULTA);
+        const exames = schedules.filter(schedule => schedule.tipo === TipoItem.EXAME);
+        
+        if (consultas.length > 0) {
+          for (const consulta of consultas) {
+            const consultaPayload = {
+              id_agendamento: idProcesso,
+              id_tipo_consulta: Number(consulta.item?.id),
+              data_agendamento: consulta.date instanceof Date 
+                ? consulta.date.toISOString().split("T")[0] 
+                : consulta.date 
+                ? new Date(consulta.date).toISOString().split("T")[0] 
+                : new Date().toISOString().split("T")[0],
+              hora_agendamento: consulta.time,
+              status_pagamento: consulta.item && consulta.item.preco > 0 ? "NAO_PAGO" : "ISENTO",
+              status: "PENDENTE",
+              valor_total: consulta.item?.preco || 0,
+            };
+            
+            console.log("Adicionando consulta:", consultaPayload);
+            await _axios.post("/consultations", consultaPayload);
           }
           
-          if (exames.length > 0) {
-            for (const exame of exames) {
-              const examePayload = {
-                id_agendamento: idProcesso,
-                id_tipo_exame: Number(exame.item?.id),
-                data_agendamento: exame.date instanceof Date 
-                  ? exame.date.toISOString().split("T")[0] 
-                  : exame.date 
-                  ? new Date(exame.date).toISOString().split("T")[0] 
-                  : new Date().toISOString().split("T")[0],
-                hora_agendamento: exame.time,
-                status_pagamento: exame.item && exame.item.preco > 0 ? "NAO_PAGO" : "ISENTO",
-                status: "PENDENTE",
-                valor_total: exame.item?.preco || 0
-              };
-              
-              console.log("Adicionando exame:", examePayload);
-              await _axios.post("/exams", examePayload);
-            }
-          }
-          
-          ___showSuccessToastNotification({ message: "Processo criado com sucesso em duas etapas!" });
-          // Reset
-          setSchedules([{ item: null, tipo: TipoItem.EXAME, date: null, time: "" }]);
-          setSelectedPatient(undefined);
-          setSelectedPatientId("");
-          setSelectedClinicoGeral(null);
-          setSelectedTipo(TipoItem.EXAME);
-          resetInputs();
-          setResetPatient(true);
-          
-        } catch (error2: any) {
-          console.error("Erro na solução alternativa:", error2);
-          console.error("Detalhes:", error2.response?.data);
-          ___showErrorToastNotification({ 
-            message: `Erro detalhado: ${JSON.stringify(error2.response?.data || error2.message)}` 
+          ___showSuccessToastNotification({ 
+            message: `${consultas.length} consulta(s) agendada(s) com sucesso em duas etapas!` 
           });
         }
-      } else {
+        
+        if (exames.length > 0) {
+          for (const exame of exames) {
+            const examePayload = {
+              id_agendamento: idProcesso,
+              id_tipo_exame: Number(exame.item?.id),
+              data_agendamento: exame.date instanceof Date 
+                ? exame.date.toISOString().split("T")[0] 
+                : exame.date 
+                ? new Date(exame.date).toISOString().split("T")[0] 
+                : new Date().toISOString().split("T")[0],
+              hora_agendamento: exame.time,
+              status_pagamento: exame.item && exame.item.preco > 0 ? "NAO_PAGO" : "ISENTO",
+              status: "PENDENTE",
+              valor_total: exame.item?.preco || 0
+            };
+            
+            console.log("Adicionando exame:", examePayload);
+            await _axios.post("/exams", examePayload);
+          }
+          
+          ___showSuccessToastNotification({ 
+            message: `${exames.length} exame(s) agendado(s) com sucesso em duas etapas!` 
+          });
+        }
+        
+        // Reset
+        setSchedules([{ item: null, tipo: TipoItem.EXAME, date: null, time: "" }]);
+        setSelectedPatient(undefined);
+        setSelectedPatientId("");
+        setSelectedTipo(TipoItem.EXAME);
+        resetInputs();
+        setResetPatient(true);
+        
+      } catch (error2: any) {
+        console.error("Erro na solução alternativa:", error2);
+        console.error("Detalhes:", error2.response?.data);
         ___showErrorToastNotification({ 
-          message: `Erro: ${error?.response?.data?.message || error.message || "Contate o suporte"}` 
+          message: `Erro: ${error2?.response?.data?.message || error2.message || "Contate o suporte"}` 
         });
       }
       setResetPatient(false);
@@ -494,7 +532,6 @@ export default function New() {
                   onClick={() => {
                     setSelectedTipo(TipoItem.EXAME);
                     setSchedules([{ item: null, tipo: TipoItem.EXAME, date: null, time: "" }]);
-                    setSelectedClinicoGeral(null);
                   }}
                   className="flex-1"
                 >
@@ -515,32 +552,27 @@ export default function New() {
             </div>
           </div>
 
-          {shouldShowClinicoGeralField() && (
+          {selectedTipo === TipoItem.CONSULTA && availableClinicos.length > 0 && (
             <div className="p-4 bg-gray-100 rounded-lg border">
               <div className="flex flex-col gap-3">
                 <div className="flex justify-between items-center">
-                  <label className="font-bold text-lg">Clínico Geral</label>
+                  <label className="font-bold text-lg">Clínico Geral Disponível</label>
                   <Badge variant="outline" className="bg-blue-50 text-blue-700">
-                    Obrigatório
+                    Opcional
                   </Badge>
                 </div>
                 
                 <div className="space-y-4">
                   <div className="flex flex-col gap-2">
-                    <label className="font-medium">Clínico Responsável *</label>
+                    <label className="font-medium">Clínico Responsável</label>
                     
                     {isLoadingClinicos ? (
                       <div className="p-3 bg-gray-50 border border-gray-200 rounded-md">
                         <p className="text-gray-500">Carregando...</p>
                       </div>
-                    ) : availableClinicos.length > 0 ? (
+                    ) : (
                       <Select
-                        value={selectedClinicoGeral?.id || ""}
-                        onValueChange={(value) => {
-                          const clinico = availableClinicos.find(c => c.id === value);
-                          setSelectedClinicoGeral(clinico || null);
-                        }}
-                        required
+                        defaultValue={availableClinicos[0]?.id || ""}
                       >
                         <SelectTrigger className="w-full">
                           <SelectValue placeholder="Selecione um clínico" />
@@ -556,12 +588,6 @@ export default function New() {
                           ))}
                         </SelectContent>
                       </Select>
-                    ) : (
-                      <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-                        <p className="text-yellow-700 text-sm">
-                          ⚠️ Nenhum clínico cadastrado.
-                        </p>
-                      </div>
                     )}
                   </div>
                 </div>
@@ -641,10 +667,11 @@ export default function New() {
 
         <Button 
           type="submit" 
-          disabled={isSaving || (shouldShowClinicoGeralField() && !selectedClinicoGeral)} 
+          disabled={isSaving || !selectedPatient} 
           className="bg-akin-turquoise hover:bg-akin-turquoise/80"
         >
-          {isSaving ? "Criando Processo..." : "Criar Processo de Agendamento"}
+          {isSaving ? "Criando Agendamento..." : 
+            selectedTipo === TipoItem.CONSULTA ? "Agendar Consulta(s)" : "Agendar Exame(s)"}
         </Button>
       </form>
     </div>

@@ -77,6 +77,7 @@ interface ConsultasType {
     nome: string;
     tipo: string;
   };
+  Agendamento?: Agendamento;
 }
 
 // ==============================================

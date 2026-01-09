@@ -21,6 +21,7 @@ import { ptBR } from "date-fns/locale";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { _axios } from "@/Api/axios.config";
 
 // Função para converter ScheduleType para CompletedScheduleType (com valores padrão)
 const convertToCompletedSchedule = (schedule: ScheduleType): CompletedScheduleType => {
@@ -69,10 +70,19 @@ export default function Request() {
   // Converter filteredSchedules também para CompletedScheduleType
   const filteredSchedules = filteredScheduleType.map(convertToCompletedSchedule);
 
+    const { data: pendingSchedule } = useQuery({
+      queryKey: ["pending-schedule"],
+      queryFn: async () => {
+        const response = await _axios.get("/consultations/pending");
+        return response.data;
+      },
+    });
+
+    const consulta = pendingSchedule?.data;
   // Calculate statistics for both exams and consultations
   const totalSchedules = completedSchedules.length;
   const totalExams = completedSchedules.reduce((total, schedule) => total + (schedule.Exame?.length || 0), 0);
-  const totalConsultations = completedSchedules.reduce((total, schedule) => total + (schedule.Consulta?.length || 0), 0);
+  const totalConsultations  = consulta?.length || 0;
   const totalRevenue = completedSchedules.reduce((total, schedule) => {
     const examRevenue = schedule.Exame?.reduce((examTotal, exam) => examTotal + (exam.Tipo_Exame?.preco || 0), 0) || 0;
     const consultationRevenue = schedule.Consulta?.reduce((consultTotal, consult) => consultTotal + (consult.Tipo_Consulta?.preco || 0), 0) || 0;
