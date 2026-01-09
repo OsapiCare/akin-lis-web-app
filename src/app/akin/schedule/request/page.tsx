@@ -105,7 +105,7 @@ export default function Request() {
 
   const consulta = pendingSchedule?.data;
   // Calculate statistics for both exams and consultations
-  const totalSchedules = completedSchedules.length;
+  const totalSchedules = completedSchedules?.length;
   const totalExams = completedSchedules.reduce((total, schedule) => total + (schedule.Exame?.length || 0), 0);
   const totalConsultas = completedConsultas?.length || 0;
   const totalRevenue = completedSchedules.reduce((total, schedule) => {
@@ -170,8 +170,8 @@ export default function Request() {
 
   // Get schedule type badge
   const getScheduleTypeBadge = (schedule: CompletedScheduleType) => {
-    const hasExams = schedule.Exame && schedule.Exame.length > 0;
-    const hasConsultations = schedule.Consulta && schedule.Consulta.length > 0;
+    const hasExams = schedule.Exame && schedule.Exame?.length > 0;
+    const hasConsultations = schedule.Consulta && schedule.Consulta?.length > 0;
 
     if (hasExams && hasConsultations) {
       return (
@@ -295,7 +295,7 @@ export default function Request() {
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{isLoading ? <Skeleton className="h-8 w-16" /> : todaySchedules.length}</div>
+            <div className="text-2xl font-bold text-blue-600">{isLoading ? <Skeleton className="h-8 w-16" /> : todaySchedules?.length}</div>
             <p className="text-xs text-muted-foreground">agendamentos para hoje</p>
           </CardContent>
         </Card>
@@ -342,10 +342,10 @@ export default function Request() {
       {showStats && <ScheduleStats schedules={completedSchedules as any} isLoading={isLoading} />}
 
       {/* Bulk Actions */}
-      {!isLoading && filteredSchedules.length > 0 && <BulkActions schedules={completedSchedules as any} selectedSchedules={selectedSchedules} onSelectionChange={setSelectedSchedules} />}
+      {!isLoading && filteredSchedules?.length > 0 && <BulkActions schedules={completedSchedules as any} selectedSchedules={selectedSchedules} onSelectionChange={setSelectedSchedules} />}
 
       {/* Filters */}
-      <ScheduleFilters onSearch={handleSearch} onFilterChange={handleFilterChange} totalSchedules={totalSchedules} filteredCount={filteredSchedules.length} />
+      <ScheduleFilters onSearch={handleSearch} onFilterChange={handleFilterChange} totalSchedules={totalSchedules} filteredCount={filteredSchedules?.length} />
       {/* <ConsultaFilters onSearch={handleSearch} onFilterChange={handleFilterChange} totalConsultas={totalConsultas} filteredCount={filteredConsultas.length} /> */}
 
       {/* View Toggle and Content */}
@@ -363,7 +363,7 @@ export default function Request() {
           </TabsList>
 
           <div className="text-sm text-gray-600">
-            {filteredSchedules.length} Exames e {consulta.length} Consultas
+            {filteredSchedules?.length} Exames e {consulta?.length} Consultas
           </div>
           {/* <div className="text-sm text-gray-600">
               {totalSchedules} agendamentos de {totalConsultas} agendamentos
@@ -378,7 +378,7 @@ export default function Request() {
               <Skeleton key={i} className="h-32 w-full" />
             ))}
           </div>
-        ) : filteredSchedules.length === 0 ? (
+        ) : filteredSchedules?.length === 0 ? (
           <Card className="p-12">
             <div className="text-center">
               <AlertTriangle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
@@ -419,8 +419,8 @@ export default function Request() {
                       const scheduleTime = getScheduleTime(schedule);
                       const totalItems = getTotalItems(schedule);
                       const totalPrice = getTotalPrice(schedule);
-                      const hasExams = schedule.Exame && schedule.Exame.length > 0;
-                      const hasConsultations = schedule.Consulta && schedule.Consulta.length > 0;
+                      const hasExams = schedule.Exame && schedule.Exame?.length > 0;
+                      const hasConsultations = schedule.Consulta && schedule.Consulta?.length > 0;
 
                       return (
                         <tr key={schedule.id} className="hover:bg-gray-50">
