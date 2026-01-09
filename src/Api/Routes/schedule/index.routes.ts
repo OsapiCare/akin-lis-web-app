@@ -82,3 +82,51 @@ class ScheduleRoutes {
 }
 
 export const scheduleRoutes = new ScheduleRoutes();
+
+
+class ConsultaRoutes {
+    async getPendingConsultas(){
+    try{
+      const response = await _axios.get<ConsultasType[]>("/consultations/pending");
+      return response.data;
+    } catch (error){
+      ___showErrorToastNotification({
+        message: "Erro inesperado ocorreu ao buscar os dados. Atualize a página ou contate o suporte.",
+      });
+      throw error;
+    }
+  }
+
+   async acceptConsulta(consultaId: number) {
+    try {
+      const response = await _axios.patch(`/consultations/${consultaId}`, { status: "CONCLUIDO" });
+      ___showSuccessToastNotification({
+        message: "Consulta aceite com sucesso!",
+      });
+      return response.data;
+    } catch (error) {
+      ___showErrorToastNotification({
+        message: "Erro ao aceitar consulta. Tente novamente.",
+      });
+      throw error;
+    }
+  }
+
+  async rejectConsulta(consultaId: number) {
+    try {
+      const response = await _axios.patch(`/consultations/${consultaId}`, { status: "CANCELADO" });
+      ___showSuccessToastNotification({
+        message: "Consulta recusada com sucesso!",
+      });
+      return response.data;
+    } catch (error) {
+      ___showErrorToastNotification({
+        message: "Erro ao recusar agendamento. Tente novamente.",
+      });
+      throw error;
+    }
+  }
+
+}
+
+export const consultaRoutes = new ConsultaRoutes();

@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { CalendarDays, Clock, User, Phone, CreditCard, Stethoscope, CheckCircle, XCircle, AlertCircle, FileText, HeartPulse, UserCog } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { scheduleRoutes } from "@/Api/Routes/schedule/index.routes";
+import { consultaRoutes, scheduleRoutes } from "@/Api/Routes/schedule/index.routes";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { _axios } from "@/Api/axios.config";
 
@@ -24,79 +24,91 @@ interface PendingScheduleCardProps {
   schedule: ScheduleType;
 }
 
-// COMPONENTE ESPECÍFICO PARA CONSULTAS
 export function ConsultaScheduleCard({ consulta }: ConsultaCardProps) {
   const [rejectReason, setRejectReason] = useState("");
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const queryClient = useQueryClient();
 
   const acceptMutation = useMutation({
-    mutationFn: (consultaId: number) => scheduleRoutes.acceptSchedule(consultaId),
+    mutationFn: (consultaId: number) => consultaRoutes.acceptConsulta(consultaId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["pending-consultations"] });
-      queryClient.invalidateQueries({ queryKey: ["pending-schedules"] });
+      queryClient.invalidateQueries({ queryKey: ["pending-consultas"] });
     },
   });
 
   const rejectMutation = useMutation({
-    mutationFn: ({ scheduleId }: { scheduleId: number }) => scheduleRoutes.rejectSchedule(scheduleId),
+    mutationFn: ({ consultaId }: { consultaId: number }) => consultaRoutes.rejectConsulta(consultaId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["pending-consultations"] });
-      queryClient.invalidateQueries({ queryKey: ["pending-schedules"] });
+      queryClient.invalidateQueries({ queryKey: ["pending-consultas"] });
       setShowRejectDialog(false);
       setRejectReason("");
     },
   });
 
   const handleAccept = () => {
-    if (consulta.Agendamento?.id) {
-      acceptMutation.mutate(consulta.Agendamento.id);
+    if (consulta?.id) {
+      acceptMutation.mutate(consulta.id);
     }
   };
 
   const handleReject = () => {
-    if (rejectReason.trim() && consulta.Agendamento?.id) {
-      rejectMutation.mutate({ scheduleId: consulta.Agendamento.id });
+    if (rejectReason.trim() && consulta?.id) {
+      rejectMutation.mutate({ consultaId: consulta.id });
     }
   };
 
-  const getPatientAge = () => {
-    const birthDate = consulta.Agendamento?.Paciente?.data_nascimento;
-    if (!birthDate) return "N/A";
-    try {
-      const birth = new Date(birthDate);
-      const age = new Date().getFullYear() - birth.getFullYear();
-      return `${age} anos`;
-    } catch {
-      return "N/A";
-    }
+
+ const getPatientAge = () => {
+    if (!consulta?.Agendamento?.Paciente) return "N/A";
+    const birthDate = new Date(consulta?.data_formatada);
+    const age = new Date().getFullYear() - birthDate.getFullYear();
+    return `${age} anos`;
   };
+
+  const isConsultaSchedule = consulta.Consulta && consulta.Consulta.length > 0;
 
   const getPatientInitials = () => {
-    const name = consulta?.Agendamento?.Paciente?.nome_completo || "Paciente";
+    const name = consulta?.Paciente?.nome_completo || "Paciente";
     return name
       .split(" ")
-      .map((n:any) => n[0] || "")
+      .map((n: any) => n[0] || "")
       .join("")
       .toUpperCase()
       .slice(0, 2);
   };
 
   const formatDate = (dateString: string) => {
-    try {
-      return format(new Date(dateString), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
-    } catch {
-      return "Data não disponível";
-    }
+    return format(new Date(dateString), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
   };
 
   const formatTime = (timeString: string) => {
-    try {
-      return format(new Date(`2000-01-01T${timeString}`), "HH:mm");
-    } catch {
-      return "Hora não disponível";
-    }
+    return format(new Date(`2000-01-01T${timeString}`), "HH:mm");
   };
+
+  const getScheduleDateConsultTime = () => {
+    if (isConsultaSchedule && consulta.Consulta?.[0]) {
+      return {
+        date: consulta.Consulta[0].data_agendamento,
+        time: consulta.Consulta[0].hora_agendamento,
+      };
+    }
+    return {
+      date: consulta.data_agendamento ?? "",
+      time: consulta.hora_agendamento ?? "",
+    };
+  };
+
+   const getTotalPrice = () => {
+    if (isConsultaSchedule) {
+      return consulta.Consulta?.reduce((total) => total + (consulta?.Tipo_Consulta?.preco || 0), 0) || 0;
+    }
+    return 0;
+  };
+
+
+  const consultaInfo = getScheduleDateConsultTime();
 
   const getStatusColor = (status: string) => {
     const statusLower = status?.toLowerCase() || "pendente";
@@ -115,9 +127,57 @@ export function ConsultaScheduleCard({ consulta }: ConsultaCardProps) {
   };
 
   const paciente = consulta?.Agendamento?.Paciente;
-  console.log("R: ",paciente?.nome_completo);
+
+        const renderConsultaContent = () => {
+    if (!isConsultaSchedule) {
+      return null;
+    }
 
   return (
+
+         <div>
+          <div className="flex items-center justify-between mb-2">
+            <Label className="flex items-center text-sm font-semibold text-gray-700">
+              <div className="p-1.5 mr-2 rounded-md bg-blue-100">
+                <FileText className="w-4 h-4 text-blue-600" />
+              </div>
+              <p>Detalhes da Consulta</p>
+            </Label>
+            <Badge variant="outline" className="bg-blue-50 text-blue-700">
+              Consulta
+            </Badge>
+          </div>
+
+          <div className="space-y-3 p-3 bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-100">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <HeartPulse className="w-4 h-4 text-blue-600" />
+                <span className="text-sm text-gray-700">Tipo:</span>
+              </div>
+              <span className="text-sm font-medium text-gray-900">{consulta.Tipo_Consulta?.nome || "Consulta Geral"}</span>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <UserCog className="w-4 h-4 text-blue-600" />
+                <span className="text-sm text-gray-700">Médico:</span>
+              </div>
+              <span className="text-sm font-medium text-gray-900 truncate ml-2">
+                {consulta.Tecnico_Laboratorio?.nome || "A designar"}</span>
+            </div>
+
+            {/* {consulta.observacoes && (
+              <div className="mt-2">
+                <Label className="text-xs text-gray-500">Observações</Label>
+                <p className="text-sm text-gray-700 mt-1 p-2 bg-white border rounded-md line-clamp-3">{consulta.observacoes}</p>
+              </div>
+            )} */}
+          </div>
+        </div>
+  )
+}
+
+  return(
     <Card className="w-full transition-shadow duration-200 hover:shadow-lg border-l-4 border-l-blue-500">
       <CardHeader className="p-4">
         <div className="flex flex-col lg:flex-row gap-2 items-center justify-between">
@@ -125,7 +185,7 @@ export function ConsultaScheduleCard({ consulta }: ConsultaCardProps) {
             <Avatar className="h-12 w-12 flex-shrink-0">
               <AvatarFallback className="bg-blue-500 text-white font-semibold">
                 {getPatientInitials()}
-              </AvatarFallback>
+                </AvatarFallback>
             </Avatar>
             <div className="min-w-0">
               <div className="flex items-center gap-2 mb-1">
@@ -136,13 +196,11 @@ export function ConsultaScheduleCard({ consulta }: ConsultaCardProps) {
                   ID: #{consulta.id}
                 </Badge>
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 line-clamp-1">
-                {paciente?.nome_completo || "Paciente não identificado"}
-              </h3>
+              <h3 className="text-lg font-semibold text-gray-900 line-clamp-1">{paciente?.nome_completo || "Paciente não identificado"}</h3>
               <div className="flex flex-wrap items-center gap-2 text-sm text-gray-500 truncate">
                 <span className="inline-flex items-center gap-1">
                   <User className="w-3 h-3 text-blue-600" />
-                  {paciente?.numero_identificacao || "-"}
+                  {/* {paciente?.numero_identificacao || "-"} */}
                 </span>
                 <span className="inline-flex items-center gap-1">{getPatientAge()}</span>
               </div>
@@ -168,8 +226,8 @@ export function ConsultaScheduleCard({ consulta }: ConsultaCardProps) {
             </div>
             <div className="min-w-0">
               <div className="text-xs text-gray-500 uppercase tracking-wide">Data</div>
-              <div className="font-medium text-gray-900 truncate">
-                {formatDate(consulta.data_agendamento)}
+              <div className="font-medium text-gray-900 truncate" title={`${consultaInfo.date ? formatDate(consultaInfo.date) : "Data não disponível"}`}>
+                {`${consultaInfo.date ? formatDate(consultaInfo.date) : "Data não encontrada"}`}
               </div>
             </div>
           </div>
@@ -179,8 +237,8 @@ export function ConsultaScheduleCard({ consulta }: ConsultaCardProps) {
             </div>
             <div className="min-w-0">
               <div className="text-xs text-gray-500 uppercase tracking-wide">Hora</div>
-              <div className="font-medium text-gray-900 truncate">
-                {formatTime(consulta.hora_agendamento)}
+              <div className="font-medium text-gray-900 truncate" title={`${consultaInfo.time ? formatTime(consultaInfo.time) : "Hora não disponível"}`}>
+                {`${consultaInfo.time ? formatTime(consultaInfo.time) : "Hora não encontrada"}`}
               </div>
             </div>
           </div>
@@ -190,69 +248,24 @@ export function ConsultaScheduleCard({ consulta }: ConsultaCardProps) {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="p-3 rounded-lg bg-white border">
             <Label className="text-xs text-gray-500 uppercase tracking-wide">Sexo</Label>
-            <p className="mt-1 text-sm text-gray-900">
-              {paciente?.id_sexo === 1 ? "Masculino" : paciente?.id_sexo === 2 ? "Feminino" : "Não informado"}
-            </p>
+            <p className="mt-1 text-sm text-gray-900">{paciente?.id_sexo === 1 ? "Masculino" : paciente?.id_sexo === 2 ? "Feminino" : "Não informado"}</p>
           </div>
           <div className="p-3 rounded-lg bg-white border">
             <Label className="text-xs text-gray-500 uppercase tracking-wide">Contacto</Label>
             <p className="mt-1 text-sm text-gray-900 flex items-center gap-2 truncate">
               <Phone className="w-4 h-4 text-green-600" />
-              {paciente?.contacto_telefonico || "N/A"}
+              {consulta.Paciente?.contacto_telefonico || "N/A"}
             </p>
           </div>
         </div>
 
         <Separator />
-
-        {/* Detalhes da Consulta - DADOS ESPECÍFICOS DESTA CONSULTA */}
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <Label className="flex items-center text-sm font-semibold text-gray-700">
-              <div className="p-1.5 mr-2 rounded-md bg-blue-100">
-                <FileText className="w-4 h-4 text-blue-600" />
-              </div>
-              <p>Detalhes da Consulta</p>
-            </Label>
-            <Badge variant="outline" className="bg-blue-50 text-blue-700">
-              Consulta
-            </Badge>
-          </div>
-
-          <div className="space-y-3 p-3 bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-100">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <HeartPulse className="w-4 h-4 text-blue-600" />
-                <span className="text-sm text-gray-700">Tipo:</span>
-              </div>
-              <span className="text-sm font-medium text-gray-900">
-                {consulta.Tipo_Consulta?.nome || "Consulta Geral"}
-              </span>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <UserCog className="w-4 h-4 text-blue-600" />
-                <span className="text-sm text-gray-700">Médico:</span>
-              </div>
-              <span className="text-sm font-medium text-gray-900 truncate ml-2">
-                {consulta?.Clinico_Geral?.nome || "A designar"}
-              </span>
-            </div>
-
-            {consulta.observacoes && (
-              <div className="mt-2">
-                <Label className="text-xs text-gray-500">Observações</Label>
-                <p className="text-sm text-gray-700 mt-1 p-2 bg-white border rounded-md line-clamp-3">
-                  {consulta.observacoes}
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
+   
 
         {/* Valor Total */}
-        {consulta.Tipo_Consulta?.preco && consulta.Tipo_Consulta.preco > 0 && (
+        {renderConsultaContent()}
+
+        {getTotalPrice() > 0 && (
           <div className="flex items-center justify-between p-3 rounded-lg bg-green-50 border border-green-100">
             <span className="flex items-center gap-2 text-sm text-green-800 font-medium">
               <div className="p-1.5 bg-green-500 rounded text-white">
@@ -264,29 +277,21 @@ export function ConsultaScheduleCard({ consulta }: ConsultaCardProps) {
               {new Intl.NumberFormat("pt-AO", {
                 style: "currency",
                 currency: "AOA",
-              }).format(consulta.Tipo_Consulta.preco)}
+              }).format(getTotalPrice())}
             </span>
           </div>
         )}
       </CardContent>
 
       <CardFooter className="p-4 flex flex-col sm:flex-row gap-2 bg-gray-50 border-t">
-        <Button 
-          onClick={handleAccept} 
-          className="w-full bg-green-600 hover:bg-green-700 text-white flex items-center gap-2"
-          disabled={acceptMutation.isPending || !consulta.id_agendamento}
-        >
+        <Button onClick={handleAccept} className="w-full bg-green-600 hover:bg-green-700 text-white flex items-center gap-2" disabled={acceptMutation.isPending || !consulta.id}>
           <CheckCircle className="w-4 h-4" />
           {acceptMutation.isPending ? "Processando..." : "Aceitar"}
         </Button>
 
         <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
           <DialogTrigger asChild>
-            <Button 
-              variant="destructive" 
-              className="w-full flex items-center gap-2"
-              disabled={rejectMutation.isPending || !consulta.id_agendamento}
-            >
+            <Button variant="destructive" className="w-full flex items-center gap-2" disabled={rejectMutation.isPending || !consulta.id}>
               <XCircle className="w-4 h-4" />
               Recusar
             </Button>
@@ -295,33 +300,20 @@ export function ConsultaScheduleCard({ consulta }: ConsultaCardProps) {
           <DialogContent className="sm:max-w-lg">
             <DialogHeader>
               <DialogTitle>Recusar Consulta</DialogTitle>
-              <DialogDescription>
-                Você está recusando uma consulta para {paciente?.nome_completo}.
-                Por favor, forneça um motivo.
-              </DialogDescription>
+              <DialogDescription>Você está recusando uma consulta para {paciente?.nome_completo}. Por favor, forneça um motivo.</DialogDescription>
             </DialogHeader>
             <div className="py-2">
               <Label htmlFor={`reject-reason-${consulta.id}`} className="text-sm">
                 Motivo da recusa
               </Label>
-              <Textarea 
-                id={`reject-reason-${consulta.id}`} 
-                placeholder="Digite o motivo da recusa..." 
-                value={rejectReason} 
-                onChange={(e) => setRejectReason(e.target.value)} 
-                className="mt-2 min-h-[100px]"
-              />
+              <Textarea id={`reject-reason-${consulta.id}`} placeholder="Digite o motivo da recusa..." value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} className="mt-2 min-h-[100px]" />
             </div>
 
             <DialogFooter>
               <Button variant="outline" onClick={() => setShowRejectDialog(false)}>
                 Cancelar
               </Button>
-              <Button 
-                variant="destructive" 
-                onClick={handleReject} 
-                disabled={!rejectReason.trim() || rejectMutation.isPending || !consulta.id_agendamento}
-              >
+              <Button variant="destructive" onClick={handleReject} disabled={!rejectReason.trim() || rejectMutation.isPending || !consulta.id}>
                 {rejectMutation.isPending ? "Recusando..." : "Confirmar Recusa"}
               </Button>
             </DialogFooter>
@@ -390,7 +382,6 @@ export function PendingScheduleCard({ schedule }: PendingScheduleCardProps) {
 
   // Determinar tipo de agendamento - AGORA SÓ EXAMES
   const isExameSchedule = schedule.Exame && schedule.Exame.length > 0;
-  const isConsultaSchedule = schedule.Consulta && schedule.Consulta.length > 0;
 
   // Obter data e hora baseadas no tipo
   const getScheduleDateTime = () => {
@@ -407,23 +398,7 @@ export function PendingScheduleCard({ schedule }: PendingScheduleCardProps) {
     };
   };
 
-  const getScheduleDateConsultTime = () => {
-    if(isConsultaSchedule && schedule.Consulta?.[0]){
-      return {
-        date: schedule.Consulta[0].data_agendamento,
-        time:schedule.Consulta[0].hora_agendamento,
-      }
-    };
-    return {
-      date: schedule.data_agendamento ?? "",
-      time: schedule.hora_agendamento ?? ""
-    };
-  }
-
   const scheduleInfo = getScheduleDateTime();
-  const consultaInfo = getScheduleDateConsultTime();
-
-  console.log("Date e Hora: ", consultaInfo.date);
 
   // Calcular preço total - APENAS PARA EXAMES
   const getTotalPrice = () => {
@@ -494,9 +469,7 @@ export function PendingScheduleCard({ schedule }: PendingScheduleCardProps) {
         <div className="flex flex-col lg:flex-row gap-2 items-center justify-between">
           <div className="flex items-center gap-3 min-w-0">
             <Avatar className="h-12 w-12 flex-shrink-0">
-              <AvatarFallback className="bg-purple-500 text-white font-semibold">
-                {getPatientInitials()}
-              </AvatarFallback>
+              <AvatarFallback className="bg-purple-500 text-white font-semibold">{getPatientInitials()}</AvatarFallback>
             </Avatar>
             <div className="min-w-0">
               <div className="flex items-center gap-2 mb-1">
@@ -535,18 +508,28 @@ export function PendingScheduleCard({ schedule }: PendingScheduleCardProps) {
       <CardContent className="space-y-4 p-4">
         {/* Data e Hora - Layout normal para exames */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50">
+             <div className="p-2 rounded-md bg-blue-500 text-white flex-shrink-0">
+              <CalendarDays className="w-4 h-4" />
+            </div>
           <div className="min-w-0">
             <div className="text-xs text-gray-500 uppercase tracking-wide">Data</div>
             <div className="font-medium text-gray-900 truncate" title={scheduleInfo.date ? formatDate(scheduleInfo.date) : "Data não disponível"}>
               {scheduleInfo.date ? formatDate(scheduleInfo.date) : "Data não disponível"}
             </div>
           </div>
+          </div>
+           <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50">
+            <div className="p-2 rounded-md bg-blue-500 text-white flex-shrink-0">
+              <Clock className="w-4 h-4" />
+            </div>
           <div className="min-w-0">
             <div className="text-xs text-gray-500 uppercase tracking-wide">Hora</div>
             <div className="font-medium text-gray-900 truncate" title={scheduleInfo.time ? formatTime(scheduleInfo.time) : "Hora não disponível"}>
               {scheduleInfo.time ? formatTime(scheduleInfo.time) : "Hora não disponível"}
             </div>
           </div>
+        </div>
         </div>
 
         {/* Informações do Paciente */}
@@ -605,9 +588,7 @@ export function PendingScheduleCard({ schedule }: PendingScheduleCardProps) {
           <DialogContent className="sm:max-w-lg">
             <DialogHeader>
               <DialogTitle>Recusar Agendamento</DialogTitle>
-              <DialogDescription>
-                Você está recusando um agendamento de exames para {schedule.Paciente?.nome_completo}. Por favor, forneça um motivo.
-              </DialogDescription>
+              <DialogDescription>Você está recusando um agendamento de exames para {schedule.Paciente?.nome_completo}. Por favor, forneça um motivo.</DialogDescription>
             </DialogHeader>
             <div className="py-2">
               <Label htmlFor={`reject-reason-${schedule.id}`} className="text-sm">
@@ -653,35 +634,29 @@ export function AllPendingSchedules() {
   const consultas = pendingConsultations || [];
 
   return (
-    <div className="space-y-4">
+    <div className="flex w-full gap-5 m-auto space-y-4">
       {/* Seção de Consultas */}
       {consultas.length > 0 && (
-        <div className="space-y-2">
+        <div className="space-y-1">
           <div className="flex items-center gap-2 mb-2">
             <FileText className="w-5 h-5 text-blue-600" />
             <h2 className="text-lg font-semibold text-gray-900">Consultas Pendentes ({consultas.length})</h2>
           </div>
           {consultas.map((consulta: ConsultasType) => (
-            <ConsultaScheduleCard 
-              key={`consulta-${consulta.id}`} 
-              consulta={consulta} 
-            />
+            <ConsultaScheduleCard key={`consulta-${consulta.id}`} consulta={consulta} />
           ))}
         </div>
       )}
 
       {/* Seção de Exames */}
       {exames.length > 0 && (
-        <div className="space-y-2">
-          <div className="flex items-center gap-2 mb-2">
+        <div className="">
+          <div className="flex -mt-3 items-center gap-2 mb-2">
             <Stethoscope className="w-5 h-5 text-purple-600" />
             <h2 className="text-lg font-semibold text-gray-900">Exames Pendentes ({exames.length})</h2>
           </div>
           {exames.map((schedule: ScheduleType) => (
-            <PendingScheduleCard 
-              key={`exame-${schedule.id}`} 
-              schedule={schedule} 
-            />
+            <PendingScheduleCard key={`exame-${schedule.id}`} schedule={schedule} />
           ))}
         </div>
       )}
@@ -689,18 +664,15 @@ export function AllPendingSchedules() {
   );
 }
 
-// Exemplo de uso na página:
-/*
-export default function PendingSchedulesPage() {
-  return (
-    <div className="container mx-auto p-4">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Agendamentos Pendentes</h1>
-        <p className="text-gray-600">Gerencie exames e consultas aguardando aprovação</p>
-      </div>
-      
-      <AllPendingSchedules />
-    </div>
-  );
-}
-*/
+// export default function PendingSchedulesPage() {
+//   return (
+//     <div className="container mx-auto p-4">
+//       <div className="mb-6">
+//         <h1 className="text-2xl font-bold text-gray-900">Agendamentos Pendentes</h1>
+//         <p className="text-gray-600">Gerencie exames e consultas aguardando aprovação</p>
+//       </div>
+
+//       <AllPendingSchedules />
+//     </div>
+//   );
+// }

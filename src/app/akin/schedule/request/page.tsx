@@ -10,12 +10,12 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Grid3X3, List, RefreshCw, Calendar, Users, Clock, AlertTriangle, CheckCircle, TrendingUp, BarChart3, AlertCircle, XCircle, Stethoscope, UserCheck } from "lucide-react";
-import { scheduleRoutes } from "@/Api/Routes/schedule/index.routes";
-import { PendingScheduleCard } from "@/components/schedule/PendingScheduleCard";
-import { ScheduleFilters } from "@/components/schedule/ScheduleFilters";
+import { consultaRoutes, scheduleRoutes } from "@/Api/Routes/schedule/index.routes";
+import { AllPendingSchedules, PendingScheduleCard } from "@/components/schedule/PendingScheduleCard";
+import { ConsultaFilters, ScheduleFilters } from "@/components/schedule/ScheduleFilters";
 import { ScheduleStats } from "@/components/schedule/ScheduleStats";
 import { BulkActions } from "@/components/schedule/BulkActions";
-import { useScheduleFilters } from "@/hooks/useScheduleFilters";
+import { useConsultaFilters, useScheduleFilters } from "@/hooks/useScheduleFilters";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -36,6 +36,20 @@ const convertToCompletedSchedule = (schedule: ScheduleType): CompletedScheduleTy
       },
     },
   } as unknown as CompletedScheduleType;
+};
+
+const convertToCompletedConsulta = (consulta: ConsultasType): CompletedConsultaType => {
+  return {
+    ...consulta,
+    status_financeiro: consulta.status_financeiro || "ISENTO",
+    Paciente: consulta.Paciente && {
+      ...consulta.Paciente,
+      sexo: consulta.Paciente.sexo && {
+        ...consulta.Paciente.sexo,
+        id: Number(consulta.Paciente.sexo.id),
+      },
+    },
+  } as unknown as CompletedConsultaType;
 };
 
 export default function Request() {
@@ -61,32 +75,44 @@ export default function Request() {
     refetchOnWindowFocus: true,
   });
 
-  // Converter schedules para CompletedScheduleType para compatibilidade
+  const {
+    data: consultas = [],
+    isLoadingError,
+    isFetched,
+  } = useQuery({
+    queryKey: ["pending-consultas"],
+    queryFn: () => consultaRoutes.getPendingConsultas(),
+    refetchInterval: 30000,
+    refetchOnWindowFocus: true,
+  });
+
+
   const completedSchedules: CompletedScheduleType[] = schedules.map(convertToCompletedSchedule);
+  const completedConsultas: CompletedConsultaType[] = Array.isArray(consultas) ? consultas.map(convertToCompletedConsulta) : [];
 
-  // Use custom hook for filtering
   const { filteredSchedules: filteredScheduleType, filters, handleSearch, handleFilterChange } = useScheduleFilters(schedules);
+  const { filteredConsultas: filteredConsultaType } = useConsultaFilters(consultas);
 
-  // Converter filteredSchedules também para CompletedScheduleType
   const filteredSchedules = filteredScheduleType.map(convertToCompletedSchedule);
+  const filteredConsultas = filteredConsultaType.map(convertToCompletedConsulta);
 
-    const { data: pendingSchedule } = useQuery({
-      queryKey: ["pending-schedule"],
-      queryFn: async () => {
-        const response = await _axios.get("/consultations/pending");
-        return response.data;
-      },
-    });
+  const { data: pendingSchedule } = useQuery({
+    queryKey: ["pending-schedule"],
+    queryFn: async () => {
+      const response = await _axios.get("/consultations/pending");
+      return response.data;
+    },
+  });
 
-    const consulta = pendingSchedule?.data;
+  const consulta = pendingSchedule?.data;
   // Calculate statistics for both exams and consultations
   const totalSchedules = completedSchedules.length;
   const totalExams = completedSchedules.reduce((total, schedule) => total + (schedule.Exame?.length || 0), 0);
-  const totalConsultations  = consulta?.length || 0;
+  const totalConsultas = completedConsultas?.length || 0;
   const totalRevenue = completedSchedules.reduce((total, schedule) => {
     const examRevenue = schedule.Exame?.reduce((examTotal, exam) => examTotal + (exam.Tipo_Exame?.preco || 0), 0) || 0;
-    const consultationRevenue = schedule.Consulta?.reduce((consultTotal, consult) => consultTotal + (consult.Tipo_Consulta?.preco || 0), 0) || 0;
-    return total + examRevenue + consultationRevenue;
+    const consultaRevenue = consulta?.Consulta?.reduce((total: number, consulta: any) => total + (consulta.Tipo_Consulta?.preco || 0), 0) || 0;
+    return total + examRevenue + consultaRevenue;
   }, 0);
 
   // Get today's schedules
@@ -196,7 +222,7 @@ export default function Request() {
   // Get total price
   const getTotalPrice = (schedule: CompletedScheduleType) => {
     const examPrice = schedule.Exame?.reduce((total, exam) => total + (exam.Tipo_Exame?.preco || 0), 0) || 0;
-    const consultationPrice = schedule.Consulta?.reduce((total, consult) => total + (consult.Tipo_Consulta?.preco || 0), 0) || 0;
+    const consultationPrice = schedule.Consulta?.reduce((total, consult) => total + (consult.id || 0), 0) || 0;
     return examPrice + consultationPrice;
   };
 
@@ -273,11 +299,11 @@ export default function Request() {
             <CheckCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{isLoading ? <Skeleton className="h-8 w-16" /> : totalExams + totalConsultations}</div>
+            <div className="text-2xl font-bold text-green-600">{isLoading ? <Skeleton className="h-8 w-16" /> : totalExams + totalConsultas}</div>
             <div className="text-xs text-muted-foreground flex gap-2">
               <span>{totalExams} exames</span>
               <span>•</span>
-              <span>{totalConsultations} consultas</span>
+              <span>{totalConsultas} consultas</span>
             </div>
           </CardContent>
         </Card>
@@ -313,6 +339,7 @@ export default function Request() {
 
       {/* Filters */}
       <ScheduleFilters onSearch={handleSearch} onFilterChange={handleFilterChange} totalSchedules={totalSchedules} filteredCount={filteredSchedules.length} />
+      <ConsultaFilters onSearch={handleSearch} onFilterChange={handleFilterChange} totalConsultas={totalConsultas} filteredCount={filteredConsultas.length} />
 
       {/* View Toggle and Content */}
       <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as "grid" | "list")}>
@@ -330,6 +357,9 @@ export default function Request() {
 
           <div className="text-sm text-gray-600">
             {filteredSchedules.length} de {totalSchedules} agendamentos
+          </div>
+          <div className="text-sm text-gray-600">
+            {filteredConsultas.length} de {totalConsultas} agendamentos
           </div>
         </div>
 
@@ -358,12 +388,7 @@ export default function Request() {
           <>
             <TabsContent value="grid" className="space-y-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredSchedules.map((schedule) => (
-                  <PendingScheduleCard
-                    key={schedule.id}
-                    schedule={schedule as any} // Cast para ScheduleType
-                  />
-                ))}
+                <AllPendingSchedules />
               </div>
             </TabsContent>
 

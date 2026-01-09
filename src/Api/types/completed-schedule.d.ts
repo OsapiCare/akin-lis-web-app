@@ -22,6 +22,12 @@ interface PatientType {
     id: string;
     nome: string;
   };
+
+  data_registro?: string;
+  data_ultima_visita?: string;
+  dias_desde_ultima_visita?:string;
+  id_usuario: string;
+  criado_aos: Date
 }
 
 // ==============================================
@@ -54,30 +60,35 @@ interface ExamsType {
 
 interface ConsultasType {
   id: number;
-  id_tipo_consulta: number;
-  id_agendamento: number;
+  id_paciente: string;
+  id_unidade_de_saude: number;
+  data_agendamento: string;
+  hora_agendamento: string;
   status: StatusClinico;
   status_financeiro: StatusFinanceiro;
   status_reembolso: StatusReembolso;
-  data_agendamento: string;
-  hora_agendamento: string;
-  observacoes?: string;
-  criado_aos: string;
-  preco?:number;
-  atualizado_aos: string;
-  Tipo_Consulta?: {
-    id: number;
-    nome: string;
-    preco: number;
-    descricao?: string;
-  };
   id_clinico_alocado?: string | null;
-  Clinico_Geral?: {
-    id: string;
-    nome: string;
-    tipo: string;
-  };
-  Agendamento?: Agendamento;
+  id_tecnico_alocado: number|null;//after remove null
+  data_pagamento: string | null;
+  Consulta: ConsultaType[];
+  Paciente: PatientType;
+  Exame: ExamsType[];
+  // observacoes?: string;
+  // criado_aos: string;
+  // preco?:number;
+  // atualizado_aos: string;
+  // Tipo_Consulta?: {
+  //   id: number;
+  //   nome: string;
+  //   preco: number;
+  //   descricao?: string;
+  // };
+  // Clinico_Geral?: {
+  //   id: string;
+  //   nome: string;
+  //   tipo: string;
+  // };
+  // Agendamento?: Agendamento;
 }
 
 // ==============================================
