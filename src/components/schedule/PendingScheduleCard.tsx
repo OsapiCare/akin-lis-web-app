@@ -192,11 +192,15 @@ export function ConsultaScheduleCard({ consulta }: ConsultaCardProps) {
                 <Badge variant="outline" className="bg-blue-50 text-blue-700">
                   Consulta
                 </Badge>
-                <Badge variant="secondary" className="text-xs">
-                  ID: #{consulta.id}
+                {isConsultaSchedule && (
+                  <Badge variant="secondary" className="text-xs">
+                  {consulta.Consulta?.length} {consulta.Consulta?.length === 1 ? "consulta" : "consultas"}
                 </Badge>
+                )}
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 line-clamp-1">{paciente?.nome_completo || "Paciente não identificado"}</h3>
+              <h3 className="text-lg font-semibold text-gray-900 line-clamp-1">
+                {paciente?.nome_completo || "Paciente não identificado"}
+                </h3>
               <div className="flex flex-wrap items-center gap-2 text-sm text-gray-500 truncate">
                 <span className="inline-flex items-center gap-1">
                   <User className="w-3 h-3 text-blue-600" />
@@ -633,6 +637,15 @@ export function AllPendingSchedules() {
   const exames = pendingSchedules || [];
   const consultas = pendingConsultations || [];
 
+    const { data: pendingSchedule } = useQuery({
+      queryKey: ["pending-schedule"],
+      queryFn: async () => {
+        const response = await _axios.get("/consultations/pending");
+        return response.data;
+      },
+    });  
+    const consulta = pendingSchedule?.data;
+
   return (
     <div className="flex w-full gap-5 m-auto space-y-4">
       {/* Seção de Consultas */}
@@ -640,7 +653,7 @@ export function AllPendingSchedules() {
         <div className="space-y-1">
           <div className="flex items-center gap-2 mb-2">
             <FileText className="w-5 h-5 text-blue-600" />
-            <h2 className="text-lg font-semibold text-gray-900">Consultas Pendentes ({consultas.length})</h2>
+            <h2 className="text-lg font-semibold text-gray-900">Consultas Pendentes ({consulta.length})</h2>
           </div>
           {consultas.map((consulta: ConsultasType) => (
             <ConsultaScheduleCard key={`consulta-${consulta.id}`} consulta={consulta} />

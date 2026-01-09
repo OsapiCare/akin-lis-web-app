@@ -71,13 +71,13 @@ export function ScheduleDetails({
       <div className="flex items-center gap-2 mb-4 p-3 bg-blue-50 rounded-md">
         {selectedTipo === TipoItem.EXAME ? (
           <>
-            <Microscope className="h-5 w-5 text-blue-600" />
-            <span className="font-medium text-blue-700">Agendando Exames Laboratoriais</span>
+            <Microscope className="h-5 w-5 text-akin-turquoise" />
+            <span className="font-medium text-akin-turquoise">Agendando Exames Laboratoriais</span>
           </>
         ) : (
           <>
-            <Stethoscope className="h-5 w-5 text-green-600" />
-            <span className="font-medium text-green-700">Agendando Consultas Clínicas</span>
+            <Stethoscope className="h-5 w-5 text-akin-turquoise" />
+            <span className="font-medium text-akin-turquoise">Agendando Consultas Clínicas</span>
           </>
         )}
       </div>
@@ -107,7 +107,7 @@ export function ScheduleDetails({
                 size="sm"
                 variant={schedule.tipo === TipoItem.EXAME ? "default" : "outline"}
                 onClick={() => handleScheduleChange(index, "tipo", TipoItem.EXAME)}
-                className="text-xs"
+                className={`text-xs ${schedule.tipo === TipoItem.EXAME ? "bg-akin-turquoise hover:bg-akin-turquoise/90": ""}`}
               >
                 Exame
               </Button>
@@ -116,7 +116,7 @@ export function ScheduleDetails({
                 size="sm"
                 variant={schedule.tipo === TipoItem.CONSULTA ? "default" : "outline"}
                 onClick={() => handleScheduleChange(index, "tipo", TipoItem.CONSULTA)}
-                className="text-xs"
+                className={`text-xs ${schedule.tipo === TipoItem.CONSULTA ? "bg-akin-turquoise hover:bg-akin-turquoise/90": ""}`}
               >
                 Consulta
               </Button>

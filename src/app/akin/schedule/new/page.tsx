@@ -73,7 +73,7 @@ export default function New() {
         registro_profissional: clinico.registro_profissional || "Registro a definir",
         papel: clinico.papel || "CLINICO",
       }));
-      
+
       if (clinicosFormatados.length > 0) {
         setAvailableClinicos(clinicosFormatados);
       }
@@ -149,7 +149,6 @@ export default function New() {
 
       setAvailableItems(allItems);
       setHasFetchedData(true);
-
     } catch (error: any) {
       console.error("Erro ao buscar dados:", error);
       const msg = error?.response?.data?.message || "Erro ao buscar dados. Contate o suporte.";
@@ -222,8 +221,8 @@ export default function New() {
   // Função para agendar CONSULTAS usando o novo endpoint
   const handleSubmitConsultas = async () => {
     try {
-      const consultas = schedules.filter(schedule => schedule.tipo === TipoItem.CONSULTA);
-      
+      const consultas = schedules.filter((schedule) => schedule.tipo === TipoItem.CONSULTA);
+
       if (consultas.length === 0) {
         ___showErrorToastNotification({ message: "Nenhuma consulta para agendar." });
         return;
@@ -235,11 +234,7 @@ export default function New() {
         id_unidade_de_saude: unit_health.toString(),
         consultas_paciente: consultas.map((schedule) => ({
           id_tipo_consulta: Number(schedule.item?.id),
-          data_agendamento: schedule.date instanceof Date 
-            ? schedule.date.toISOString().split("T")[0] 
-            : schedule.date 
-            ? new Date(schedule.date).toISOString().split("T")[0] 
-            : new Date().toISOString().split("T")[0],
+          data_agendamento: schedule.date instanceof Date ? schedule.date.toISOString().split("T")[0] : schedule.date ? new Date(schedule.date).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
           hora_agendamento: schedule.time,
           status_reembolso: schedule.item && schedule.item.preco > 0 ? "NAO_PAGO" : "ISENTO",
         })),
@@ -250,17 +245,17 @@ export default function New() {
       const response = await _axios.post("/schedulings/set-schedule", payload);
 
       if (response.status === 201 || response.status === 200) {
-        ___showSuccessToastNotification({ 
-          message: `${consultas.length} consulta(s) agendada(s) com sucesso!` 
+        ___showSuccessToastNotification({
+          message: `${consultas.length} consulta(s) agendada(s) com sucesso!`,
         });
         return true;
       }
-      
+
       return false;
     } catch (error: any) {
       console.error("Erro ao agendar consultas:", error);
       console.error("Resposta do erro:", error.response?.data);
-      
+
       // Tentar endpoint alternativo se o principal falhar
       try {
         console.log("Tentando endpoint alternativo /schedulings...");
@@ -271,30 +266,28 @@ export default function New() {
           status: "ACTIVO",
           status_pagamento: "NAO_PAGO",
           status_reembolso: "SEM_REEMBOLSO",
-          consultas_paciente: schedules.filter(schedule => schedule.tipo === TipoItem.CONSULTA).map((schedule) => ({
-            id_tipo_consulta: Number(schedule.item?.id),
-            data_agendamento: schedule.date instanceof Date 
-              ? schedule.date.toISOString().split("T")[0] 
-              : schedule.date 
-              ? new Date(schedule.date).toISOString().split("T")[0] 
-              : new Date().toISOString().split("T")[0],
-            hora_agendamento: schedule.time,
-            status_pagamento: schedule.item && schedule.item.preco > 0 ? "NAO_PAGO" : "ISENTO",
-          })),
+          consultas_paciente: schedules
+            .filter((schedule) => schedule.tipo === TipoItem.CONSULTA)
+            .map((schedule) => ({
+              id_tipo_consulta: Number(schedule.item?.id),
+              data_agendamento: schedule.date instanceof Date ? schedule.date.toISOString().split("T")[0] : schedule.date ? new Date(schedule.date).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
+              hora_agendamento: schedule.time,
+              status_pagamento: schedule.item && schedule.item.preco > 0 ? "NAO_PAGO" : "ISENTO",
+            })),
         };
 
         const responseAlt = await _axios.post("/schedulings", payload);
-        
+
         if (responseAlt.status === 201 || responseAlt.status === 200) {
-          ___showSuccessToastNotification({ 
-            message: "Consultas agendadas com endpoint alternativo!" 
+          ___showSuccessToastNotification({
+            message: "Consultas agendadas com endpoint alternativo!",
           });
           return true;
         }
       } catch (error2: any) {
         console.error("Erro no endpoint alternativo:", error2);
       }
-      
+
       throw error;
     }
   };
@@ -302,8 +295,8 @@ export default function New() {
   // Função para agendar EXAMES usando o endpoint tradicional
   const handleSubmitExames = async () => {
     try {
-      const exames = schedules.filter(schedule => schedule.tipo === TipoItem.EXAME);
-      
+      const exames = schedules.filter((schedule) => schedule.tipo === TipoItem.EXAME);
+
       if (exames.length === 0) {
         ___showErrorToastNotification({ message: "Nenhum exame para agendar." });
         return false;
@@ -318,11 +311,7 @@ export default function New() {
         status_reembolso: "SEM_REEMBOLSO",
         exames_paciente: exames.map((schedule) => ({
           id_tipo_exame: Number(schedule.item?.id),
-          data_agendamento: schedule.date instanceof Date 
-            ? schedule.date.toISOString().split("T")[0] 
-            : schedule.date 
-            ? new Date(schedule.date).toISOString().split("T")[0] 
-            : new Date().toISOString().split("T")[0],
+          data_agendamento: schedule.date instanceof Date ? schedule.date.toISOString().split("T")[0] : schedule.date ? new Date(schedule.date).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
           hora_agendamento: schedule.time,
           status_pagamento: schedule.item && schedule.item.preco > 0 ? "NAO_PAGO" : "ISENTO",
           status_reembolso: "SEM_REEMBOLSO",
@@ -337,12 +326,12 @@ export default function New() {
       const response = await _axios.post("/schedulings", payload);
 
       if (response.status === 201 || response.status === 200) {
-        ___showSuccessToastNotification({ 
-          message: `${exames.length} exame(s) agendado(s) com sucesso!` 
+        ___showSuccessToastNotification({
+          message: `${exames.length} exame(s) agendado(s) com sucesso!`,
         });
         return true;
       }
-      
+
       return false;
     } catch (error: any) {
       console.error("Erro ao agendar exames:", error);
@@ -358,15 +347,15 @@ export default function New() {
 
     setIsSaving(true);
     try {
-      const consultas = schedules.filter(schedule => schedule.tipo === TipoItem.CONSULTA);
-      const exames = schedules.filter(schedule => schedule.tipo === TipoItem.EXAME);
+      const consultas = schedules.filter((schedule) => schedule.tipo === TipoItem.CONSULTA);
+      const exames = schedules.filter((schedule) => schedule.tipo === TipoItem.EXAME);
 
       let success = false;
 
       // Verificar se está tentando agendar ambos os tipos
       if (consultas.length > 0 && exames.length > 0) {
-        ___showErrorToastNotification({ 
-          message: "Não é possível agendar exames e consultas no mesmo processo. Selecione apenas um tipo." 
+        ___showErrorToastNotification({
+          message: "Não é possível agendar exames e consultas no mesmo processo. Selecione apenas um tipo.",
         });
         setIsSaving(false);
         return;
@@ -374,13 +363,12 @@ export default function New() {
 
       // Agendar CONSULTAS usando o novo endpoint
       if (consultas.length > 0) {
-        success = await handleSubmitConsultas() ?? true;
+        success = (await handleSubmitConsultas()) ?? true;
       }
       // Agendar EXAMES usando o endpoint tradicional
       else if (exames.length > 0) {
         success = await handleSubmitExames();
-      }
-      else {
+      } else {
         ___showErrorToastNotification({ message: "Nenhum item selecionado para agendamento." });
         setIsSaving(false);
         return;
@@ -395,15 +383,14 @@ export default function New() {
         resetInputs();
         setResetPatient(true);
       }
-
     } catch (error: any) {
       console.error("Erro completo:", error);
       console.error("Resposta do erro:", error.response?.data);
-      
+
       // **SOLUÇÃO DE EMERGÊNCIA: Criar processo em duas etapas se falhar**
       try {
         console.log("Tentando solução de emergência...");
-        
+
         // **ETAPA 1: Criar o processo básico**
         const processoPayload = {
           id_paciente: Number(selectedPatient!.id),
@@ -411,69 +398,61 @@ export default function New() {
           id_recepcionista: user_id,
           status: "ACTIVO",
           status_pagamento: calculateTotalValue() > 0 ? "NAO_PAGO" : "ISENTO",
-          status_reembolso: "SEM_REEMBOLSO"
+          status_reembolso: "SEM_REEMBOLSO",
         };
-        
+
         console.log("Criando processo básico:", processoPayload);
         const processoResponse = await _axios.post("/schedulings", processoPayload);
         const idProcesso = processoResponse.data.id;
-        
+
         console.log("Processo criado com ID:", idProcesso);
-        
+
         // **ETAPA 2: Adicionar os itens**
-        const consultas = schedules.filter(schedule => schedule.tipo === TipoItem.CONSULTA);
-        const exames = schedules.filter(schedule => schedule.tipo === TipoItem.EXAME);
-        
+        const consultas = schedules.filter((schedule) => schedule.tipo === TipoItem.CONSULTA);
+        const exames = schedules.filter((schedule) => schedule.tipo === TipoItem.EXAME);
+
         if (consultas.length > 0) {
           for (const consulta of consultas) {
             const consultaPayload = {
               id_agendamento: idProcesso,
               id_tipo_consulta: Number(consulta.item?.id),
-              data_agendamento: consulta.date instanceof Date 
-                ? consulta.date.toISOString().split("T")[0] 
-                : consulta.date 
-                ? new Date(consulta.date).toISOString().split("T")[0] 
-                : new Date().toISOString().split("T")[0],
+              data_agendamento: consulta.date instanceof Date ? consulta.date.toISOString().split("T")[0] : consulta.date ? new Date(consulta.date).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
               hora_agendamento: consulta.time,
               status_pagamento: consulta.item && consulta.item.preco > 0 ? "NAO_PAGO" : "ISENTO",
               status: "PENDENTE",
               valor_total: consulta.item?.preco || 0,
             };
-            
+
             console.log("Adicionando consulta:", consultaPayload);
             await _axios.post("/consultations", consultaPayload);
           }
-          
-          ___showSuccessToastNotification({ 
-            message: `${consultas.length} consulta(s) agendada(s) com sucesso em duas etapas!` 
+
+          ___showSuccessToastNotification({
+            message: `${consultas.length} consulta(s) agendada(s) com sucesso em duas etapas!`,
           });
         }
-        
+
         if (exames.length > 0) {
           for (const exame of exames) {
             const examePayload = {
               id_agendamento: idProcesso,
               id_tipo_exame: Number(exame.item?.id),
-              data_agendamento: exame.date instanceof Date 
-                ? exame.date.toISOString().split("T")[0] 
-                : exame.date 
-                ? new Date(exame.date).toISOString().split("T")[0] 
-                : new Date().toISOString().split("T")[0],
+              data_agendamento: exame.date instanceof Date ? exame.date.toISOString().split("T")[0] : exame.date ? new Date(exame.date).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
               hora_agendamento: exame.time,
               status_pagamento: exame.item && exame.item.preco > 0 ? "NAO_PAGO" : "ISENTO",
               status: "PENDENTE",
-              valor_total: exame.item?.preco || 0
+              valor_total: exame.item?.preco || 0,
             };
-            
+
             console.log("Adicionando exame:", examePayload);
             await _axios.post("/exams", examePayload);
           }
-          
-          ___showSuccessToastNotification({ 
-            message: `${exames.length} exame(s) agendado(s) com sucesso em duas etapas!` 
+
+          ___showSuccessToastNotification({
+            message: `${exames.length} exame(s) agendado(s) com sucesso em duas etapas!`,
           });
         }
-        
+
         // Reset
         setSchedules([{ item: null, tipo: TipoItem.EXAME, date: null, time: "" }]);
         setSelectedPatient(undefined);
@@ -481,12 +460,11 @@ export default function New() {
         setSelectedTipo(TipoItem.EXAME);
         resetInputs();
         setResetPatient(true);
-        
       } catch (error2: any) {
         console.error("Erro na solução alternativa:", error2);
         console.error("Detalhes:", error2.response?.data);
-        ___showErrorToastNotification({ 
-          message: `Erro: ${error2?.response?.data?.message || error2.message || "Contate o suporte"}` 
+        ___showErrorToastNotification({
+          message: `Erro: ${error2?.response?.data?.message || error2.message || "Contate o suporte"}`,
         });
       }
       setResetPatient(false);
@@ -512,14 +490,7 @@ export default function New() {
       >
         <div className="flex flex-col gap-6 w-full">
           <div className="p-4 bg-gray-100 rounded-lg border w-full">
-            <PatientDetails 
-              isLoading={isLoading} 
-              selectedPatient={selectedPatient ?? undefined} 
-              autoCompleteData={patientAutoComplete} 
-              onPatientSelect={(patientId) => setSelectedPatientId(patientId)} 
-              resetPatient={resetPatient} 
-              getPatientAge={getPatientAge} 
-            />
+            <PatientDetails isLoading={isLoading} selectedPatient={selectedPatient ?? undefined} autoCompleteData={patientAutoComplete} onPatientSelect={(patientId) => setSelectedPatientId(patientId)} resetPatient={resetPatient} getPatientAge={getPatientAge} />
           </div>
 
           <div className="p-4 bg-gray-100 rounded-lg border">
@@ -533,7 +504,7 @@ export default function New() {
                     setSelectedTipo(TipoItem.EXAME);
                     setSchedules([{ item: null, tipo: TipoItem.EXAME, date: null, time: "" }]);
                   }}
-                  className="flex-1"
+                  className={`flex-1 ${selectedTipo === TipoItem.EXAME ? "bg-akin-turquoise hover:bg-akin-turquoise/90" : ""}`}
                 >
                   Exames
                 </Button>
@@ -544,7 +515,7 @@ export default function New() {
                     setSelectedTipo(TipoItem.CONSULTA);
                     setSchedules([{ item: null, tipo: TipoItem.CONSULTA, date: null, time: "" }]);
                   }}
-                  className="flex-1"
+                  className={`flex-1 ${selectedTipo === TipoItem.CONSULTA ? "bg-akin-turquoise hover:bg-akin-turquoise/90" : ""}`}
                 >
                   Consultas
                 </Button>
@@ -557,23 +528,19 @@ export default function New() {
               <div className="flex flex-col gap-3">
                 <div className="flex justify-between items-center">
                   <label className="font-bold text-lg">Clínico Geral Disponível</label>
-                  <Badge variant="outline" className="bg-blue-50 text-blue-700">
-                    Opcional
-                  </Badge>
+                 
                 </div>
-                
+
                 <div className="space-y-4">
                   <div className="flex flex-col gap-2">
                     <label className="font-medium">Clínico Responsável</label>
-                    
+
                     {isLoadingClinicos ? (
                       <div className="p-3 bg-gray-50 border border-gray-200 rounded-md">
                         <p className="text-gray-500">Carregando...</p>
                       </div>
                     ) : (
-                      <Select
-                        defaultValue={availableClinicos[0]?.id || ""}
-                      >
+                      <Select defaultValue={availableClinicos[0]?.id || ""}>
                         <SelectTrigger className="w-full">
                           <SelectValue placeholder="Selecione um clínico" />
                         </SelectTrigger>
@@ -602,18 +569,10 @@ export default function New() {
               </div>
             ) : filteredItems.length === 0 ? (
               <div className="p-4 text-center border border-yellow-200 bg-yellow-50 rounded-md">
-                <p className="font-medium text-yellow-800">
-                  Nenhum {selectedTipo === TipoItem.EXAME ? "exame" : "consulta"} disponível
-                </p>
+                <p className="font-medium text-yellow-800">Nenhum {selectedTipo === TipoItem.EXAME ? "exame" : "consulta"} disponível</p>
               </div>
             ) : (
-              <ScheduleDetails 
-                isLoading={isLoading} 
-                items={filteredItems} 
-                schedules={schedules} 
-                onChange={setSchedules} 
-                selectedTipo={selectedTipo} 
-              />
+              <ScheduleDetails isLoading={isLoading} items={filteredItems} schedules={schedules} onChange={setSchedules} selectedTipo={selectedTipo} />
             )}
           </div>
 
@@ -640,10 +599,7 @@ export default function New() {
                   <CardContent className="pt-4">
                     <div className="flex flex-col items-center text-center">
                       <span className="text-sm text-gray-600">Estado Financeiro</span>
-                      <Badge 
-                        variant={calculateTotalValue() > 0 ? "outline" : "default"} 
-                        className={calculateTotalValue() > 0 ? "bg-yellow-50 text-yellow-800" : "bg-green-100 text-green-800"}
-                      >
+                      <Badge variant={calculateTotalValue() > 0 ? "outline" : "default"} className={calculateTotalValue() > 0 ? "bg-yellow-50 text-yellow-800" : "bg-green-100 text-green-800"}>
                         {calculateTotalValue() > 0 ? "NÃO PAGO" : "ISENTO"}
                       </Badge>
                     </div>
@@ -665,13 +621,8 @@ export default function New() {
           </div>
         </div>
 
-        <Button 
-          type="submit" 
-          disabled={isSaving || !selectedPatient} 
-          className="bg-akin-turquoise hover:bg-akin-turquoise/80"
-        >
-          {isSaving ? "Criando Agendamento..." : 
-            selectedTipo === TipoItem.CONSULTA ? "Agendar Consulta(s)" : "Agendar Exame(s)"}
+        <Button type="submit" disabled={isSaving || !selectedPatient} className="bg-akin-turquoise hover:bg-akin-turquoise/80">
+          {isSaving ? "Criando Agendamento..." : selectedTipo === TipoItem.CONSULTA ? "Agendar Consulta(s)" : "Agendar Exame(s)"}
         </Button>
       </form>
     </div>

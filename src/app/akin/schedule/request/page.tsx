@@ -86,7 +86,6 @@ export default function Request() {
     refetchOnWindowFocus: true,
   });
 
-
   const completedSchedules: CompletedScheduleType[] = schedules.map(convertToCompletedSchedule);
   const completedConsultas: CompletedConsultaType[] = Array.isArray(consultas) ? consultas.map(convertToCompletedConsulta) : [];
 
@@ -120,6 +119,14 @@ export default function Request() {
     const scheduleDate = schedule.Exame?.[0]?.data_agendamento || schedule.Consulta?.[0]?.data_agendamento;
     if (!scheduleDate) return false;
     const date = new Date(scheduleDate);
+    const today = new Date();
+    return date.toDateString() === today.toDateString();
+  });
+
+  const todayConsultas = completedConsultas.filter((consulta) => {
+    const consultaDate = consulta.Consulta?.[0]?.data_agendamento || consulta.Consulta?.[0]?.data_agendamento;
+    if (!consultaDate) return false;
+    const date = new Date(consultaDate);
     const today = new Date();
     return date.toDateString() === today.toDateString();
   });
@@ -299,11 +306,11 @@ export default function Request() {
             <CheckCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{isLoading ? <Skeleton className="h-8 w-16" /> : totalExams + totalConsultas}</div>
+            <div className="text-2xl font-bold text-green-600">{isLoading ? <Skeleton className="h-8 w-16" /> : consulta?.length}</div>
             <div className="text-xs text-muted-foreground flex gap-2">
               <span>{totalExams} exames</span>
               <span>•</span>
-              <span>{totalConsultas} consultas</span>
+              <span>{consulta?.length} consultas</span>
             </div>
           </CardContent>
         </Card>
@@ -339,7 +346,7 @@ export default function Request() {
 
       {/* Filters */}
       <ScheduleFilters onSearch={handleSearch} onFilterChange={handleFilterChange} totalSchedules={totalSchedules} filteredCount={filteredSchedules.length} />
-      <ConsultaFilters onSearch={handleSearch} onFilterChange={handleFilterChange} totalConsultas={totalConsultas} filteredCount={filteredConsultas.length} />
+      {/* <ConsultaFilters onSearch={handleSearch} onFilterChange={handleFilterChange} totalConsultas={totalConsultas} filteredCount={filteredConsultas.length} /> */}
 
       {/* View Toggle and Content */}
       <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as "grid" | "list")}>
@@ -356,11 +363,11 @@ export default function Request() {
           </TabsList>
 
           <div className="text-sm text-gray-600">
-            {filteredSchedules.length} de {totalSchedules} agendamentos
+            {filteredSchedules.length} Exames e {consulta.length} Consultas
           </div>
-          <div className="text-sm text-gray-600">
-            {filteredConsultas.length} de {totalConsultas} agendamentos
-          </div>
+          {/* <div className="text-sm text-gray-600">
+              {totalSchedules} agendamentos de {totalConsultas} agendamentos
+          </div> */}
         </div>
 
         <Separator className="my-4" />
