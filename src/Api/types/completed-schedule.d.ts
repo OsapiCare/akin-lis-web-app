@@ -3,7 +3,7 @@
 // ==============================================
 
 type StatusClinico = "PENDENTE" | "EM_ANDAMENTO" | "CONCLUIDO" | "CANCELADO" | "POR_REAGENDAR";
-type StatusFinanceiro = "PENDENTE" | "PAGO" | "CANCELADO" | "ISENTO";
+type StatusFinanceiro = "PENDENTE" | "PAGO" | "CANCELADO" | "ISENTO" | "NAO_PAGO";
 type StatusReembolso = "SEM_REEMBOLSO" | "POR_REEMBOLSAR" | "REEMBOLSADO";
 
 // ==============================================

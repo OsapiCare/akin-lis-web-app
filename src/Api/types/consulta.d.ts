@@ -2,6 +2,8 @@
 // ENUMS PARA VALORES PREDEFINIDOS
 // ==============================================
 
+type StatusFinanceiro = "PENDENTE" | "PAGO" | "CANCELADO" | "ISENTO";
+
 enum ConsultaStatus {
   PENDENTE = "PENDENTE",
   EM_ANDAMENTO = "EM_ANDAMENTO",
@@ -11,9 +13,10 @@ enum ConsultaStatus {
 }
 
 enum StatusFinanceiro {
+  PENDENTE = "PENDENTE",
   PAGO = "PAGO",
-  NAO_PAGO = "NAO_PAGO",
-  ISENTO = "ISENTO"
+  CANCELADO = "CANCELADO",
+  ISENTO = "ISENTO",
 }
 
 enum StatusReembolso {
