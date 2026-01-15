@@ -383,8 +383,6 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
     // enabled: isReceptionist,
   });
 
-  console.log(labChiefs);
-
   const { data: clinicos } = useQuery({
     queryKey: ["clinicos"],
     queryFn: async () => (await _axios.get("/general-practitioners")).data,
