@@ -230,11 +230,14 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
     enabled: isReceptionist,
   });
 
+
   const { data: clinicos } = useQuery({
     queryKey: ["clinicos"],
     queryFn: async () => (await _axios.get("/general-practitioners")).data,
     enabled: isReceptionist || isClinico,
   });
+
+
 
   const { data: examTypesResponse } = useQuery({
     queryKey: ["exam-types"],
@@ -244,11 +247,10 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
 
   const { data: consultaTypesResponse } = useQuery({
     queryKey: ["consulta-types"],
-    queryFn: async () => (await _axios.get("/consultations")).data,
+    queryFn: async () => (await _axios.get("/consultation-types")).data,
     enabled: isReceptionist || isClinico,
   });
 
-  const consultaType = consultaTypesResponse?.data || [];
 
   // Função para verificar se o botão de salvar deve estar habilitado
   const checkSaveButtonStatus = () => {
