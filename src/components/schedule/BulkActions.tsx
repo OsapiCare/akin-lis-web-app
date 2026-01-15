@@ -9,10 +9,9 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { CheckCircle, XCircle, Loader, AlertTriangle, Users, Calendar, Stethoscope, CreditCard } from "lucide-react";
+import { CheckCircle, XCircle, Loader, AlertTriangle, Users, Calendar, Stethoscope, CreditCard, FileText } from "lucide-react";
 import { scheduleRoutes } from "@/Api/Routes/schedule/index.routes";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api } from "@/Api/api";
 import { examRoutes } from "@/Api/Routes/Exam/index.route";
 
 interface BulkActionsProps {
@@ -32,7 +31,8 @@ export function BulkActions({ schedules, selectedSchedules, onSelectionChange }:
       return results;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["pending-schedules"] });
+      queryClient.invalidateQueries({ queryKey: ["exams-pending"] });
+      queryClient.invalidateQueries({ queryKey: ["pending-consultas"] });
       onSelectionChange([]);
     },
   });
@@ -51,7 +51,8 @@ export function BulkActions({ schedules, selectedSchedules, onSelectionChange }:
       return results;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["pending-schedules"] });
+      queryClient.invalidateQueries({ queryKey: ["exams-pending"] });
+      queryClient.invalidateQueries({ queryKey: ["pending-consultas"] });
       onSelectionChange([]);
       setShowBulkRejectDialog(false);
       setRejectReason("");
@@ -93,10 +94,34 @@ export function BulkActions({ schedules, selectedSchedules, onSelectionChange }:
       const schedule = schedules.find((s) => s.id === scheduleId);
       if (!schedule) return total;
 
-      const scheduleTotal = schedule.Exame?.reduce((examTotal, exam) => examTotal + (exam.Tipo_Exame?.preco || 0), 0) || 0;
+      // Calcular total de exames
+      const examesTotal = schedule.Exame?.reduce((totalExame, exame) => {
+        return totalExame + (exame?.Tipo_Exame?.preco || 0);
+      }, 0) || 0;
 
-      return total + scheduleTotal;
+      // Calcular total de consultas
+      const consultasTotal = schedule.Consulta?.reduce((totalConsulta, consulta) => {
+        return totalConsulta + (consulta?.Tipo_Consulta?.preco || 0);
+      }, 0) || 0;
+
+      return total + examesTotal + consultasTotal;
     }, 0);
+  };
+
+  const getSelectedSchedulesCounts = () => {
+    const counts = selectedSchedules.reduce(
+      (acc, scheduleId) => {
+        const schedule = schedules.find((s) => s.id === scheduleId);
+        if (schedule) {
+          acc.exames += schedule.Exame?.length || 0;
+          acc.consultas += schedule.Consulta?.length || 0;
+        }
+        return acc;
+      },
+      { exames: 0, consultas: 0 }
+    );
+
+    return counts;
   };
 
   const isIndeterminate = selectedSchedules.length > 0 && selectedSchedules.length < schedules.length;
@@ -105,6 +130,58 @@ export function BulkActions({ schedules, selectedSchedules, onSelectionChange }:
   if (schedules.length === 0) {
     return null;
   }
+
+  // Função para formatar data
+  const formatDate = (dateString: string) => {
+    if (!dateString) return "N/D";
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString("pt-AO");
+    } catch {
+      return "N/D";
+    }
+  };
+
+  // Função para renderizar informações de data e tipo
+  const renderScheduleInfo = (schedule: any) => {
+    const examesInfo = schedule.exames?.map((exame: any) => ({
+      tipo: "Exame",
+      data: exame?.data_agendamento,
+      nome: exame?.Tipo_Exame?.nome,
+      preco: exame?.Tipo_Exame?.preco
+    })) || [];
+
+    const consultasInfo = schedule.consultas?.map((consulta: any) => ({
+      tipo: "Consulta",
+      data: consulta?.data_agendamento,
+      nome: consulta?.Tipo_Consulta?.nome,
+      preco: consulta?.Tipo_Consulta?.preco
+    })) || [];
+
+    const allItems = [...examesInfo, ...consultasInfo];
+
+    return (
+      <div className="space-y-1">
+        {allItems.map((item, index) => (
+          <div key={index} className="flex items-center gap-2 text-xs">
+            <Badge variant="outline" className={`${item.tipo === "Exame" ? "bg-blue-50 text-blue-700 border-blue-200" : "bg-green-50 text-green-700 border-green-200"} px-1 py-0`}>
+              {item.tipo === "Exame" ? <Stethoscope className="w-2 h-2 mr-1" /> : <FileText className="w-2 h-2 mr-1" />}
+              {item.tipo}
+            </Badge>
+            <span className="text-gray-600">{formatDate(item.data)}</span>
+            {item.preco > 0 && (
+              <span className="font-semibold text-green-600 ml-auto">
+                {new Intl.NumberFormat("pt-AO", {
+                  style: "currency",
+                  currency: "AOA",
+                }).format(item.preco)}
+              </span>
+            )}
+          </div>
+        ))}
+      </div>
+    );
+  };
 
   return (
     <div className="bg-white border rounded-lg p-4 space-y-4">
@@ -187,39 +264,28 @@ export function BulkActions({ schedules, selectedSchedules, onSelectionChange }:
                   <div>
                     <span className="text-gray-600">Exames:</span>
                     <div className="font-semibold text-blue-700">
-                      {selectedSchedules.reduce((total, scheduleId) => {
-                        const schedule = schedules.find((s) => s.id === scheduleId);
-                        return total + (schedule?.Exame?.length || 0);
-                      }, 0)}
+                      {getSelectedSchedulesCounts().exames}
                     </div>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <CreditCard className="w-4 h-4 text-green-600" />
+                  <FileText className="w-4 h-4 text-green-600" />
+                  <div>
+                    <span className="text-gray-600">Consultas:</span>
+                    <div className="font-semibold text-green-700">
+                      {getSelectedSchedulesCounts().consultas}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CreditCard className="w-4 h-4 text-purple-600" />
                   <div>
                     <span className="text-gray-600">Valor Total:</span>
-                    <div className="font-semibold text-green-700">
+                    <div className="font-semibold text-purple-700">
                       {new Intl.NumberFormat("pt-AO", {
                         style: "currency",
                         currency: "AOA",
-                        notation: "compact",
                       }).format(getSelectedSchedulesTotal())}
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Users className="w-4 h-4 text-blue-600" />
-                  <div>
-                    <span className="text-gray-600">Pacientes:</span>
-                    <div className="font-semibold text-blue-700">
-                      {
-                        new Set(
-                          selectedSchedules.map((scheduleId) => {
-                            const schedule = schedules.find((s) => s.id === scheduleId);
-                            return schedule?.id_paciente;
-                          })
-                        ).size
-                      }
                     </div>
                   </div>
                 </div>
@@ -274,24 +340,32 @@ export function BulkActions({ schedules, selectedSchedules, onSelectionChange }:
 
       {/* Individual Schedule Selection */}
       <div className="space-y-2 max-h-60 overflow-y-auto">
-        {exam?.map((schedule: any) => (
-          <div key={schedule.id} className="flex items-center space-x-3 p-2 hover:bg-gray-50 rounded">
-            <Checkbox checked={selectedSchedules.includes(schedule.id)} onCheckedChange={(checked) => handleSelectSchedule(schedule.id, checked as boolean)} />
+        {schedules.map((schedule: any) => (
+          <div key={schedule.id_paciente} className="flex items-start space-x-3 p-2 hover:bg-gray-50 rounded">
+            <Checkbox 
+              checked={selectedSchedules.includes(schedule.id_paciente)} 
+              onCheckedChange={(checked) => handleSelectSchedule(schedule.id_paciente, checked as boolean)} 
+              className="mt-1"
+            />
             <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between">
-                <span className="font-medium truncate">{schedule.Agendamento.Paciente?.nome_completo}</span>
+              <div className="flex items-center justify-between mb-1">
+                <span className="font-medium truncate">{schedule.paciente_nome}</span>
                 <div className="flex items-center space-x-2 text-xs text-gray-500">
                   <Calendar className="w-3 h-3" />
-                  <span>{new Date(schedule.data_agendamento).toLocaleDateString("pt-AO")}</span>
-                  <span className="font-semibold text-green-600">
-                    {new Intl.NumberFormat("pt-AO", {
+                  <span className="font-medium">
+                    Total: {new Intl.NumberFormat("pt-AO", {
                       style: "currency",
                       currency: "AOA",
-                      notation: "compact",
-                    }).format(Array.isArray(schedule?.Exame) ? schedule.Exame?.reduce((total: number, exam: any) => total + (exam?.Tipo_Exame?.preco || 0), 0) : schedule?.Tipo_Exame?.preco || 0)}
+                    }).format(
+                      (schedule.exames?.reduce((total: number, exame: any) => total + (exame?.Tipo_Exame?.preco || 0), 0) || 0) +
+                      (schedule.consultas?.reduce((total: number, consulta: any) => total + (consulta?.Tipo_Consulta?.preco || 0), 0) || 0)
+                    )}
                   </span>
                 </div>
               </div>
+              
+              {/* Informações detalhadas de exames e consultas */}
+              {renderScheduleInfo(schedule)}
             </div>
           </div>
         ))}

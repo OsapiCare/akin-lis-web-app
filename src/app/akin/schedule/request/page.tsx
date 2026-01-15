@@ -66,9 +66,6 @@ const agruparPorPaciente = (exames: any, consultas: any): PacienteAgendamento[] 
   const examesArray = toArray(exames);
   const consultasArray = toArray(consultas);
 
-  console.log("Exames para processar:", examesArray);
-  console.log("Consultas para processar:", consultasArray);
-
   // Processar exames - CORREÇÃO CRÍTICA AQUI
   examesArray.forEach((exame) => {
     try {
@@ -142,7 +139,6 @@ const agruparPorPaciente = (exames: any, consultas: any): PacienteAgendamento[] 
   });
 
   const resultado = Array.from(pacientesMap.values());
-  console.log("Pacientes agrupados:", resultado);
   return resultado;
 };
 
@@ -169,9 +165,7 @@ export default function Request() {
   queryKey: ["exams-pending"],
   queryFn: async (): Promise<ExamesTypes[]> => {
     try {
-      const response = await examRoutes.getPendingExams();
-      console.log("Resposta bruta de exames:", response);
-      
+      const response = await examRoutes.getPendingExams();      
       // Fazer type assertion para 'any' ou um tipo mais genérico
       const responseData = response as any;
       
@@ -181,7 +175,6 @@ export default function Request() {
         const possibleDataProps = ["data", "results", "records", "items", "exames"];
         for (const prop of possibleDataProps) {
           if (responseData[prop] && Array.isArray(responseData[prop])) {
-            console.log(`Encontrado array em ${prop}:`, responseData[prop]);
             return responseData[prop];
           }
         }
@@ -190,7 +183,6 @@ export default function Request() {
         const values = Object.values(responseData);
         for (const value of values) {
           if (Array.isArray(value)) {
-            console.log("Encontrado array nos valores:", value);
             return value;
           }
         }
@@ -220,7 +212,6 @@ export default function Request() {
     try {
       // Fazer type assertion para 'any'
       const response = await consultaRoutes.getPendingConsultas() as any;
-      console.log("Resposta bruta de consultas:", response);
       
       if (Array.isArray(response)) return response;
       
@@ -228,7 +219,6 @@ export default function Request() {
         const possibleDataProps = ["data", "results", "records", "items", "consultas"];
         for (const prop of possibleDataProps) {
           if (response[prop] && Array.isArray(response[prop])) {
-            console.log(`Encontrado array em ${prop}:`, response[prop]);
             return response[prop];
           }
         }
@@ -236,14 +226,12 @@ export default function Request() {
         const values = Object.values(response);
         for (const value of values) {
           if (Array.isArray(value)) {
-            console.log("Encontrado array nos valores:", value);
             return value;
           }
         }
         
         // Agora TypeScript não reclama
         if (response.id !== undefined && response.Tipo_Consulta) {
-          console.log("É uma única consulta, convertendo para array");
           return [response];
         }
       }
@@ -260,14 +248,12 @@ export default function Request() {
 });
 
   const consultas = useMemo(() => {
-    console.log("Consultas processadas:", consultasRaw);
     if (!consultasRaw) return [];
     if (Array.isArray(consultasRaw)) return consultasRaw;
     return [];
   }, [consultasRaw]);
 
   const exames = useMemo(() => {
-    console.log("Exames processados:", examesRaw);
     if (!examesRaw) return [];
     if (Array.isArray(examesRaw)) return examesRaw;
     return [];
@@ -275,7 +261,6 @@ export default function Request() {
 
   const pacientesAgendamentos = useMemo(() => {
     const resultado = agruparPorPaciente(exames, consultas);
-    console.log("Resultado final de pacientes agendamentos:", resultado);
     return resultado;
   }, [exames, consultas]);
 
@@ -286,9 +271,6 @@ export default function Request() {
   const totalExames = pacientesAgendamentos.reduce((total, paciente) => total + paciente.exames?.length, 0);
   const totalConsultas = pacientesAgendamentos.reduce((total, paciente) => total + paciente.consultas?.length, 0);
 
-  console.log("Total exames:", totalExames);
-  console.log("Total consultas:", totalConsultas);
-  console.log("Total pacientes:", totalPacientes);
 
   const totalRevenue = useMemo(() => {
     let revenue = 0;
@@ -306,7 +288,6 @@ export default function Request() {
       });
     });
 
-    console.log("Receita total calculada:", revenue);
     return revenue;
   }, [pacientesAgendamentos]);
 
@@ -1079,7 +1060,7 @@ export default function Request() {
                 new Intl.NumberFormat("pt-AO", {
                   style: "currency",
                   currency: "AOA",
-                  notation: "compact",
+                  // notation: "compact",
                   maximumFractionDigits: 0,
                 }).format(totalRevenue)
               )}
