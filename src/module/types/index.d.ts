@@ -33,8 +33,12 @@ export interface IPaciente {
   nome_completo: string;
   numero_identificacao: string;
   data_nascimento?: string;
-  contacto_telefonico?: string;
-  email?: string;
+  usuario:{
+    email?: string;
+    contacto_telefonico?: string;
+    nome?:string;
+    tipo?:string;
+  }
   sexo: SexoType;
   endereco?: string;
   criado_aos: Date;

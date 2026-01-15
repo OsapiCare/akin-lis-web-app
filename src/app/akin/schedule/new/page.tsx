@@ -96,9 +96,9 @@ export default function New() {
         id: paciente.sexo.id,
         nome: paciente.sexo.nome,
       },
-      contacto_telefonico: paciente.contacto_telefonico,
+      contacto_telefonico: paciente?.usuario?.contacto_telefonico ?? "",
       numero_identificacao: paciente.numero_identificacao,
-      email: paciente.email,
+      email: paciente.usuario?.email,
       id_usuario: paciente.id,
       criado_aos: paciente.criado_aos,
       id_sexo: Number(paciente.sexo.id),
@@ -113,6 +113,7 @@ export default function New() {
 
       // Buscar pacientes
       const patientsResponse = await patientRoutes.getAllPacients();
+      console.log("Pacientes: ", patientsResponse);
 
       // Converter pacientes para PatientType
       const patientTypes: PatientType[] = patientsResponse.map((p: IPaciente) => convertToPatientType(p));
@@ -528,7 +529,6 @@ export default function New() {
               <div className="flex flex-col gap-3">
                 <div className="flex justify-between items-center">
                   <label className="font-bold text-lg">Clínico Geral Disponível</label>
-                 
                 </div>
 
                 <div className="space-y-4">
@@ -574,50 +574,6 @@ export default function New() {
             ) : (
               <ScheduleDetails isLoading={isLoading} items={filteredItems} schedules={schedules} onChange={setSchedules} selectedTipo={selectedTipo} />
             )}
-          </div>
-
-          <div className="p-4 bg-blue-50 rounded-lg border">
-            <div className="flex flex-col gap-3">
-              <h3 className="font-bold text-lg">Resumo</h3>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Card>
-                  <CardContent className="pt-4">
-                    <div className="flex flex-col items-center text-center">
-                      <span className="text-sm text-gray-600">Valor Total</span>
-                      <span className="text-2xl font-bold text-green-700">
-                        {new Intl.NumberFormat("pt-AO", {
-                          style: "currency",
-                          currency: "AOA",
-                        }).format(calculateTotalValue())}
-                      </span>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardContent className="pt-4">
-                    <div className="flex flex-col items-center text-center">
-                      <span className="text-sm text-gray-600">Estado Financeiro</span>
-                      <Badge variant={calculateTotalValue() > 0 ? "outline" : "default"} className={calculateTotalValue() > 0 ? "bg-yellow-50 text-yellow-800" : "bg-green-100 text-green-800"}>
-                        {calculateTotalValue() > 0 ? "NÃO PAGO" : "ISENTO"}
-                      </Badge>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardContent className="pt-4">
-                    <div className="flex flex-col items-center text-center">
-                      <span className="text-sm text-gray-600">Estado de Reembolso</span>
-                      <Badge variant="default" className="bg-green-100 text-green-800">
-                        SEM REEMBOLSO
-                      </Badge>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
           </div>
         </div>
 

@@ -380,7 +380,7 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
   const { data: labChiefs } = useQuery({
     queryKey: ["lab-chiefs"],
     queryFn: async () => await labChiefRoutes.getAllLabChief(),
-    // enabled: isReceptionist,
+    enabled: isReceptionist,
   });
 
   const { data: clinicos } = useQuery({
@@ -1460,7 +1460,7 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
                 {/* SEÇÃO DE ALOCAÇÕES (APENAS RECEPCIONISTA) */}
                 {isReceptionist && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <Card className="border-0 shadow-lg bg-gradient-to-br from-white to-blue-50 mb-44">
+                    <Card className="borde shadow-sm bg-gradient-to-br from-white to-blue-50 mb-11">
                       <CardHeader className="pb-3">
                         <CardTitle className="text-lg font-bold text-gray-800 flex items-center gap-2">
                           <div className="p-2 bg-gradient-to-br from-blue-100 to-blue-200 rounded-lg">
@@ -1469,7 +1469,7 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
                           Chefe de Laboratório
                         </CardTitle>
                       </CardHeader>
-                      <CardContent>
+                      <CardContent className="pb-4">
                         <div className="space-y-4">
                           <div className="p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl">
                             <Label className="text-sm font-medium text-gray-700 mb-2">Chefe Atual</Label>
@@ -1511,7 +1511,7 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
                       </CardContent>
                     </Card>
 
-                    <Card className="border-0 shadow-lg bg-gradient-to-br from-white to-green-50 mb-44">
+                    <Card className="border-0 shadow-lg bg-gradient-to-br from-white to-green-50 mb-11">
                       <CardHeader className="pb-3">
                         <CardTitle className="text-lg font-bold text-gray-800 flex items-center gap-2">
                           <div className="p-2 bg-gradient-to-br from-green-100 to-green-200 rounded-lg">
@@ -1530,13 +1530,13 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
                             <Label className="text-sm font-medium text-gray-700">Alocar Novo Clínico</Label>
                             <div className="flex flex-col sm:flex-row gap-2">
                               <Select value={selectedClinico || ""} onValueChange={setSelectedClinico}>
-                                <SelectTrigger className="flex-1 bg-white border-gray-300">
+                                <SelectTrigger className="flex-1 border-gray-300">
                                   <SelectValue placeholder="Selecionar clínico..." />
                                 </SelectTrigger>
-                                <SelectContent>
+                                <SelectContent className="bg-red-500 text-white">
                                   {Array.isArray(clinicos) &&
                                     clinicos.map((clinico) => (
-                                      <SelectItem key={clinico.id} value={clinico.id}>
+                                      <SelectItem className="bg-red-500 text-white" key={clinico.id} value={clinico.id}>
                                            {clinico.nome} -  {clinico.tipo}
                                       </SelectItem>
                                     ))}
@@ -1564,7 +1564,7 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
               </TabsContent>
 
               {/* ABA DE EXAMES */}
-              <TabsContent value="exams" className="space-y-4 mb-11">
+              <TabsContent value="exams" className="space-y-4 mb-5">
                 {activeExams.length === 0 ? (
                   <Card className="border-0 shadow-lg">
                     <CardContent className="py-12 text-center">
@@ -1581,7 +1581,7 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
               </TabsContent>
 
               {/* ABA DE CONSULTAS */}
-              <TabsContent value="consultations" className="space-y-4 mb-11">
+              <TabsContent value="consultations" className="space-y-4 mb-5">
                 {activeConsultas.length === 0 ? (
                   <Card className="border-0 shadow-lg">
                     <CardContent className="py-12 text-center">
@@ -1695,7 +1695,7 @@ const ExamItem = ({ exam, editing, editedExam, ...props }: any) => {
   };
 
   return (
-    <Card className="border-0 shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300 mb-44">
+    <Card className="border-0 shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300 mb-11">
       <CardContent className="p-0">
         <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-4 border-b">
           <div className="flex items-center justify-between">
@@ -1845,7 +1845,7 @@ const ConsultaItem = ({ consulta, editing, editedConsulta, ...props }: any) => {
     return "Clínico não encontrado";
   }
   return (
-    <Card className="border-0 shadow-lg mb-44 overflow-hidden hover:shadow-xl transition-shadow duration-300">
+    <Card className="border-0 shadow-lg mb-11 overflow-hidden hover:shadow-xl transition-shadow duration-300">
       <CardContent className="p-0">
         <div className="bg-gradient-to-r from-green-50 to-green-100 p-4 border-b">
           <div className="flex items-center justify-between">

@@ -15,14 +15,18 @@ interface PatientType {
   nome_completo: string;
   data_nascimento?: string;
   numero_identificacao?: string;
-  contacto_telefonico?: string;
   email?: string;
   id_sexo: number;
   sexo?: {
     id: string;
     nome: string;
   };
-
+   usuario?:{
+    email?: string;
+    contacto_telefonico?: string;
+    nome?:string;
+    tipo?:string;
+  };
   data_registro?: string;
   data_ultima_visita?: string;
   dias_desde_ultima_visita?:string;
