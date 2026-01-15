@@ -491,7 +491,6 @@ const handleSubmitConsultas = async () => {
               valor_total: exame.item?.preco || 0,
             };
 
-            console.log("Adicionando exame:", examePayload);
             await _axios.post("/exams", examePayload);
           }
 

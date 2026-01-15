@@ -79,3 +79,18 @@ interface EditableExam {
   observacoes?: string;
   id_tecnico_alocado?: string | null;
 }
+
+interface ExamesTypes {
+  id:number;
+  id_paciente:string;
+  id_unidade_de_saude:number;
+  data_agendamento:string;
+  hora_agendamento:string;
+  status:StatusClinico;
+  status_financeiro: StatusFinanceiro;
+  status_reembolso: StatusReembolso;
+  id_tecnico_alocado: number | null;
+  data_pagamento: string | null;
+  Paciente: PatientType;
+  Exame: ExamsType[];
+}

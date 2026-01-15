@@ -73,7 +73,7 @@ const agruparPorPaciente = (exames: any, consultas: any): PacienteAgendamento[] 
       if (pacienteInfo) {
         const pacienteId = pacienteInfo.id;
         const pacienteNome = pacienteInfo.nome_completo || "Paciente";
-        
+
         if (!pacientesMap.has(pacienteId)) {
           pacientesMap.set(pacienteId, {
             id_paciente: pacienteId,
@@ -104,7 +104,7 @@ const agruparPorPaciente = (exames: any, consultas: any): PacienteAgendamento[] 
       if (pacienteInfo) {
         const pacienteId = pacienteInfo.id;
         const pacienteNome = pacienteInfo.nome_completo || "Paciente";
-        
+
         if (!pacientesMap.has(pacienteId)) {
           pacientesMap.set(pacienteId, {
             id_paciente: pacienteId,
@@ -138,16 +138,47 @@ export default function Request() {
   const [rejectReason, setRejectReason] = useState("");
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [selectedScheduleId, setSelectedScheduleId] = useState<number | null>(null);
-  const [expandedCards, setExpandedCards] = useState<Set<number>>(new Set());
+  // Estado separado para controlar expansão de cada bloco
+  const [expandedExames, setExpandedExames] = useState<Set<number>>(new Set());
+  const [expandedConsultas, setExpandedConsultas] = useState<Set<number>>(new Set());
   const queryClient = useQueryClient();
 
   // Buscar dados
-  const { data: schedules = [], isLoading, isError, error, refetch, isRefetching } = useQuery({
-    queryKey: ["pending-schedules"],
-    queryFn: () => scheduleRoutes.getPendingSchedules(),
+  const {
+    data: examesRaw,
+    isLoading,
+    isError,
+    refetch,
+    isRefetching,
+  } = useQuery({
+    queryKey: ["exams-pending"],
+    queryFn: async () => {
+      try {
+        const response = await examRoutes.getPendingExams();
+        if (Array.isArray(response)) return response;
+        const possibleDataProps = ["data", "results", "records", "items", "exames"];
+        for (const prop of possibleDataProps) {
+          if (response && response[prop] && Array.isArray(response[prop])) {
+            return response[prop];
+          }
+        }
+        const values = Object.values(response as any);
+        for (const value of values) {
+          if (Array.isArray(value)) {
+            return value;
+          }
+        }
+        return [];
+      } catch (error) {
+        console.error("Erro ao buscar exames: ", error);
+        return [];
+      }
+    },
     refetchInterval: 30000,
     refetchOnWindowFocus: true,
   });
+
+  console.log("Exames Pendentes: ", examesRaw);
 
   const { data: consultasRaw, isLoading: isLoadingConsultas } = useQuery({
     queryKey: ["pending-consultas"],
@@ -179,26 +210,36 @@ export default function Request() {
     refetchOnWindowFocus: true,
   });
 
+  console.log("Consultas Pendentes: ", consultasRaw);
+
   const consultas = useMemo(() => {
     if (!consultasRaw) return [];
     if (Array.isArray(consultasRaw)) return consultasRaw;
     return [];
   }, [consultasRaw]);
 
-  const pacientesAgendamentos = useMemo(() => {
-    return agruparPorPaciente(schedules, consultas);
-  }, [schedules, consultas]);
+  const exames = useMemo(() => {
+    if (!examesRaw) return [];
+    if (Array.isArray(examesRaw)) return examesRaw;
+    return [];
+  }, [examesRaw]);
 
-  const { filteredSchedules: filteredPacientes, filters, handleSearch, handleFilterChange } = useScheduleFilters(pacientesAgendamentos as any);
+  const pacientesAgendamentos = useMemo(() => {
+    return agruparPorPaciente(exames, consultas);
+  }, [exames, consultas]);
+
+  const { filteredExames: filteredPacientes, filters, handleSearch, handleFilterChange } = useScheduleFilters(pacientesAgendamentos as any);
 
   // Estatísticas
   const totalPacientes = pacientesAgendamentos.length;
   const totalExames = pacientesAgendamentos.reduce((total, paciente) => total + paciente.exames.length, 0);
   const totalConsultas = pacientesAgendamentos.reduce((total, paciente) => total + paciente.consultas.length, 0);
 
+  console.log(totalExames);
+
   const totalRevenue = useMemo(() => {
     let revenue = 0;
-    
+
     pacientesAgendamentos.forEach((paciente) => {
       // Calcular receita de exames
       paciente.exames.forEach((exame: any) => {
@@ -207,13 +248,13 @@ export default function Request() {
           revenue += item?.Tipo_Exame?.preco || 0;
         });
       });
-      
+
       // Calcular receita de consultas
       paciente.consultas.forEach((consulta: any) => {
         revenue += consulta?.Tipo_Consulta?.preco || 0;
       });
     });
-    
+
     return revenue;
   }, [pacientesAgendamentos]);
 
@@ -227,12 +268,12 @@ export default function Request() {
           return itemDate && new Date(itemDate).toDateString() === today;
         });
       });
-      
+
       const hasTodayConsulta = paciente.consultas.some((consulta: any) => {
         const consultaDate = consulta?.data_agendamento;
         return consultaDate && new Date(consultaDate).toDateString() === today;
       });
-      
+
       return hasTodayExame || hasTodayConsulta;
     });
   }, [pacientesAgendamentos]);
@@ -257,15 +298,25 @@ export default function Request() {
     },
   });
 
-  // Handlers
-  const toggleCardExpansion = (pacienteId: number) => {
-    const newExpanded = new Set(expandedCards);
+  // Handlers para expansão separada
+  const toggleExamesExpansion = (pacienteId: number) => {
+    const newExpanded = new Set(expandedExames);
     if (newExpanded.has(pacienteId)) {
       newExpanded.delete(pacienteId);
     } else {
       newExpanded.add(pacienteId);
     }
-    setExpandedCards(newExpanded);
+    setExpandedExames(newExpanded);
+  };
+
+  const toggleConsultasExpansion = (pacienteId: number) => {
+    const newExpanded = new Set(expandedConsultas);
+    if (newExpanded.has(pacienteId)) {
+      newExpanded.delete(pacienteId);
+    } else {
+      newExpanded.add(pacienteId);
+    }
+    setExpandedConsultas(newExpanded);
   };
 
   const handleAccept = (pacienteId: number) => {
@@ -292,33 +343,30 @@ export default function Request() {
   };
 
   // Componente de Bloco de Exames
-  const ExamesBlock = ({ exames, pacienteId }: { exames: any[], pacienteId: number }) => {
+  const ExamesBlock = ({ exames, pacienteId }: { exames: any[]; pacienteId: number }) => {
     if (exames.length === 0) return null;
 
-    const isExpanded = expandedCards.has(pacienteId);
+    const isExpanded = expandedExames.has(pacienteId);
     const totalExames = exames.reduce((total, exame) => total + (exame?.Exame?.length || 0), 0);
     const totalValor = exames.reduce((total, exame) => {
       const examesArray = exame?.Exame || [];
-      return total + examesArray.reduce((subTotal: number, item: any) => 
-        subTotal + (item?.Tipo_Exame?.preco || 0), 0);
+      return total + examesArray.reduce((subTotal: number, item: any) => subTotal + (item?.Tipo_Exame?.preco || 0), 0);
     }, 0);
 
     return (
-      <Card className="w-full border-blue-200 border-l-4">
+      <Card className="w-full border-blue-200 border-l-4 mb-4">
         <CardHeader className="p-4 pb-2">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-blue-100 rounded-lg">
                 <Stethoscope className="w-5 h-5 text-blue-600" />
               </div>
               <div>
-                <CardTitle className="text-lg font-bold text-blue-800">
-                  Exames ({totalExames})
-                </CardTitle>
-                <p className="text-sm text-gray-600">Agendamentos de exames laboratoriais</p>
+                <CardTitle className="text-lg font-bold text-blue-800">Exames ({totalExames})</CardTitle>
+                <p className="text-sm text-gray-600 hidden sm:block">Agendamentos de exames laboratoriais</p>
               </div>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
               {totalValor > 0 && (
                 <div className="text-right">
                   <p className="text-sm text-gray-600">Valor Total</p>
@@ -330,17 +378,9 @@ export default function Request() {
                   </p>
                 </div>
               )}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => toggleCardExpansion(pacienteId)}
-                className="p-1"
-              >
-                {isExpanded ? (
-                  <ChevronUp className="w-5 h-5" />
-                ) : (
-                  <ChevronDown className="w-5 h-5" />
-                )}
+              <Button variant="ghost" size="sm" onClick={() => toggleExamesExpansion(pacienteId)} className="p-1 self-end sm:self-center">
+                {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                <span className="sr-only">Expandir/Recolher exames</span>
               </Button>
             </div>
           </div>
@@ -351,102 +391,82 @@ export default function Request() {
             <CardContent className="p-4 pt-0">
               <div className="space-y-4">
                 {exames.map((exame, index) => (
-                  <div key={index} className="bg-blue-50 border border-blue-100 rounded-lg p-4">
+                  <div key={index} className="bg-blue-50 border border-blue-100 rounded-lg p-3 sm:p-4">
                     {/* Informações do agendamento */}
-                    <div className="mb-4 pb-3 border-b border-blue-200">
+                    <div className="mb-3 sm:mb-4 pb-3 border-b border-blue-200">
                       <div className="flex flex-wrap justify-between items-center gap-2 mb-2">
-                        <Badge variant="outline" className="bg-blue-100 text-blue-700 border-blue-300">
+                        <Badge variant="outline" className="bg-blue-100 text-blue-700 border-blue-300 text-xs">
                           Agendamento #{exame.id}
                         </Badge>
                         <Badge variant="secondary" className="text-xs">
                           {exame.status}
                         </Badge>
                       </div>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
-                        <div className="flex items-center gap-2">
-                          <CalendarDays className="w-4 h-4 text-gray-500" />
-                          <span className="text-gray-700">
-                            Criado: {format(new Date(exame.criado_aos), "dd/MM/yyyy HH:mm")}
-                          </span>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3 text-sm">
+                        <div className="flex items-center gap-2 truncate">
+                          <CalendarDays className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                          <span className="text-gray-700 truncate">Criado: {format(new Date(exame.criado_aos), "dd/MM/yyyy HH:mm")}</span>
                         </div>
                         {exame.id_unidade_de_saude && (
-                          <div className="flex items-center gap-2">
-                            <MapPin className="w-4 h-4 text-gray-500" />
-                            <span className="text-gray-700">
-                              Unidade: {exame.id_unidade_de_saude}
-                            </span>
+                          <div className="flex items-center gap-2 truncate">
+                            <MapPin className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                            <span className="text-gray-700 truncate">Unidade: {exame.id_unidade_de_saude}</span>
                           </div>
                         )}
-                        <div className="flex items-center gap-2">
-                          <DollarSign className="w-4 h-4 text-gray-500" />
-                          <span className="text-gray-700">
-                            Pagamento: {exame.status_pagamento}
-                          </span>
+                        <div className="flex items-center gap-2 truncate">
+                          <DollarSign className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                          <span className="text-gray-700 truncate">Pagamento: {exame.status_pagamento}</span>
                         </div>
                       </div>
                     </div>
 
                     {/* Itens de exame */}
                     <div className="space-y-3">
-                      <h4 className="font-semibold text-blue-800">Itens Agendados:</h4>
+                      <h4 className="font-semibold text-blue-800 text-sm sm:text-base">Itens Agendados:</h4>
                       {(exame.Exame || []).map((item: any, itemIndex: number) => (
-                        <div key={itemIndex} className="bg-white border border-gray-200 rounded-lg p-4">
-                          <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
-                            <div className="flex-1">
-                              <div className="flex items-start gap-3 mb-2">
-                                <div className="mt-1">
+                        <div key={itemIndex} className="bg-white border border-gray-200 rounded-lg p-3 sm:p-4">
+                          <div className="flex flex-col md:flex-row md:items-start justify-between gap-3 sm:gap-4">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex flex-col sm:flex-row sm:items-start gap-3 mb-2">
+                                <div className="mt-1 flex-shrink-0">
                                   <Stethoscope className="w-4 h-4 text-blue-600" />
                                 </div>
-                                <div>
-                                  <h5 className="font-bold text-gray-900">
-                                    {item?.Tipo_Exame?.nome || "Exame não especificado"}
-                                  </h5>
-                                  {item?.Tipo_Exame?.descricao && (
-                                    <p className="text-sm text-gray-600 mt-1">
-                                      {item.Tipo_Exame.descricao}
-                                    </p>
-                                  )}
+                                <div className="min-w-0">
+                                  <h5 className="font-bold text-gray-900 text-sm sm:text-base truncate">{item?.Tipo_Exame?.nome || "Exame não especificado"}</h5>
+                                  {item?.Tipo_Exame?.descricao && <p className="text-sm text-gray-600 mt-1 line-clamp-2">{item.Tipo_Exame.descricao}</p>}
                                 </div>
                               </div>
-                              
-                              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-3">
+
+                              <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mt-3">
                                 {item.data_agendamento && (
-                                  <div className="flex items-center gap-2">
-                                    <Calendar className="w-4 h-4 text-gray-500" />
-                                    <span className="text-sm">
-                                      {format(new Date(item.data_agendamento), "dd/MM/yyyy")}
-                                    </span>
+                                  <div className="flex items-center gap-2 truncate">
+                                    <Calendar className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                                    <span className="text-xs sm:text-sm truncate">{format(new Date(item.data_agendamento), "dd/MM/yyyy")}</span>
                                   </div>
                                 )}
-                                
+
                                 {item.hora_agendamento && (
-                                  <div className="flex items-center gap-2">
-                                    <Clock4 className="w-4 h-4 text-gray-500" />
-                                    <span className="text-sm">{item.hora_agendamento}</span>
+                                  <div className="flex items-center gap-2 truncate">
+                                    <Clock4 className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                                    <span className="text-xs sm:text-sm truncate">{item.hora_agendamento}</span>
                                   </div>
                                 )}
-                                
+
                                 {item.status && (
                                   <div className="flex items-center gap-2">
-                                    <Badge 
-                                      variant="outline" 
-                                      className={`${
-                                        item.status === "PENDENTE" 
-                                          ? "bg-yellow-50 text-yellow-700 border-yellow-200"
-                                          : item.status === "CONCLUIDO"
-                                          ? "bg-green-50 text-green-700 border-green-200"
-                                          : "bg-gray-50 text-gray-700 border-gray-200"
-                                      }`}
+                                    <Badge
+                                      variant="outline"
+                                      className={`text-xs ${item.status === "PENDENTE" ? "bg-yellow-50 text-yellow-700 border-yellow-200" : item.status === "CONCLUIDO" ? "bg-green-50 text-green-700 border-green-200" : "bg-gray-50 text-gray-700 border-gray-200"}`}
                                     >
                                       {item.status}
                                     </Badge>
                                   </div>
                                 )}
-                                
+
                                 {item.valor_total > 0 && (
-                                  <div className="flex items-center gap-2">
-                                    <DollarSign className="w-4 h-4 text-green-600" />
-                                    <span className="text-sm font-semibold text-green-700">
+                                  <div className="flex items-center gap-2 truncate">
+                                    <DollarSign className="w-4 h-4 text-green-600 flex-shrink-0" />
+                                    <span className="text-xs sm:text-sm font-semibold text-green-700 truncate">
                                       {new Intl.NumberFormat("pt-AO", {
                                         style: "currency",
                                         currency: "AOA",
@@ -456,23 +476,12 @@ export default function Request() {
                                 )}
                               </div>
                             </div>
-                            
-                            <div className="md:w-48 flex flex-col gap-2">
-                              {item.isento && (
-                                <Badge className="bg-gray-100 text-gray-800 border-gray-300">
-                                  ISENTO
-                                </Badge>
-                              )}
+
+                            <div className="md:w-48 flex flex-col gap-2 mt-3 md:mt-0">
+                              {item.isento && <Badge className="bg-gray-100 text-gray-800 border-gray-300 text-xs">ISENTO</Badge>}
                               <div className="text-right">
-                                <p className="text-sm text-gray-600">Status Pagamento</p>
-                                <Badge 
-                                  variant="outline" 
-                                  className={`mt-1 ${
-                                    item.status_pagamento === "PAGO"
-                                      ? "bg-green-50 text-green-700 border-green-200"
-                                      : "bg-red-50 text-red-700 border-red-200"
-                                  }`}
-                                >
+                                <p className="text-xs sm:text-sm text-gray-600">Status Pagamento</p>
+                                <Badge variant="outline" className={`mt-1 text-xs ${item.status_pagamento === "PAGO" ? "bg-green-50 text-green-700 border-green-200" : "bg-red-50 text-red-700 border-red-200"}`}>
                                   {item.status_pagamento || "NÃO PAGO"}
                                 </Badge>
                               </div>
@@ -492,29 +501,26 @@ export default function Request() {
   };
 
   // Componente de Bloco de Consultas
-  const ConsultasBlock = ({ consultas, pacienteId }: { consultas: any[], pacienteId: number }) => {
+  const ConsultasBlock = ({ consultas, pacienteId }: { consultas: any[]; pacienteId: number }) => {
     if (consultas.length === 0) return null;
 
-    const isExpanded = expandedCards.has(pacienteId);
-    const totalValor = consultas.reduce((total, consulta) => 
-      total + (consulta?.Tipo_Consulta?.preco || 0), 0);
+    const isExpanded = expandedConsultas.has(pacienteId);
+    const totalValor = consultas.reduce((total, consulta) => total + (consulta?.Tipo_Consulta?.preco || 0), 0);
 
     return (
-      <Card className="w-full border-green-200 border-l-4 mt-4 mb-5">
+      <Card className="w-full border-green-200 border-l-4 mb-5">
         <CardHeader className="p-4 pb-2">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-green-100 rounded-lg">
                 <FileText className="w-5 h-5 text-green-600" />
               </div>
               <div>
-                <CardTitle className="text-lg font-bold text-green-800">
-                  Consultas ({consultas.length})
-                </CardTitle>
-                <p className="text-sm text-gray-600">Agendamentos de consultas médicas</p>
+                <CardTitle className="text-lg font-bold text-green-800">Consultas ({consultas.length})</CardTitle>
+                <p className="text-sm text-gray-600 hidden sm:block">Agendamentos de consultas médicas</p>
               </div>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
               {totalValor > 0 && (
                 <div className="text-right">
                   <p className="text-sm text-gray-600">Valor Total</p>
@@ -526,17 +532,9 @@ export default function Request() {
                   </p>
                 </div>
               )}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => toggleCardExpansion(pacienteId)}
-                className="p-1"
-              >
-                {isExpanded ? (
-                  <ChevronUp className="w-5 h-5" />
-                ) : (
-                  <ChevronDown className="w-5 h-5" />
-                )}
+              <Button variant="ghost" size="sm" onClick={() => toggleConsultasExpansion(pacienteId)} className="p-1 self-end sm:self-center">
+                {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                <span className="sr-only">Expandir/Recolher consultas</span>
               </Button>
             </div>
           </div>
@@ -547,80 +545,62 @@ export default function Request() {
             <CardContent className="p-4 pt-0">
               <div className="space-y-4">
                 {consultas.map((consulta, index) => (
-                  <div key={index} className="bg-green-50 border border-green-100 rounded-lg p-4">
-                    <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
-                      <div className="flex-1">
-                        <div className="flex items-start gap-3 mb-3">
-                          <div className="mt-1">
+                  <div key={index} className="bg-green-50 border border-green-100 rounded-lg p-3 sm:p-4">
+                    <div className="flex flex-col md:flex-row md:items-start justify-between gap-3 sm:gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-col sm:flex-row sm:items-start gap-3 mb-3">
+                          <div className="mt-1 flex-shrink-0">
                             <FileText className="w-4 h-4 text-green-600" />
                           </div>
-                          <div>
-                            <h5 className="font-bold text-gray-900 text-lg">
-                              {consulta?.Tipo_Consulta?.nome || "Consulta não especificada"}
-                            </h5>
-                            {consulta?.Tipo_Consulta?.descricao && (
-                              <p className="text-sm text-gray-600 mt-1">
-                                {consulta.Tipo_Consulta.descricao}
-                              </p>
-                            )}
+                          <div className="min-w-0">
+                            <h5 className="font-bold text-gray-900 text-sm sm:text-base md:text-lg truncate">{consulta?.Tipo_Consulta?.nome || "Consulta não especificada"}</h5>
+                            {consulta?.Tipo_Consulta?.descricao && <p className="text-sm text-gray-600 mt-1 line-clamp-2">{consulta.Tipo_Consulta.descricao}</p>}
                           </div>
                         </div>
-                        
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+
+                        <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                           {consulta.data_agendamento && (
-                            <div className="bg-white border border-gray-200 rounded-lg p-3">
+                            <div className="bg-white border border-gray-200 rounded-lg p-2 sm:p-3">
                               <div className="flex items-center gap-2 mb-1">
-                                <Calendar className="w-4 h-4 text-gray-500" />
-                                <span className="text-sm font-semibold text-gray-700">Data</span>
+                                <Calendar className="w-3 h-3 sm:w-4 sm:h-4 text-gray-500 flex-shrink-0" />
+                                <span className="text-xs sm:text-sm font-semibold text-gray-700 truncate">Data</span>
                               </div>
-                              <p className="text-base font-bold text-gray-900">
-                                {format(new Date(consulta.data_agendamento), "dd/MM/yyyy")}
-                              </p>
-                              {isToday(new Date(consulta.data_agendamento)) && (
-                                <Badge className="mt-1 bg-blue-100 text-blue-700">
-                                  Hoje
-                                </Badge>
-                              )}
+                              <p className="text-sm sm:text-base font-bold text-gray-900 truncate">{format(new Date(consulta.data_agendamento), "dd/MM/yyyy")}</p>
+                              {isToday(new Date(consulta.data_agendamento)) && <Badge className="mt-1 bg-blue-100 text-blue-700 text-xs">Hoje</Badge>}
                             </div>
                           )}
-                          
+
                           {consulta.hora_agendamento && (
-                            <div className="bg-white border border-gray-200 rounded-lg p-3">
+                            <div className="bg-white border border-gray-200 rounded-lg p-2 sm:p-3">
                               <div className="flex items-center gap-2 mb-1">
-                                <Clock4 className="w-4 h-4 text-gray-500" />
-                                <span className="text-sm font-semibold text-gray-700">Hora</span>
+                                <Clock4 className="w-3 h-3 sm:w-4 sm:h-4 text-gray-500 flex-shrink-0" />
+                                <span className="text-xs sm:text-sm font-semibold text-gray-700 truncate">Hora</span>
                               </div>
-                              <p className="text-base font-bold text-gray-900">
-                                {consulta.hora_agendamento}
-                              </p>
+                              <p className="text-sm sm:text-base font-bold text-gray-900 truncate">{consulta.hora_agendamento}</p>
                             </div>
                           )}
-                          
-                          <div className="bg-white border border-gray-200 rounded-lg p-3">
+
+                          <div className="bg-white border border-gray-200 rounded-lg p-2 sm:p-3">
                             <div className="flex items-center gap-2 mb-1">
-                              <AlertCircle className="w-4 h-4 text-gray-500" />
-                              <span className="text-sm font-semibold text-gray-700">Status</span>
+                              <AlertCircle className="w-3 h-3 sm:w-4 sm:h-4 text-gray-500 flex-shrink-0" />
+                              <span className="text-xs sm:text-sm font-semibold text-gray-700 truncate">Status</span>
                             </div>
-                            <Badge 
-                              className={`font-bold ${
-                                consulta.status === "PENDENTE"
-                                  ? "bg-yellow-100 text-yellow-800 hover:bg-yellow-100"
-                                  : consulta.status === "CONCLUIDO"
-                                  ? "bg-green-100 text-green-800 hover:bg-green-100"
-                                  : "bg-gray-100 text-gray-800 hover:bg-gray-100"
+                            <Badge
+                              className={`font-bold text-xs sm:text-sm ${
+                                consulta.status === "PENDENTE" ? "bg-yellow-100 text-yellow-800 hover:bg-yellow-100" : consulta.status === "CONCLUIDO" ? "bg-green-100 text-green-800 hover:bg-green-100" : "bg-gray-100 text-gray-800 hover:bg-gray-100"
                               }`}
                             >
                               {consulta.status}
                             </Badge>
                           </div>
-                          
+
                           {consulta?.Tipo_Consulta?.preco > 0 && (
-                            <div className="bg-white border border-gray-200 rounded-lg p-3">
+                            <div className="bg-white border border-gray-200 rounded-lg p-2 sm:p-3">
                               <div className="flex items-center gap-2 mb-1">
-                                <DollarSign className="w-4 h-4 text-gray-500" />
-                                <span className="text-sm font-semibold text-gray-700">Valor</span>
+                                <DollarSign className="w-3 h-3 sm:w-4 sm:h-4 text-gray-500 flex-shrink-0" />
+                                <span className="text-xs sm:text-sm font-semibold text-gray-700 truncate">Valor</span>
                               </div>
-                              <p className="text-base font-bold text-green-700">
+                              <p className="text-sm sm:text-base font-bold text-green-700 truncate">
                                 {new Intl.NumberFormat("pt-AO", {
                                   style: "currency",
                                   currency: "AOA",
@@ -629,52 +609,39 @@ export default function Request() {
                             </div>
                           )}
                         </div>
-                        
+
                         {/* Informações adicionais */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                          <div className="bg-white border border-gray-200 rounded-lg p-3">
-                            <h6 className="font-semibold text-gray-700 mb-2">Informações do Pagamento</h6>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 mt-3 sm:mt-4">
+                          <div className="bg-white border border-gray-200 rounded-lg p-2 sm:p-3">
+                            <h6 className="font-semibold text-gray-700 text-sm sm:text-base mb-2">Informações do Pagamento</h6>
                             <div className="space-y-2">
-                              <div className="flex justify-between">
-                                <span className="text-sm text-gray-600">Status:</span>
-                                <Badge 
-                                  variant="outline" 
-                                  className={
-                                    consulta.status_pagamento === "PAGO"
-                                      ? "bg-green-50 text-green-700 border-green-200"
-                                      : "bg-red-50 text-red-700 border-red-200"
-                                  }
-                                >
+                              <div className="flex justify-between items-center">
+                                <span className="text-xs sm:text-sm text-gray-600 truncate">Status:</span>
+                                <Badge variant="outline" className={`text-xs ${consulta.status_pagamento === "PAGO" ? "bg-green-50 text-green-700 border-green-200" : "bg-red-50 text-red-700 border-red-200"}`}>
                                   {consulta.status_pagamento}
                                 </Badge>
                               </div>
                               {consulta.isento && (
-                                <div className="flex justify-between">
-                                  <span className="text-sm text-gray-600">Isenção:</span>
-                                  <Badge className="bg-gray-100 text-gray-800">
-                                    ISENTO
-                                  </Badge>
+                                <div className="flex justify-between items-center">
+                                  <span className="text-xs sm:text-sm text-gray-600 truncate">Isenção:</span>
+                                  <Badge className="bg-gray-100 text-gray-800 text-xs">ISENTO</Badge>
                                 </div>
                               )}
                             </div>
                           </div>
-                          
+
                           {consulta.Agendamento && (
-                            <div className="bg-white border border-gray-200 rounded-lg p-3">
-                              <h6 className="font-semibold text-gray-700 mb-2">Dados do Agendamento</h6>
+                            <div className="bg-white border border-gray-200 rounded-lg p-2 sm:p-3">
+                              <h6 className="font-semibold text-gray-700 text-sm sm:text-base mb-2">Dados do Agendamento</h6>
                               <div className="space-y-2">
-                                <div className="flex justify-between">
-                                  <span className="text-sm text-gray-600">Criado em:</span>
-                                  <span className="text-sm font-medium">
-                                    {format(new Date(consulta.criado_aos), "dd/MM/yyyy HH:mm")}
-                                  </span>
+                                <div className="flex justify-between items-center">
+                                  <span className="text-xs sm:text-sm text-gray-600 truncate">Criado em:</span>
+                                  <span className="text-xs sm:text-sm font-medium truncate">{format(new Date(consulta.criado_aos), "dd/MM/yyyy HH:mm")}</span>
                                 </div>
                                 {consulta.Agendamento.id_unidade_de_saude && (
-                                  <div className="flex justify-between">
-                                    <span className="text-sm text-gray-600">Unidade:</span>
-                                    <span className="text-sm font-medium">
-                                      {consulta.Agendamento.id_unidade_de_saude}
-                                    </span>
+                                  <div className="flex justify-between items-center">
+                                    <span className="text-xs sm:text-sm text-gray-600 truncate">Unidade:</span>
+                                    <span className="text-xs sm:text-sm font-medium truncate">{consulta.Agendamento.id_unidade_de_saude}</span>
                                   </div>
                                 )}
                               </div>
@@ -693,18 +660,19 @@ export default function Request() {
     );
   };
 
-  // Componente de Cabeçalho do Paciente
+  // Componente de Cabeçalho do Paciente - Versão Responsiva
   const PacienteHeader = ({ paciente }: { paciente: PacienteAgendamento }) => {
     const hasExames = paciente.exames.length > 0;
     const hasConsultas = paciente.consultas.length > 0;
-    const totalItens = paciente.exames.reduce((total, exame) => 
-      total + (exame?.Exame?.length || 0), 0) + paciente.consultas.length;
+    const totalItens = paciente.exames.reduce((total, exame) => total + (exame?.Exame?.length || 0), 0) + paciente.consultas.length;
 
+    console.log(paciente);
+    
     return (
-      <div className="bg-gradient-to-r from-gray-50 to-white border-b border-gray-200 p-4">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="h-14 w-14 flex-shrink-0 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-xl shadow-lg">
+      <div className="bg-gradient-to-r from-gray-50 to-white border-b border-gray-200 p-3 sm:p-4">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 sm:gap-4">
+          <div className="flex items-start sm:items-center gap-3 sm:gap-4">
+            <div className="h-12 w-12 sm:h-14 sm:w-14 flex-shrink-0 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-lg sm:text-xl shadow-lg">
               {paciente.paciente_nome
                 .split(" ")
                 .map((n) => n[0])
@@ -712,85 +680,75 @@ export default function Request() {
                 .toUpperCase()
                 .slice(0, 2)}
             </div>
-            
+
             <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-2 mb-2">
-                <h2 className="text-2xl font-bold text-gray-900 truncate">
-                  {paciente.paciente_nome}
-                </h2>
-                
-                <div className="flex flex-wrap gap-2">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-900 truncate">{paciente.paciente_nome}</h2>
+
+                <div className="flex flex-wrap gap-1 sm:gap-2">
                   {hasExames && (
-                    <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 border-blue-300">
+                    <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 border-blue-300 text-xs">
                       <Stethoscope className="w-3 h-3 mr-1" />
                       {paciente.exames.reduce((total, exame) => total + (exame?.Exame?.length || 0), 0)} Exame(s)
                     </Badge>
                   )}
                   {hasConsultas && (
-                    <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-green-300">
+                    <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-green-300 text-xs">
                       <FileText className="w-3 h-3 mr-1" />
                       {paciente.consultas.length} Consulta(s)
                     </Badge>
                   )}
-                  <Badge variant="outline" className="border-gray-300">
+                  <Badge variant="outline" className="border-gray-300 text-xs">
                     {totalItens} Itens
                   </Badge>
                 </div>
               </div>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+
+              <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
                 {paciente.paciente_numero_identificacao && (
-                  <div className="flex items-center gap-2">
-                    <IdCard className="w-4 h-4 text-gray-500" />
-                    <span className="text-sm text-gray-700">
+                  <div className="flex items-center gap-2 truncate">
+                    <IdCard className="w-3 h-3 sm:w-4 sm:h-4 text-gray-500 flex-shrink-0" />
+                    <span className="text-xs sm:text-sm text-gray-700 truncate">
                       <span className="font-semibold">BI:</span> {paciente.paciente_numero_identificacao}
                     </span>
                   </div>
                 )}
-                
+
                 {paciente.paciente_sexo && (
-                  <div className="flex items-center gap-2">
-                    <User className="w-4 h-4 text-gray-500" />
-                    <span className="text-sm text-gray-700">
+                  <div className="flex items-center gap-2 truncate">
+                    <User className="w-3 h-3 sm:w-4 sm:h-4 text-gray-500 flex-shrink-0" />
+                    <span className="text-xs sm:text-sm text-gray-700 truncate">
                       <span className="font-semibold">Sexo:</span> {paciente.paciente_sexo}
                     </span>
                   </div>
                 )}
+
                 {paciente.paciente_contacto && (
-                  <div className="flex items-center gap-2">
-                    <Phone className="w-4 h-4 text-gray-500" />
-                    <span className="text-sm text-gray-700">
-                      <span className="font-semibold">Contacto:</span> 
-                      {paciente.paciente_contacto}
+                  <div className="flex items-center gap-2 truncate">
+                    <Phone className="w-3 h-3 sm:w-4 sm:h-4 text-gray-500 flex-shrink-0" />
+                    <span className="text-xs sm:text-sm text-gray-700 truncate">
+                      <span className="font-semibold">Contacto:</span> {paciente.paciente_contacto}
                     </span>
                   </div>
                 )}
-                
+
                 {paciente.paciente_data_nascimento && (
-                  <div className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4 text-gray-500" />
-                    <span className="text-sm text-gray-700">
-                      <span className="font-semibold">Nascimento:</span>{" "}
-                      {format(new Date(paciente.paciente_data_nascimento), "dd/MM/yyyy")}
+                  <div className="flex items-center gap-2 truncate">
+                    <Calendar className="w-3 h-3 sm:w-4 sm:h-4 text-gray-500 flex-shrink-0" />
+                    <span className="text-xs sm:text-sm text-gray-700 truncate">
+                      <span className="font-semibold">Nascimento:</span> {format(new Date(paciente.paciente_data_nascimento), "dd/MM/yyyy")}
                     </span>
                   </div>
                 )}
-                
               </div>
             </div>
           </div>
-          
-          <div className="flex flex-col items-end gap-3">
-            <div className="text-right">
-              <p className="text-sm text-gray-600">Status Geral</p>
-              <Badge 
-                className={`text-sm font-bold ${
-                  paciente.status === "PENDENTE"
-                    ? "bg-yellow-100 text-yellow-800 hover:bg-yellow-100"
-                    : paciente.status === "APROVADO"
-                    ? "bg-green-100 text-green-800 hover:bg-green-100"
-                    : "bg-gray-100 text-gray-800 hover:bg-gray-100"
-                }`}
+
+          <div className="flex flex-col items-start sm:items-end gap-2 sm:gap-3 mt-2 sm:mt-0">
+            <div className="text-left sm:text-right">
+              <p className="text-xs sm:text-sm text-gray-600">Status Geral</p>
+              <Badge
+                className={`text-xs sm:text-sm font-bold ${paciente.status === "PENDENTE" ? "bg-yellow-100 text-yellow-800 hover:bg-yellow-100" : paciente.status === "APROVADO" ? "bg-green-100 text-green-800 hover:bg-green-100" : "bg-gray-100 text-gray-800 hover:bg-gray-100"}`}
               >
                 {paciente.status}
               </Badge>
@@ -804,39 +762,26 @@ export default function Request() {
   // Componente Principal do Card do Paciente
   const PacienteCard = ({ paciente }: { paciente: PacienteAgendamento }) => {
     return (
-      <div className="space-y-4">
-        <Card className="w-full px-5 overflow-hidden border border-gray-300 shadow-lg">
+      <div className="space-y-3 sm:space-y-4">
+        <Card className="w-full overflow-hidden border border-gray-300 shadow-lg">
           {/* Cabeçalho do Paciente */}
           <PacienteHeader paciente={paciente} />
-          
-          <CardContent className="p-0">
-            {/* Bloco de Exames */}
-            <ExamesBlock 
-              exames={paciente.exames} 
-              pacienteId={paciente.id_paciente} 
-            />
-            
-            {/* Bloco de Consultas */}
-            <ConsultasBlock 
-              consultas={paciente.consultas} 
-              pacienteId={paciente.id_paciente} 
-            />
 
-             <div className="flex gap-2 mb-3">
-              <Button
-                onClick={() => handleAccept(paciente.id_paciente)}
-                className="bg-green-600 hover:bg-green-700 text-white px-6"
-                disabled={acceptMutation.isPending}
-              >
+          <CardContent className="p-3 sm:p-4">
+            {/* Bloco de Exames */}
+            <ExamesBlock exames={paciente.exames} pacienteId={paciente.id_paciente} />
+
+            {/* Bloco de Consultas */}
+            <ConsultasBlock consultas={paciente.consultas} pacienteId={paciente.id_paciente} />
+
+            {/* Ações - Versão Responsiva */}
+            <div className="flex flex-col xs:flex-row gap-2 sm:gap-3 mt-4 sm:mt-6">
+              <Button onClick={() => handleAccept(paciente.id_paciente)} className="bg-green-600 hover:bg-green-700 text-white px-4 sm:px-6 py-2 h-auto text-sm sm:text-base" disabled={acceptMutation.isPending}>
                 <CheckCircle className="w-4 h-4 mr-2" />
                 {acceptMutation.isPending ? "Processando..." : "Aceitar Tudo"}
               </Button>
-              
-              <Button
-                variant="destructive"
-                onClick={() => openRejectDialog(paciente.id_paciente)}
-                className="px-6"
-              >
+
+              <Button variant="destructive" onClick={() => openRejectDialog(paciente.id_paciente)} className="px-4 sm:px-6 py-2 h-auto text-sm sm:text-base">
                 <XCircle className="w-4 h-4 mr-2" />
                 Recusar
               </Button>
@@ -850,7 +795,7 @@ export default function Request() {
   // Renderização condicional de erro
   if (isError) {
     return (
-      <div className="container mx-auto px-6 py-8">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
@@ -866,86 +811,81 @@ export default function Request() {
 
   // Renderização principal
   return (
-    <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+    <div className="container mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 lg:py-8 space-y-6 sm:space-y-8">
       {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 sm:gap-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Agendamentos Pendentes</h1>
-          <p className="text-gray-600 mt-1">Gerencie exames e consultas agrupados por paciente</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Agendamentos Pendentes</h1>
+          <p className="text-gray-600 mt-1 text-sm sm:text-base">Gerencie exames e consultas agrupados por paciente</p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <Badge variant="outline" className="text-sm py-2 px-4">
-            <Calendar className="w-4 h-4 mr-2" />
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          <Badge variant="outline" className="text-xs sm:text-sm py-1.5 sm:py-2 px-3 sm:px-4">
+            <Calendar className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
             {format(new Date(), "dd 'de' MMMM", { locale: ptBR })}
           </Badge>
 
-          <Button variant="outline" onClick={() => setShowStats(!showStats)}>
-            <BarChart3 className="w-4 h-4 mr-2" />
-            {showStats ? "Ocultar" : "Mostrar"} Estatísticas
+          <Button variant="outline" size="sm" onClick={() => setShowStats(!showStats)} className="h-9 sm:h-10 px-3 sm:px-4">
+            <BarChart3 className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
+            <span className="hidden xs:inline">{showStats ? "Ocultar" : "Mostrar"} Estatísticas</span>
+            <span className="xs:hidden">Estatísticas</span>
           </Button>
 
-          <Button variant="outline" onClick={() => refetch()} disabled={isRefetching}>
-            <RefreshCw className={`w-4 h-4 mr-2 ${isRefetching ? "animate-spin" : ""}`} />
-            Atualizar
+          <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isRefetching} className="h-9 sm:h-10 px-3 sm:px-4">
+            <RefreshCw className={`w-3 h-3 sm:w-4 sm:h-4 mr-1.5 sm:mr-2 ${isRefetching ? "animate-spin" : ""}`} />
+            <span className="hidden sm:inline">Atualizar</span>
           </Button>
         </div>
       </div>
 
-      {/* Statistics Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card>
-          <CardHeader className="flex items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Pacientes</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+      {/* Statistics Cards - Versão Responsiva */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
+        <Card className="col-span-1">
+          <CardHeader className="flex flex-row items-center justify-between pb-2 p-3 sm:p-4">
+            <CardTitle className="text-xs sm:text-sm font-medium">Pacientes</CardTitle>
+            <Users className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-600">
-              {isLoading ? <Skeleton className="h-8 w-16" /> : totalPacientes}
-            </div>
-            <p className="text-xs text-muted-foreground">com agendamentos pendentes</p>
+          <CardContent className="p-3 sm:p-4 pt-0">
+            <div className="text-xl sm:text-2xl font-bold text-orange-600">{isLoading ? <Skeleton className="h-6 sm:h-8 w-10 sm:w-16" /> : totalPacientes}</div>
+            <p className="text-xs text-muted-foreground mt-1">com agendamentos pendentes</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Hoje</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
+        <Card className="col-span-1">
+          <CardHeader className="flex flex-row items-center justify-between pb-2 p-3 sm:p-4">
+            <CardTitle className="text-xs sm:text-sm font-medium">Hoje</CardTitle>
+            <Clock className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">
-              {isLoading ? <Skeleton className="h-8 w-16" /> : todaySchedules.length}
-            </div>
-            <p className="text-xs text-muted-foreground">pacientes com agendamentos hoje</p>
+          <CardContent className="p-3 sm:p-4 pt-0">
+            <div className="text-xl sm:text-2xl font-bold text-blue-600">{isLoading ? <Skeleton className="h-6 sm:h-8 w-10 sm:w-16" /> : todaySchedules.length}</div>
+            <p className="text-xs text-muted-foreground mt-1">agendamentos hoje</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Itens Pendentes</CardTitle>
-            <CheckCircle className="h-4 w-4 text-muted-foreground" />
+        <Card className="col-span-1">
+          <CardHeader className="flex flex-row items-center justify-between pb-2 p-3 sm:p-4">
+            <CardTitle className="text-xs sm:text-sm font-medium">Itens</CardTitle>
+            <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {isLoading ? <Skeleton className="h-8 w-16" /> : totalExames + totalConsultas}
-            </div>
-            <div className="text-xs text-muted-foreground flex gap-2">
+          <CardContent className="p-3 sm:p-4 pt-0">
+            <div className="text-xl sm:text-2xl font-bold text-green-600">{isLoading ? <Skeleton className="h-6 sm:h-8 w-10 sm:w-16" /> : totalExames + totalConsultas}</div>
+            <div className="text-xs text-muted-foreground flex flex-col sm:flex-row sm:gap-1 mt-1">
               <span>{totalExames} exames</span>
-              <span>•</span>
+              <span className="hidden sm:inline">•</span>
               <span>{totalConsultas} consultas</span>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Receita Potencial</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+        <Card className="col-span-1">
+          <CardHeader className="flex flex-row items-center justify-between pb-2 p-3 sm:p-4">
+            <CardTitle className="text-xs sm:text-sm font-medium">Receita</CardTitle>
+            <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-purple-600">
+          <CardContent className="p-3 sm:p-4 pt-0">
+            <div className="text-xl sm:text-2xl font-bold text-purple-600">
               {isLoading ? (
-                <Skeleton className="h-8 w-24" />
+                <Skeleton className="h-6 sm:h-8 w-14 sm:w-24" />
               ) : (
                 new Intl.NumberFormat("pt-AO", {
                   style: "currency",
@@ -955,7 +895,7 @@ export default function Request() {
                 }).format(totalRevenue)
               )}
             </div>
-            <p className="text-xs text-muted-foreground">valor total pendente</p>
+            <p className="text-xs text-muted-foreground mt-1">valor total pendente</p>
           </CardContent>
         </Card>
       </div>
@@ -964,61 +904,46 @@ export default function Request() {
       {showStats && <ScheduleStats schedules={pacientesAgendamentos as any} isLoading={isLoading} />}
 
       {/* Bulk Actions */}
-      {!isLoading && filteredPacientes.length > 0 && (
-        <BulkActions 
-          schedules={filteredPacientes as any} 
-          selectedSchedules={selectedSchedules} 
-          onSelectionChange={setSelectedSchedules} 
-        />
-      )}
+      {!isLoading && filteredPacientes.length > 0 && <BulkActions schedules={filteredPacientes as any} selectedSchedules={selectedSchedules} onSelectionChange={setSelectedSchedules} />}
 
       {/* Filters */}
-      <ScheduleFilters 
-        onSearch={handleSearch} 
-        onFilterChange={handleFilterChange} 
-        totalSchedules={totalPacientes} 
-        filteredCount={filteredPacientes.length} 
-      />
+      <ScheduleFilters onSearch={handleSearch} onFilterChange={handleFilterChange} totalSchedules={totalPacientes} filteredCount={filteredPacientes.length} />
 
       {/* View Toggle and Content */}
       <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as "grid" | "list")}>
-        <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
-          <TabsList className="grid w-full max-w-md grid-cols-2">
-            <TabsTrigger value="grid" className="flex items-center gap-2">
-              <Grid3X3 className="w-4 h-4" />
+        <div className="flex flex-col lg:flex-row items-center justify-between gap-3 sm:gap-4">
+          <TabsList className="grid w-full max-w-xs sm:max-w-md grid-cols-2">
+            <TabsTrigger value="grid" className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm">
+              <Grid3X3 className="w-3 h-3 sm:w-4 sm:h-4" />
               Cards
             </TabsTrigger>
-            <TabsTrigger value="list" className="flex items-center gap-2">
-              <List className="w-4 h-4" />
+            <TabsTrigger value="list" className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm">
+              <List className="w-3 h-3 sm:w-4 sm:h-4" />
               Lista
             </TabsTrigger>
           </TabsList>
 
-          <div className="text-sm text-gray-600">
-            {filteredPacientes.length} pacientes • {totalExames + totalConsultas} itens pendentes
+          <div className="text-xs sm:text-sm text-gray-600">
+            {filteredPacientes.length} pacientes • {totalExames + totalConsultas} itens
           </div>
         </div>
 
-        <Separator className="my-6" />
+        <Separator className="my-4 sm:my-6" />
 
         {isLoading ? (
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
             {[...Array(3)].map((_, i) => (
-              <Skeleton key={i} className="h-64 w-full" />
+              <Skeleton key={i} className="h-48 sm:h-64 w-full" />
             ))}
           </div>
         ) : filteredPacientes.length === 0 ? (
-          <Card className="p-12">
+          <Card className="p-6 sm:p-8 lg:p-12">
             <div className="text-center">
-              <AlertTriangle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Nenhum agendamento encontrado</h3>
-              <p className="text-gray-600 mb-4">
-                {totalPacientes === 0 
-                  ? "Não há agendamentos pendentes no momento." 
-                  : "Tente ajustar os filtros para encontrar agendamentos."}
-              </p>
+              <AlertTriangle className="w-8 h-8 sm:w-12 sm:h-12 text-gray-400 mx-auto mb-3 sm:mb-4" />
+              <h3 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 mb-2">Nenhum agendamento encontrado</h3>
+              <p className="text-gray-600 text-sm sm:text-base mb-4">{totalPacientes === 0 ? "Não há agendamentos pendentes no momento." : "Tente ajustar os filtros para encontrar agendamentos."}</p>
               {filters.searchQuery && (
-                <Button variant="outline" onClick={() => handleSearch("")}>
+                <Button variant="outline" size="sm" onClick={() => handleSearch("")} className="text-xs sm:text-sm">
                   Limpar busca
                 </Button>
               )}
@@ -1026,56 +951,42 @@ export default function Request() {
           </Card>
         ) : (
           <>
-            <TabsContent value="grid" className="space-y-8">
+            <TabsContent value="grid" className="space-y-6 sm:space-y-8">
               {(filteredPacientes as unknown as PacienteAgendamento[]).map((paciente: PacienteAgendamento) => (
                 <PacienteCard key={paciente.id_paciente} paciente={paciente} />
               ))}
             </TabsContent>
 
             <TabsContent value="list" className="space-y-4">
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto -mx-3 sm:-mx-0">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Paciente
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Tipo
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Itens
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">
-                        Valor
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Estado
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Ações
-                      </th>
+                      <th className="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Paciente</th>
+                      <th className="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
+                      <th className="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">Itens</th>
+                      <th className="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">Valor</th>
+                      <th className="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                      <th className="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ações</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {(filteredPacientes as unknown as PacienteAgendamento[]).map((paciente: PacienteAgendamento) => {
-                      const totalExamesPaciente = paciente.exames.reduce((total, exame) => 
-                        total + (exame?.Exame?.length || 0), 0);
+                      const totalExamesPaciente = paciente.exames.reduce((total, exame) => total + (exame?.Exame?.length || 0), 0);
                       const totalConsultasPaciente = paciente.consultas.length;
                       const totalItens = totalExamesPaciente + totalConsultasPaciente;
 
-                      const precoTotal = paciente.exames.reduce((total, exame) => {
-                        const examesArray = exame?.Exame || [];
-                        return total + examesArray.reduce((subTotal: number, item: any) => 
-                          subTotal + (item?.Tipo_Exame?.preco || 0), 0);
-                      }, 0) + paciente.consultas.reduce((total, consulta: any) => 
-                        total + (consulta?.Tipo_Consulta?.preco || 0), 0);
+                      const precoTotal =
+                        paciente.exames.reduce((total, exame) => {
+                          const examesArray = exame?.Exame || [];
+                          return total + examesArray.reduce((subTotal: number, item: any) => subTotal + (item?.Tipo_Exame?.preco || 0), 0);
+                        }, 0) + paciente.consultas.reduce((total, consulta: any) => total + (consulta?.Tipo_Consulta?.preco || 0), 0);
 
                       return (
                         <tr key={paciente.id_paciente} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap">
+                          <td className="px-3 sm:px-6 py-3 whitespace-nowrap">
                             <div className="flex items-center">
-                              <div className="h-10 w-10 flex-shrink-0 rounded-full bg-blue-500 flex items-center justify-center text-white font-semibold text-sm mr-3">
+                              <div className="h-8 w-8 sm:h-10 sm:w-10 flex-shrink-0 rounded-full bg-blue-500 flex items-center justify-center text-white font-semibold text-xs sm:text-sm mr-2 sm:mr-3">
                                 {paciente.paciente_nome
                                   .split(" ")
                                   .map((n: string) => n[0])
@@ -1083,17 +994,13 @@ export default function Request() {
                                   .toUpperCase()
                                   .slice(0, 2)}
                               </div>
-                              <div>
-                                <div className="text-sm font-medium text-gray-900">
-                                  {paciente.paciente_nome}
-                                </div>
-                                <div className="text-xs text-gray-500">
-                                  {paciente.paciente_contacto || "Sem contacto"}
-                                </div>
+                              <div className="min-w-0">
+                                <div className="text-sm font-medium text-gray-900 truncate max-w-[120px] sm:max-w-none">{paciente.paciente_nome}</div>
+                                <div className="text-xs text-gray-500 truncate max-w-[120px] sm:max-w-none">{paciente.paciente_contacto || "Sem contacto"}</div>
                               </div>
                             </div>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
+                          <td className="px-3 sm:px-6 py-3 whitespace-nowrap">
                             <div className="flex flex-col gap-1">
                               {totalExamesPaciente > 0 && (
                                 <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-xs">
@@ -1107,39 +1014,30 @@ export default function Request() {
                               )}
                             </div>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          <td className="px-3 sm:px-6 py-3 whitespace-nowrap text-sm text-gray-500 hidden sm:table-cell">
                             {totalItens} {totalItens === 1 ? "item" : "itens"}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600 hidden lg:table-cell">
+                          <td className="px-3 sm:px-6 py-3 whitespace-nowrap text-sm text-green-600 hidden lg:table-cell">
                             {new Intl.NumberFormat("pt-AO", {
                               style: "currency",
                               currency: "AOA",
                             }).format(precoTotal)}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <Badge variant="outline" className="bg-yellow-50 text-yellow-800 border-yellow-200">
+                          <td className="px-3 sm:px-6 py-3 whitespace-nowrap">
+                            <Badge variant="outline" className="bg-yellow-50 text-yellow-800 border-yellow-200 text-xs">
                               <AlertCircle className="w-3 h-3 mr-1" />
                               {paciente.status}
                             </Badge>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex gap-2">
-                              <Button
-                                onClick={() => handleAccept(paciente.id_paciente)}
-                                disabled={acceptMutation.isPending}
-                                size="sm"
-                                className="bg-green-600 hover:bg-green-700 text-white px-4"
-                              >
-                                <CheckCircle className="w-4 h-4" />
+                          <td className="px-3 sm:px-6 py-3 whitespace-nowrap">
+                            <div className="flex gap-1 sm:gap-2">
+                              <Button onClick={() => handleAccept(paciente.id_paciente)} disabled={acceptMutation.isPending} size="sm" className="bg-green-600 hover:bg-green-700 text-white h-8 w-8 sm:h-9 sm:w-auto sm:px-3">
+                                <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4" />
+                                <span className="sr-only sm:not-sr-only sm:ml-1">Aceitar</span>
                               </Button>
-                              <Button
-                                variant="destructive"
-                                size="sm"
-                                onClick={() => openRejectDialog(paciente.id_paciente)}
-                                disabled={rejectMutation.isPending}
-                                className="px-4"
-                              >
-                                <XCircle className="w-4 h-4" />
+                              <Button variant="destructive" size="sm" onClick={() => openRejectDialog(paciente.id_paciente)} disabled={rejectMutation.isPending} className="h-8 w-8 sm:h-9 sm:w-auto sm:px-3">
+                                <XCircle className="w-3 h-3 sm:w-4 sm:h-4" />
+                                <span className="sr-only sm:not-sr-only sm:ml-1">Recusar</span>
                               </Button>
                             </div>
                           </td>
@@ -1156,23 +1054,17 @@ export default function Request() {
 
       {/* Reject Dialog */}
       <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-md lg:max-w-lg">
           <DialogHeader>
             <DialogTitle>Recusar Agendamentos</DialogTitle>
-            <DialogDescription>
-              Por favor, forneça um motivo para recusar todos os agendamentos deste paciente.
-            </DialogDescription>
+            <DialogDescription className="text-sm sm:text-base">Por favor, forneça um motivo para recusar todos os agendamentos deste paciente.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="reject-reason">Motivo da recusa</Label>
-              <Textarea
-                id="reject-reason"
-                placeholder="Digite o motivo da recusa..."
-                value={rejectReason}
-                onChange={(e) => setRejectReason(e.target.value)}
-                className="mt-2"
-              />
+              <Label htmlFor="reject-reason" className="text-sm sm:text-base">
+                Motivo da recusa
+              </Label>
+              <Textarea id="reject-reason" placeholder="Digite o motivo da recusa..." value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} className="mt-2 min-h-[100px] sm:min-h-[120px] text-sm sm:text-base" />
             </div>
           </div>
           <DialogFooter>
@@ -1183,14 +1075,11 @@ export default function Request() {
                 setRejectReason("");
                 setSelectedScheduleId(null);
               }}
+              className="text-sm sm:text-base"
             >
               Cancelar
             </Button>
-            <Button
-              variant="destructive"
-              onClick={handleConfirmReject}
-              disabled={!rejectReason.trim() || rejectMutation.isPending}
-            >
+            <Button variant="destructive" onClick={handleConfirmReject} disabled={!rejectReason.trim() || rejectMutation.isPending} className="text-sm sm:text-base">
               {rejectMutation.isPending ? "Recusando..." : "Confirmar Recusa"}
             </Button>
           </DialogFooter>

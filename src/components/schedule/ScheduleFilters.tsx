@@ -14,6 +14,13 @@ interface ConsultaFilterProps {
   filteredCount: number;
 }
 
+interface ExameFiltersProps{
+   onSearch: (query: string) => void;
+  onFilterChange: (filters: ExameFilters) => void;
+  totalExames: number;
+  filteredCount: number;
+}
+
 interface ScheduleFiltersProps {
   onSearch: (query: string) => void;
   onFilterChange: (filters: ScheduleFilters) => void;
@@ -21,6 +28,17 @@ interface ScheduleFiltersProps {
   filteredCount: number;
 }
 
+export interface ExameFilters {
+    searchQuery: string;
+  dateFrom?: Date;
+  dateTo?: Date;
+  examType?: string;
+  priceRange?: {
+    min: number;
+    max: number;
+  };
+  gender?: string;
+}
 export interface ScheduleFilters {
   searchQuery: string;
   dateFrom?: Date;

@@ -1,4 +1,5 @@
 import { _axios } from "@/Api/axios.config";
+import { ___showErrorToastNotification } from "@/lib/sonner";
 
 
 class ExamRoute {
@@ -18,8 +19,15 @@ class ExamRoute {
   }
 
   async getPendingExams() {
-    const response = await _axios.get('/exams/pending');
-    return response.data;
+    try{
+
+      const response = await _axios.get<ExamesTypes[]>('/exams/pending');
+      return response.data;
+    }catch(error){
+      ___showErrorToastNotification({
+        message: "Erro inesperado ocorreu ao buscar os dados. Atualize a página ou contate o suporte."
+      })
+    }
   }
 
 }

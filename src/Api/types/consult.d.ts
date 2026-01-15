@@ -53,6 +53,8 @@ interface Paciente {
   id: number;
   nome_completo: string;
   id_sexo: number;
+  numero_identificacao?: string;
+  contacto_telefonico?: string;
 }
 
 interface Chefe_Laboratorio {
@@ -69,7 +71,7 @@ interface AvaliableConsultasType {
 }
 
 interface EditableConsulta {
-id: number;
+  id: number;
   data_agendamento: string;
   hora_agendamento: string;
   status: string;

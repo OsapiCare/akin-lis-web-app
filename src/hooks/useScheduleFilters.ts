@@ -9,7 +9,7 @@ export function useConsultaFilters(consultas: ConsultasType[]) {
   const filteredConsultas = useMemo(() => {
     if (!consultas) return [];
 
-    return Array.isArray(consultas) ? consultas.filter((consulta) : [] => {
+    return Array.isArray(consultas) ? consultas.filter((consulta): [] => {
       // Search filter
       if (filters.searchQuery) {
         const query = filters.searchQuery.toLowerCase();
@@ -64,7 +64,7 @@ export function useConsultaFilters(consultas: ConsultasType[]) {
 
       // Price range filter
       if (filters.priceRange) {
-        const totalPrice = consulta.Consulta?.reduce((total, exam) => total + Number((exam.Exame.map((e)=>  e.Tipo_Exame?.preco)) || 0), 0) || 0;
+        const totalPrice = consulta.Consulta?.reduce((total, exam) => total + Number((exam.Exame.map((e) => e.Tipo_Exame?.preco)) || 0), 0) || 0;
 
         if (filters.priceRange.min && totalPrice < filters.priceRange.min) {
           return false || [];
@@ -79,7 +79,7 @@ export function useConsultaFilters(consultas: ConsultasType[]) {
     }) : [];
   }, [consultas, filters]);
 
-   const handleSearch = (query: string) => {
+  const handleSearch = (query: string) => {
     setFilters(prev => ({ ...prev, searchQuery: query }));
   };
 
@@ -95,21 +95,21 @@ export function useConsultaFilters(consultas: ConsultasType[]) {
   };
 }
 
-export function useScheduleFilters(schedules: ScheduleType[]) {
+export function useScheduleFilters(exames: ExamsType[]) {
   const [filters, setFilters] = useState<ScheduleFilters>({
     searchQuery: "",
   });
 
 
 
-  const filteredSchedules = useMemo(() => {
-    if (!schedules) return [];
+  const filteredExames = useMemo(() => {
+    if (!exames) return [];
 
-    return schedules.filter((schedule) => {
+    return exames.filter((exame) => {
       // Search filter
       if (filters.searchQuery) {
         const query = filters.searchQuery.toLowerCase();
-        const patient = schedule.Paciente;
+        const patient = exame?.Agendamento?.Paciente;
         const matchesName = patient?.nome_completo?.toLowerCase().includes(query);
         const matchesBI = patient?.numero_identificacao?.toLowerCase().includes(query);
         const matchesPhone = patient?.contacto_telefonico?.toLowerCase().includes(query);
@@ -120,8 +120,8 @@ export function useScheduleFilters(schedules: ScheduleType[]) {
       }
 
       // Date range filter
-      if (filters.dateFrom && schedule.Exame && schedule.Exame.length > 0) {
-        const hasDateInRange = schedule.Exame.some(exam => {
+      if (filters.dateFrom && exame?.Exame && exame?.Exame.length > 0) {
+        const hasDateInRange = exame.Exame.some(exam => {
           const examDate = new Date(exam.data_agendamento);
           return examDate >= filters.dateFrom!;
         });
@@ -130,8 +130,8 @@ export function useScheduleFilters(schedules: ScheduleType[]) {
         }
       }
 
-      if (filters.dateTo && schedule.Exame && schedule.Exame.length > 0) {
-        const hasDateInRange = schedule.Exame.some(exam => {
+      if (filters.dateTo && exame.Exame && exame.Exame.length > 0) {
+        const hasDateInRange = exame.Exame.some(exam => {
           const examDate = new Date(exam.data_agendamento);
           return examDate <= filters.dateTo!;
         });
@@ -143,14 +143,14 @@ export function useScheduleFilters(schedules: ScheduleType[]) {
       // Gender filter
       if (filters.gender) {
         const genderId = parseInt(filters.gender);
-        if (schedule.Paciente?.id_sexo !== genderId) {
+        if (exame.Agendamento?.Paciente?.id_sexo !== genderId) {
           return false;
         }
       }
 
       // Exam type filter
       if (filters.examType) {
-        const hasExamType = schedule.Exame?.some(exam =>
+        const hasExamType = exame.Exame?.some(exam =>
           exam.Tipo_Exame?.nome?.toLowerCase().includes(filters.examType!.toLowerCase())
         );
         if (!hasExamType) {
@@ -160,7 +160,7 @@ export function useScheduleFilters(schedules: ScheduleType[]) {
 
       // Price range filter
       if (filters.priceRange) {
-        const totalPrice = schedule.Exame?.reduce((total, exam) => total + (exam.Tipo_Exame?.preco || 0), 0) || 0;
+        const totalPrice = exame.Exame?.reduce((total, exam) => total + (exam.Tipo_Exame?.preco || 0), 0) || 0;
 
         if (filters.priceRange.min && totalPrice < filters.priceRange.min) {
           return false;
@@ -173,7 +173,7 @@ export function useScheduleFilters(schedules: ScheduleType[]) {
 
       return true;
     });
-  }, [schedules, filters]);
+  }, [exames, filters]);
 
   const handleSearch = (query: string) => {
     setFilters(prev => ({ ...prev, searchQuery: query }));
@@ -184,7 +184,7 @@ export function useScheduleFilters(schedules: ScheduleType[]) {
   };
 
   return {
-    filteredSchedules,
+    filteredExames,
     filters,
     handleSearch,
     handleFilterChange,

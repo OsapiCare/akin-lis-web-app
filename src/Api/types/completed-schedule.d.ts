@@ -21,15 +21,15 @@ interface PatientType {
     id: string;
     nome: string;
   };
-   usuario?:{
+  usuario?: {
     email?: string;
     contacto_telefonico?: string;
-    nome?:string;
-    tipo?:string;
+    nome?: string;
+    tipo?: string;
   };
   data_registro?: string;
   data_ultima_visita?: string;
-  dias_desde_ultima_visita?:string;
+  dias_desde_ultima_visita?: string;
   id_usuario: string;
   criado_aos: Date
 }
@@ -39,23 +39,43 @@ interface PatientType {
 // ==============================================
 
 interface ExamsType {
-  id: number;
-  id_tipo_exame: number;
-  id_agendamento: number;
-  status: StatusClinico;
-  status_financeiro: StatusFinanceiro;
-  status_reembolso: StatusReembolso;
-  data_agendamento: string;
-  hora_agendamento: string;
-  observacoes?: string;
-  criado_aos: string;
-  atualizado_aos: string;
-  Tipo_Exame?: {
-    id: number;
-    nome: string;
-    preco: number;
-    descricao?: string;
-  };
+  Exame?:
+  [
+    {
+      id: number;
+      id_tipo_exame: number;
+      id_agendamento: number;
+      status: StatusClinico;
+      status_financeiro: StatusFinanceiro;
+      status_reembolso: StatusReembolso;
+      data_agendamento: string;
+      hora_agendamento: string;
+      observacoes?: string;
+      criado_aos: string;
+      atualizado_aos: string;
+      Tipo_Exame?: {
+        id: number;
+        nome: string;
+        preco: number;
+        descricao?: string;
+      };
+      Agendamento?: {
+        atualizado_aos: string;
+        criado_aos: string;
+        data_cancelamento?: string;
+        id?: number;
+        id_chefe_alocado?: number;
+        id_clinico_alocado?: number;
+        id_paciente: number;
+        id_recepcionista: string;
+        id_unidade_de_saude: string;
+        status: StatusClinico
+        status_pagamento: StatusFinanceiro
+        status_reembolso: StatusReembolso
+        Paciente?: Paciente
+      }
+    }
+  ]
 }
 
 // ==============================================
@@ -72,7 +92,7 @@ interface ConsultasType {
   status_financeiro: StatusFinanceiro;
   status_reembolso: StatusReembolso;
   id_clinico_alocado?: string | null;
-  id_tecnico_alocado: number|null;//after remove null
+  id_tecnico_alocado: number | null;//after remove null
   data_pagamento: string | null;
   Consulta: ConsultaType[];
   Paciente: PatientType;
@@ -141,16 +161,16 @@ interface CompletedScheduleType extends ScheduleType {
   // Status específico para agendamentos completados
   status: "CONCLUIDO";
   criado_aos: string;
-  
+
   // IDs de profissionais alocados
   id_recepcionista?: string | null;
   id_chefe_alocado?: string | null;
   id_clinico_alocado?: string | null; // Para consultas
-  
+
   // Datas
   criado_aos: string;
   atualizado_aos: string;
-  
+
   // Paciente com informações completas
   Paciente: PatientType & {
     sexo: {
@@ -158,32 +178,32 @@ interface CompletedScheduleType extends ScheduleType {
       nome: string;
     };
   };
-  
+
   // Itens do agendamento (exames e consultas)
   Exame: CompletedExamType[];
   Consulta: CompletedConsultaType[];
-  
+
   // Status de pagamento do bloco (agora usando o tipo correto)
   status_pagamento: StatusFinanceiro;
-  
+
   // Informações financeiras do bloco
   valor_total?: number;
   valor_pago?: number;
   valor_a_pagar?: number;
-  
+
   // Profissionais alocados
   Chefe_Laboratorio?: {
     id: string;
     nome: string;
     tipo: string;
   };
-  
+
   Recepcionista?: {
     id: string;
     nome: string;
     tipo: string;
   };
-  
+
   Clinico_Geral?: {
     id: string;
     nome: string;
@@ -220,36 +240,36 @@ interface CompletedScheduleFilters {
 interface CompletedScheduleStats {
   // Contagem de agendamentos
   totalSchedules: number;
-  
+
   // Contagem de itens
   totalExams: number;
   totalConsultas: number;
-  
+
   // Status de exames
   pendingExams: number;
   completedExams: number;
   cancelledExams: number;
   porReagendarExams: number;
   emAndamentoExams: number;
-  
+
   // Status de consultas
   pendingConsultas: number;
   completedConsultas: number;
   cancelledConsultas: number;
   porReagendarConsultas: number;
   emAndamentoConsultas: number;
-  
+
   // Financeiro
   totalRevenue: number;
   paidRevenue: number;
   pendingRevenue: number;
   exemptRevenue: number;
-  
+
   // Médias
   averageExamsPerSchedule: number;
   averageConsultasPerSchedule: number;
   averageValuePerSchedule: number;
-  
+
   // Reembolsos
   totalReembolsosPendentes: number;
   totalReembolsosProcessados: number;
