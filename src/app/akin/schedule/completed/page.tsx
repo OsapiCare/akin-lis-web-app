@@ -406,13 +406,9 @@ export default function CompletedSchedulesPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredSchedules.map((schedule) => {
               const exams = schedule.Exame || [];
-              const paymentStatus = getPaymentStatus(exams);
               const examStatuses = getExamStatuses(exams);
               const totalValue = calculateTotalValue(exams);
               const hasAllocatedChief = !!schedule.id_chefe_alocado;
-              const status_pagamento = schedule.status_pagamento;
-              console.log("Estado do pagamento: ", status_pagamento);
-
               return (
                 <Card key={schedule.id} className="group border-0 bg-white shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden hover:-translate-y-1 cursor-pointer" onClick={() => handleViewDetails(schedule)}>
                   <CardContent className="p-0">

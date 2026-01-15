@@ -69,10 +69,13 @@ interface AvaliableExamsType {
 }
 
 interface EditableExam {
-  id: number;
-  status: string;
+ id: number;
   data_agendamento: string;
   hora_agendamento: string;
-  status_pagamento: string;
-  id_tecnico_alocado: string | null;
+  status: string;
+  status_financeiro: string;
+  status_reembolso: string;
+  id_tipo_exame?: number;
+  observacoes?: string;
+  id_tecnico_alocado?: string | null;
 }

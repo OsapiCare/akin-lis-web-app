@@ -7,12 +7,44 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CalendarDays, Clock, User, Phone, Stethoscope, CheckCircle, XCircle, AlertCircle, Edit3, Mail, Users, Save, X, FileText, DollarSign, CreditCard, Shield, ChevronDown, ClipboardList } from "lucide-react";
-import { format, parse, isValid, isBefore, startOfDay, isToday, isAfter, isEqual } from "date-fns";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  CalendarDays,
+  Clock,
+  User,
+  Phone,
+  Stethoscope,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  Edit3,
+  Mail,
+  Users,
+  Save,
+  X,
+  DollarSign,
+  CreditCard,
+  Shield,
+  ChevronDown,
+  ClipboardList,
+  RefreshCw,
+  FileText,
+  Calendar,
+  Sparkles,
+  Zap,
+  Activity,
+  Heart,
+  Brain,
+  Eye,
+  Thermometer,
+  Pill,
+  Syringe,
+  Microscope,
+} from "lucide-react";
+import { format, parse, isValid, isBefore, startOfDay, isToday } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { _axios } from "@/Api/axios.config";
 import { ___showSuccessToastNotification, ___showErrorToastNotification } from "@/lib/sonner";
@@ -21,7 +53,7 @@ import { labTechniciansRoutes } from "@/Api/Routes/lab-technicians/index.routes"
 import { labChiefRoutes } from "@/Api/Routes/lab-chief/index.routes";
 import { examRoutes } from "@/Api/Routes/Exam/index.route";
 import TimePicker from "@/components/ui/timepicker";
-import { Calendar } from "@/components/ui/calendar";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Input } from "../ui/input";
 
@@ -69,14 +101,12 @@ interface ConsultaType {
   descricao?: string;
 }
 
-// Função para converter string no formato yy/M/d para Date
 const parseFromYYMMDD = (dateString: string): Date | null => {
-  if (!dateString || dateString.trim() === "") return null;
+  if (!dateString || dateString?.trim() === "") return null;
 
   try {
     const trimmedString = dateString.trim();
 
-    // Primeiro tenta como ISO string (formato do backend: YYYY-MM-DD)
     try {
       const isoDate = new Date(trimmedString);
       if (isValid(isoDate)) {
@@ -109,8 +139,8 @@ const parseFromYYMMDD = (dateString: string): Date | null => {
       }
     }
 
-    // Tenta outros formatos
-    const formats = ["dd/MM/yyyy", "dd-MM-yyyy", "yyyy/MM/dd", "yyyy-MM-dd", "dd/MM/yy", "dd-MM-yy"];
+    // Tenta formatos comuns
+    const formats = ["dd/MM/yy", "dd/MM/yyyy", "dd-MM-yyyy", "yyyy-MM-dd"];
 
     for (const fmt of formats) {
       try {
@@ -122,7 +152,6 @@ const parseFromYYMMDD = (dateString: string): Date | null => {
         continue;
       }
     }
-
     console.warn(`Não foi possível parsear a data: "${dateString}"`);
     return null;
   } catch (error) {
@@ -131,7 +160,6 @@ const parseFromYYMMDD = (dateString: string): Date | null => {
   }
 };
 
-// Função para converter Date para string no formato yy/M/d
 const formatToYYMMDD = (date: Date | null | undefined): string => {
   if (!date || !isValid(date)) return "";
 
@@ -143,10 +171,13 @@ const formatToYYMMDD = (date: Date | null | undefined): string => {
   }
 };
 
-// Função para formatar data para input (dd/MM/yy)
+const formatForDisplay = (date: Date | null | undefined): string => {
+  if (!date || !isValid(date)) return "";
+  return format(date, "dd/MM/yyyy");
+};
+
 const formatForInput = (date: Date | null | undefined): string => {
   if (!date || !isValid(date)) return "";
-
   try {
     return format(date, "dd/MM/yy");
   } catch (error) {
@@ -155,27 +186,22 @@ const formatForInput = (date: Date | null | undefined): string => {
   }
 };
 
-// Função para verificar se uma data é anterior à data atual
 const isDateBeforeToday = (date: Date): boolean => {
   const today = startOfDay(new Date());
   const selectedDate = startOfDay(date);
   return isBefore(selectedDate, today);
 };
 
-// Função para verificar se um horário é anterior ao horário atual (para datas de hoje)
 const isTimeBeforeNow = (date: Date, time: string): boolean => {
   if (!date || !time) return false;
 
   try {
-    // Cria uma data com a hora selecionada
     const [hours, minutes] = time.split(":").map(Number);
     const selectedDateTime = new Date(date);
     selectedDateTime.setHours(hours, minutes, 0, 0);
 
-    // Data e hora atual
     const now = new Date();
 
-    // Verifica se o horário selecionado é anterior ao horário atual
     return isBefore(selectedDateTime, now);
   } catch (error) {
     console.error("Erro ao verificar horário:", error);
@@ -183,11 +209,137 @@ const isTimeBeforeNow = (date: Date, time: string): boolean => {
   }
 };
 
-// Função para formatar hora atual para comparação
 const getCurrentTimeString = (): string => {
   const now = new Date();
   return `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
 };
+
+const formatCurrency = (value: number): string => {
+  return new Intl.NumberFormat("pt-AO", {
+    style: "currency",
+    currency: "AOA",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(value);
+};
+
+// ======================== COMPONENTES DE UI ========================
+
+const StatusBadge = ({ status, type }: { status: string; type: "item" | "financeiro" | "reembolso" }) => {
+  // Definir tipos para as configurações
+  type StatusConfig = {
+    text: string;
+    variant: "default" | "outline" | "secondary" | "destructive";
+    className: string;
+  };
+
+  type ConfigType = Record<string, StatusConfig>;
+
+  const configs: Record<string, ConfigType> = {
+    item: {
+      PENDENTE: {
+        text: "Pendente",
+        variant: "outline",
+        className: "border-amber-200 bg-gradient-to-r from-amber-50 to-amber-100 text-amber-700",
+      },
+      CANCELADO: {
+        text: "Cancelado",
+        variant: "outline",
+        className: "border-red-200 bg-gradient-to-r from-red-50 to-red-100 text-red-700",
+      },
+      POR_REAGENDAR: {
+        text: "Por Reagendar",
+        variant: "outline",
+        className: "border-orange-200 bg-gradient-to-r from-orange-50 to-orange-100 text-orange-700",
+      },
+      EM_ANDAMENTO: {
+        text: "Em Andamento",
+        variant: "default",
+        className: "bg-gradient-to-r from-blue-500 to-blue-600 text-white",
+      },
+      CONCLUIDO: {
+        text: "Concluído",
+        variant: "default",
+        className: "bg-gradient-to-r from-green-500 to-green-600 text-white",
+      },
+    },
+    financeiro: {
+      PAGO: {
+        text: "Pago",
+        variant: "default",
+        className: "bg-gradient-to-r from-green-500 to-green-600 text-white",
+      },
+      NAO_PAGO: {
+        text: "Não Pago",
+        variant: "outline",
+        className: "border-red-200 bg-gradient-to-r from-red-50 to-red-100 text-red-700",
+      },
+      PENDENTE: {
+        text: "Pendente",
+        variant: "outline",
+        className: "border-amber-200 bg-gradient-to-r from-amber-50 to-amber-100 text-amber-700",
+      },
+      ISENTO: {
+        text: "Isento",
+        variant: "outline",
+        className: "border-blue-200 bg-gradient-to-r from-blue-50 to-blue-100 text-blue-700",
+      },
+    },
+    reembolso: {
+      REEMBOLSADO: {
+        text: "Reembolsado",
+        variant: "default",
+        className: "bg-gradient-to-r from-green-500 to-green-600 text-white",
+      },
+      POR_REEMBOLSAR: {
+        text: "Por Reembolsar",
+        variant: "outline",
+        className: "border-orange-200 bg-gradient-to-r from-orange-50 to-orange-100 text-orange-700",
+      },
+      SEM_REEMBOLSO: {
+        text: "Sem Reembolso",
+        variant: "outline",
+        className: "border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100 text-gray-700",
+      },
+    },
+  };
+
+  // Acessar a configuração de forma segura
+  const typeConfig = configs[type];
+  const config = typeConfig?.[status] || {
+    text: status,
+    variant: "outline" as const,
+    className: "border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100 text-gray-700",
+  };
+
+  return (
+    <Badge variant={config.variant} className={`text-xs px-3 py-1 font-medium ${config.className}`}>
+      {config.text}
+    </Badge>
+  );
+};
+
+const InfoCard = ({ icon, title, value, className = "" }: { icon: React.ReactNode; title: string; value: React.ReactNode; className?: string }) => (
+  <div className={`bg-gradient-to-br from-white to-gray-50 border border-gray-200 rounded-xl p-4 ${className}`}>
+    <div className="flex items-center gap-3 mb-2">
+      <div className="p-2 bg-gradient-to-br from-blue-100 to-blue-200 rounded-lg">{icon}</div>
+      <span className="text-sm font-medium text-gray-600">{title}</span>
+    </div>
+    <div className="text-lg font-semibold text-gray-800">{value}</div>
+  </div>
+);
+
+const PatientInfoItem = ({ label, value, icon }: { label: string; value: string; icon: React.ReactNode }) => (
+  <div className="space-y-2">
+    <div className="flex items-center gap-2">
+      <span className="text-gray-500">{icon}</span>
+      <Label className="text-xs text-gray-500">{label}</Label>
+    </div>
+    <p className="font-medium text-gray-800">{value}</p>
+  </div>
+);
+
+// ======================== COMPONENTE PRINCIPAL ========================
 
 export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: CompletedScheduleDetailsModalProps) {
   const [editingExam, setEditingExam] = useState<number | null>(null);
@@ -199,7 +351,6 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
   const [selectedClinico, setSelectedClinico] = useState<string | null>(null);
   const [localExams, setLocalExams] = useState<any[]>([]);
   const [localConsultas, setLocalConsultas] = useState<any[]>([]);
-  const [calendarDates, setCalendarDates] = useState<Map<number, Date | null>>(new Map());
   const [calendarDate, setCalendarDate] = useState<Date | null>(null);
   const [inputValue, setInputValue] = useState("");
   const [inputError, setInputError] = useState<string | null>(null);
@@ -210,6 +361,8 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
   const [isDateValid, setIsDateValid] = useState<boolean>(true);
   const [dateValidationMessage, setDateValidationMessage] = useState<string | null>(null);
   const [timeError, setTimeError] = useState<string | null>(null);
+  const [calendarDates, setCalendarDates] = useState<Map<number, Date | null>>(new Map());
+  const [activeTab, setActiveTab] = useState<string>("overview");
 
   const queryClient = useQueryClient();
   const userRole = getAllDataInCookies().userRole;
@@ -227,17 +380,16 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
   const { data: labChiefs } = useQuery({
     queryKey: ["lab-chiefs"],
     queryFn: async () => await labChiefRoutes.getAllLabChief(),
-    enabled: isReceptionist,
+    // enabled: isReceptionist,
   });
 
+  console.log(labChiefs);
 
   const { data: clinicos } = useQuery({
     queryKey: ["clinicos"],
     queryFn: async () => (await _axios.get("/general-practitioners")).data,
     enabled: isReceptionist || isClinico,
   });
-
-
 
   const { data: examTypesResponse } = useQuery({
     queryKey: ["exam-types"],
@@ -251,6 +403,7 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
     enabled: isReceptionist || isClinico,
   });
 
+  const consultaType = consultaTypesResponse?.data || [];
 
   // Função para verificar se o botão de salvar deve estar habilitado
   const checkSaveButtonStatus = () => {
@@ -926,30 +1079,15 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
     onError: () => ___showErrorToastNotification({ message: "Erro ao alocar chefe." }),
   });
 
-  const allocateClinicoMutation = useMutation({
-    mutationFn: async (data: { consultaId: number; clinicoId: string }) => (await _axios.patch(`/consultas/${data.consultaId}`, { id_clinico_alocado: data.clinicoId })).data,
-    onSuccess: (response, variables) => {
-      ___showSuccessToastNotification({ message: "Clínico alocado com sucesso!" });
-
-      queryClient.invalidateQueries({ queryKey: ["completed-schedules"] });
-
-      setLocalConsultas((prev) => prev.map((consulta) => (consulta.id === variables.consultaId ? { ...consulta, id_clinico_alocado: variables.clinicoId } : consulta)));
-
-      setSelectedClinico(null);
-    },
-    onError: () => ___showErrorToastNotification({ message: "Erro ao alocar clínico." }),
-  });
-
   const handleForceRefresh = async () => {
     try {
       setIsRefreshing(true);
-
       queryClient.invalidateQueries({ queryKey: ["completed-schedules"] });
       queryClient.invalidateQueries({ queryKey: ["schedules"] });
       queryClient.invalidateQueries({ queryKey: ["exams"] });
       queryClient.invalidateQueries({ queryKey: ["consultas"] });
 
-      await Promise.all([queryClient.refetchQueries({ queryKey: ["completed-schedules"], type: "active" }), queryClient.refetchQueries({ queryKey: ["schedules"], type: "active" })]);
+      await Promise.all([queryClient.invalidateQueries({ queryKey: ["completed-schedules"] }), queryClient.invalidateQueries({ queryKey: ["schedules"] }), queryClient.invalidateQueries({ queryKey: ["exams"] }), queryClient.invalidateQueries({ queryKey: ["consultas"] })]);
 
       ___showSuccessToastNotification({
         message: "Dados atualizados com sucesso!",
@@ -965,12 +1103,11 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
   };
 
   if (!schedule) return null;
-
   const hasPendingPayment = schedule.Exame?.some((exam) => exam.status_pagamento === "PENDENTE") || schedule.Consulta?.some((consulta: any) => consulta.status_pagamento === "PENDENTE");
 
   const calculateOverallScheduleStatus = () => {
-    const exams = schedule.Exame || [];
-    const consultas = schedule.Consulta || [];
+    const exams = schedule?.Exame || [];
+    const consultas = schedule?.Consulta || [];
     const allItems = [...exams, ...consultas];
 
     if (allItems.some((item) => item.status === "PENDENTE")) {
@@ -993,13 +1130,12 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
   };
 
   const overallStatus = calculateOverallScheduleStatus();
-  const activeExams = localExams.length > 0 ? localExams : schedule.Exame?.filter((exam) => exam.status !== "CONCLUIDO") || [];
-  const activeConsultas = localConsultas.length > 0 ? localConsultas : schedule.Consulta?.filter((consulta: any) => consulta.status !== "CONCLUIDO") || [];
+  const activeExams = localExams.length > 0 ? localExams : schedule?.Exame?.filter((exam) => exam.status !== "CONCLUIDO") || [];
+  const activeConsultas = localConsultas.length > 0 ? localConsultas : schedule?.Consulta?.filter((consulta: any) => consulta.status !== "CONCLUIDO") || [];
 
   if (overallStatus === "CONCLUIDO") return null;
-
   const getPatientAge = () => {
-    if (!schedule.Paciente?.data_nascimento) return "N/A";
+    if (!schedule?.Paciente?.data_nascimento) return "N/A";
     try {
       const birthDate = new Date(schedule.Paciente.data_nascimento);
       if (!isValid(birthDate)) return "N/A";
@@ -1016,7 +1152,7 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
   };
 
   const getPatientInitials = () =>
-    (schedule.Paciente?.nome_completo || "")
+    (schedule?.Paciente?.nome_completo || "")
       .split(" ")
       .map((n) => n[0])
       .join("")
@@ -1050,7 +1186,6 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
     if (!id || !labChiefs) return "Não alocado";
     return labChiefs.find((c) => c.id === id)?.nome || "Chefe não encontrado";
   };
-
   const getClinicoName = (id: string | null) => {
     if (!id || !clinicos) return "Não alocado";
     return clinicos.find((c: any) => c.id === id)?.nome || "Clínico não encontrado";
@@ -1089,7 +1224,7 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
   };
 
   const totalValue = [...activeExams, ...activeConsultas]?.reduce((acc, item) => acc + (item.Tipo_Exame?.preco || item.Tipo_Consulta?.preco || 0), 0) || 0;
-
+  
   const handleEditExam = (exam: any) => {
     setEditingExam(exam.id);
     setEditingConsulta(null);
@@ -1170,222 +1305,23 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
     }
   };
 
-  const handleSaveExam = () => {
-    if (!editedExam) return;
 
-    // Verifica se o botão está desabilitado e mostra o motivo
-    if (isSaveDisabled && saveDisabledReason) {
-      ___showErrorToastNotification({
-        message: saveDisabledReason,
-      });
-      return;
-    }
 
-    // Valida se a data não é anterior a hoje
-    const selectedDate = parseFromYYMMDD(editedExam.data_agendamento);
-    if (selectedDate && isDateBeforeToday(selectedDate)) {
-      ___showErrorToastNotification({
-        message: "Não é possível agendar para uma data anterior à data atual.",
-      });
-      return;
-    }
 
-    // Valida o horário se a data for hoje
-    if (selectedDate && isToday(selectedDate)) {
-      if (isTimeBeforeNow(selectedDate, editedExam.hora_agendamento)) {
-        ___showErrorToastNotification({
-          message: `Para hoje, não é possível agendar para um horário anterior ao atual (${getCurrentTimeString()})`,
-        });
-        return;
-      }
-    }
 
-    updateExamMutation.mutate({
-      examId: editedExam.id,
-      updates: {
-        data_agendamento: editedExam.data_agendamento,
-        hora_agendamento: editedExam.hora_agendamento,
-        status: editedExam.status,
-        status_financeiro: editedExam.status_financeiro,
-        status_reembolso: editedExam.status_reembolso,
-        id_tipo_exame: editedExam.id_tipo_exame,
-        id_tecnico_alocado: editedExam.id_tecnico_alocado,
-      },
-    });
-  };
+  // ======================== RENDERIZAÇÃO ========================
 
-  const handleSaveConsulta = () => {
-    if (!editedConsulta) return;
+  if (!schedule) return null;
 
-    // Verifica se o botão está desabilitado e mostra o motivo
-    if (isSaveDisabled && saveDisabledReason) {
-      ___showErrorToastNotification({
-        message: saveDisabledReason,
-      });
-      return;
-    }
+  // ======================== FUNÇÕES DE VALIDAÇÃO ========================
 
-    // Valida se a data não é anterior a hoje
-    const selectedDate = parseFromYYMMDD(editedConsulta.data_agendamento);
-    if (selectedDate && isDateBeforeToday(selectedDate)) {
-      ___showErrorToastNotification({
-        message: "Não é possível agendar para uma data anterior à data atual.",
-      });
-      return;
-    }
-
-    // Valida o horário se a data for hoje
-    if (selectedDate && isToday(selectedDate)) {
-      if (isTimeBeforeNow(selectedDate, editedConsulta.hora_agendamento)) {
-        ___showErrorToastNotification({
-          message: `Para hoje, não é possível agendar para um horário anterior ao atual (${getCurrentTimeString()})`,
-        });
-        return;
-      }
-    }
-
-    updateConsultaMutation.mutate({
-      consultaId: editedConsulta.id,
-      updates: {
-        data_agendamento: editedConsulta.data_agendamento,
-        hora_agendamento: editedConsulta.hora_agendamento,
-        status: editedConsulta.status,
-        status_financeiro: editedConsulta.status_financeiro,
-        status_reembolso: editedConsulta.status_reembolso,
-        id_tipo_consulta: editedConsulta.id_tipo_consulta,
-        id_clinico_alocado: editedConsulta.id_clinico_alocado,
-      },
-    });
-  };
-
-  const handleCancelEdit = () => {
-    setEditingExam(null);
-    setEditingConsulta(null);
-    setEditedExam(null);
-    setEditedConsulta(null);
-    setCalendarDate(null);
-    setInputValue("");
-    setInputError(null);
-    setIsSaveDisabled(true);
-    setSaveDisabledReason(null);
-    setIsDateValid(true);
-    setDateValidationMessage(null);
-    setTimeError(null);
-  };
-
-  const handleExamFieldChange = (field: keyof EditableExam, value: any) => {
-    if (!editedExam) return;
-
-    if (field === "id_tipo_exame" && Array.isArray(examTypes)) {
-      const selectedExamType = examTypes.find((et: ExamType) => et.id === parseInt(value));
-      if (selectedExamType) {
-        setEditedExam({
-          ...editedExam,
-          [field]: value,
-        });
-
-        setLocalExams((prev) =>
-          prev.map((exam) => {
-            if (exam.id === editedExam.id) {
-              return {
-                ...exam,
-                Tipo_Exame: selectedExamType,
-                id_tipo_exame: selectedExamType.id,
-              };
-            }
-            return exam;
-          })
-        );
-
-        return;
-      }
-    }
-
-    // Se estiver alterando o horário e a data for hoje, valida
-    if (field === "hora_agendamento" && calendarDate && isToday(calendarDate)) {
-      if (isTimeBeforeNow(calendarDate, value)) {
-        setTimeError(`Horário inválido para hoje. Hora atual: ${getCurrentTimeString()}`);
-      } else {
-        setTimeError(null);
-      }
-    }
-
-    setEditedExam({ ...editedExam, [field]: value });
-  };
-
-  const handleConsultaFieldChange = (field: keyof EditableConsulta, value: any) => {
-    if (!editedConsulta) return;
-
-    if (field === "id_tipo_consulta" && Array.isArray(consultaTypes)) {
-      const selectedConsultaType = consultaTypes.find((ct: ConsultaType) => ct.id === parseInt(value));
-      if (selectedConsultaType) {
-        setEditedConsulta({
-          ...editedConsulta,
-          [field]: value,
-        });
-
-        setLocalConsultas((prev) =>
-          prev.map((consulta) => {
-            if (consulta.id === editedConsulta.id) {
-              return {
-                ...consulta,
-                Tipo_Consulta: selectedConsultaType,
-                id_tipo_consulta: selectedConsultaType.id,
-              };
-            }
-            return consulta;
-          })
-        );
-
-        return;
-      }
-    }
-
-    // Se estiver alterando o horário e a data for hoje, valida
-    if (field === "hora_agendamento" && calendarDate && isToday(calendarDate)) {
-      if (isTimeBeforeNow(calendarDate, value)) {
-        setTimeError(`Horário inválido para hoje. Hora atual: ${getCurrentTimeString()}`);
-      } else {
-        setTimeError(null);
-      }
-    }
-
-    setEditedConsulta({ ...editedConsulta, [field]: value });
-  };
-
-  const handleTimeChange = (time: string) => {
-    if (editedExam) {
-      // Valida o horário se a data for hoje
-      if (calendarDate && isToday(calendarDate)) {
-        if (isTimeBeforeNow(calendarDate, time)) {
-          setTimeError(`Horário inválido para hoje. Hora atual: ${getCurrentTimeString()}`);
-        } else {
-          setTimeError(null);
-        }
-      }
-      setEditedExam({ ...editedExam, hora_agendamento: time });
-    }
-
-    if (editedConsulta) {
-      // Valida o horário se a data for hoje
-      if (calendarDate && isToday(calendarDate)) {
-        if (isTimeBeforeNow(calendarDate, time)) {
-          setTimeError(`Horário inválido para hoje. Hora atual: ${getCurrentTimeString()}`);
-        } else {
-          setTimeError(null);
-        }
-      }
-      setEditedConsulta({ ...editedConsulta, hora_agendamento: time });
-    }
-  };
-
-  const canInitializeExam = (exam: any) => {
+  const canInitializeExam = (exam: any, isLabChief: boolean, isLabTechnician: boolean): boolean => {
     if (exam.status_financeiro !== "PAGO" && exam.status_financeiro !== "ISENTO") return false;
     if (!isLabChief && !isLabTechnician) return false;
     return true;
   };
 
-  const canInitializeConsulta = (consulta: any) => {
+  const canInitializeConsulta = (consulta: any, isClinico: boolean): boolean => {
     if (consulta.status_financeiro !== "PAGO" && consulta.status_financeiro !== "ISENTO") return false;
     if (!isClinico) return false;
     return true;
@@ -1393,890 +1329,598 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden p-0 z-[50]">
-        <DialogHeader className="sticky top-0 bg-white z-10 px-6 py-4 border-b">
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden p-0 z-[100]">
+        {/* HEADER MODERNIZADO */}
+        <DialogHeader className="sticky top-0 z-10 px-6 py-4 border-b bg-gradient-to-r from-blue-50 to-white">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-100">
-                <User className="w-4 h-4 text-blue-600" />
+              <div className="relative">
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
+                  <User className="w-6 h-6 text-white" />
+                </div>
+                <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-gradient-to-br from-green-400 to-green-500 rounded-full border-2 border-white flex items-center justify-center">
+                  <Sparkles className="w-3 h-3 text-white" />
+                </div>
               </div>
               <div>
-                <DialogTitle className="text-lg font-semibold">Agendamento #{schedule.id}</DialogTitle>
+                <DialogTitle className="text-xl font-bold text-gray-800">
+                  Agendamento <span className="text-blue-600">#{schedule.id}</span>
+                </DialogTitle>
                 <div className="flex items-center gap-2 mt-1">
-                  <span className="text-sm text-gray-500">Paciente: {schedule.Paciente?.nome_completo}</span>
+                  <span className="text-sm font-medium text-gray-700">{schedule.Paciente?.nome_completo}</span>
                   <span className="text-gray-300">•</span>
-                  <span className="text-sm text-gray-500">{getPatientAge()}</span>
+                  <span className="text-sm text-gray-600 bg-gray-100 px-2 py-0.5 rounded-full">{getPatientAge()}</span>
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              {getItemStatusBadge(overallStatus)}
-              <Button variant="ghost" size="sm" onClick={handleForceRefresh} className="h-8 px-2" title="Recarregar dados" disabled={isRefreshing}>
-                {isRefreshing ? (
-                  <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                  </svg>
-                ) : (
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                  </svg>
-                )}
-              </Button>
-              <DialogClose className="rounded-full p-1.5 hover:bg-gray-100 transition-colors">
-                <X className="w-4 h-4" />
+
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <StatusBadge status={overallStatus} type="item" />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleForceRefresh}
+                  // disabled={isRefreshing}
+                  className="h-9 w-9 hover:bg-white/50 border border-gray-200 rounded-lg"
+                  title="Recarregar dados"
+                >
+                  <RefreshCw className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`} />
+                </Button>
+              </div>
+              <DialogClose className="p-2 hover:bg-white/50 border border-gray-200 rounded-lg transition-colors">
+                <X className="w-5 h-5 text-gray-600" />
               </DialogClose>
             </div>
           </div>
         </DialogHeader>
 
-        <ScrollArea className="h-[calc(90vh-120px)]">
-          <div className="px-6 py-4 space-y-4">
-            <Card className="border shadow-sm">
-              <CardContent className="p-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <Shield className="w-4 h-4" />
-                      Status do Bloco
-                    </div>
-                    <div className="font-medium">{getItemStatusBadge(overallStatus)}</div>
-                  </div>
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <CreditCard className="w-4 h-4" />
-                      Status do Pagamento
-                    </div>
-                    <div className={`font-medium ${hasPendingPayment ? "text-amber-600" : "text-green-600"}`}>{hasPendingPayment ? "Pendente" : "Pago"}</div>
-                  </div>
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <CalendarDays className="w-4 h-4" />
-                      Data de Criação
-                    </div>
-                    <div className="font-medium text-sm">
-                      {(() => {
-                        try {
-                          const date = new Date(schedule.criado_aos);
-                          if (isValid(date)) {
-                            return format(date, "dd/MM/yyyy HH:mm", { locale: ptBR });
-                          }
-                          return "Data inválida";
-                        } catch {
-                          return "Erro na data";
-                        }
-                      })()}
-                    </div>
-                  </div>
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <DollarSign className="w-4 h-4" />
-                      Valor Total
-                    </div>
-                    <div className="font-medium text-green-600 text-sm">{new Intl.NumberFormat("pt-AO", { style: "currency", currency: "AOA" }).format(totalValue)}</div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+        {/* CONTEÚDO PRINCIPAL */}
+        <ScrollArea className="h-[calc(90vh-73px)]">
+          <div className="p-6 space-y-6">
+            {/* CARDS DE RESUMO */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <InfoCard icon={<Activity className="w-5 h-5 text-blue-600" />} title="Status do Bloco" value={<StatusBadge status={overallStatus} type="item" />} />
+              <InfoCard icon={<CreditCard className="w-5 h-5 text-green-600" />} title="Status Pagamento" value={<StatusBadge status={schedule.status_pagamento} type="financeiro" />} />
+              <InfoCard icon={<CalendarDays className="w-5 h-5 text-purple-600" />} title="Criado em" value={format(new Date(schedule.criado_aos), "dd/MM/yyyy HH:mm", { locale: ptBR })} />
+              <InfoCard icon={<DollarSign className="w-5 h-5 text-emerald-600" />} title="Valor Total" value={<span className="text-emerald-700 font-bold">{new Intl.NumberFormat("pt-AO", { style: "currency", currency: "AOA" }).format(totalValue)}</span>} />
+            </div>
 
-            <Card className="border shadow-sm">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <User className="w-4 h-4" />
-                  Informações do Paciente
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pb-4">
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <div className="flex-shrink-0 flex justify-center sm:justify-start">
-                    <Avatar className="w-16 h-16">
-                      <AvatarImage src="" alt={schedule.Paciente?.nome_completo} />
-                      <AvatarFallback className="bg-blue-100 text-blue-600 text-lg">{getPatientInitials()}</AvatarFallback>
-                    </Avatar>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 flex-1">
-                    <div>
-                      <Label className="text-xs text-gray-500">Nome Completo</Label>
-                      <p className="font-medium mt-1">{schedule.Paciente?.nome_completo}</p>
-                    </div>
-                    <div>
-                      <Label className="text-xs text-gray-500">Idade</Label>
-                      <p className="font-medium mt-1">{getPatientAge()}</p>
-                    </div>
-                    <div>
-                      <Label className="text-xs text-gray-500">BI/Identificação</Label>
-                      <p className="font-medium mt-1 text-sm">{schedule.Paciente?.numero_identificacao || "Não informado"}</p>
-                    </div>
-                    <div>
-                      <Label className="text-xs text-gray-500">Telefone</Label>
-                      <div className="flex items-center gap-2 mt-1">
-                        <Phone className="w-3 h-3 text-gray-500" />
-                        <span className="font-medium">{schedule.Paciente?.contacto_telefonico}</span>
-                      </div>
-                    </div>
-                    {schedule.Paciente?.email && (
-                      <div className="sm:col-span-2">
-                        <Label className="text-xs text-gray-500">Email</Label>
-                        <div className="flex items-center gap-2 mt-1">
-                          <Mail className="w-3 h-3 text-gray-500" />
-                          <span className="font-medium text-sm truncate">{schedule.Paciente.email}</span>
-                        </div>
-                      </div>
-                    )}
-                    <div>
-                      <Label className="text-xs text-gray-500">Sexo</Label>
-                      <p className="font-medium mt-1">{schedule.Paciente?.sexo?.nome || "Não informado"}</p>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {isReceptionist && (
-              <>
-                <Card className="border shadow-sm">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <Users className="w-4 h-4" />
-                      Chefe de Laboratório
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="pb-4">
-                    <div className="space-y-3">
-                      <div>
-                        <Label className="text-sm">Chefe Atual</Label>
-                        <p className="font-medium mt-1">{getChiefName(schedule.id_chefe_alocado || null)}</p>
-                      </div>
-                      <div className="flex flex-col sm:flex-row gap-2">
-                        <Select value={selectedChief || ""} onValueChange={setSelectedChief}>
-                          <SelectTrigger className="flex-1">
-                            <SelectValue placeholder="Selecionar novo chefe" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {Array.isArray(labChiefs) &&
-                              labChiefs.map((chief) => (
-                                <SelectItem key={chief.id} value={chief.id}>
-                                  {chief.nome} - {chief.tipo}
-                                </SelectItem>
-                              ))}
-                          </SelectContent>
-                        </Select>
-                        <Button
-                          onClick={() =>
-                            selectedChief &&
-                            allocateChiefMutation.mutate({
-                              scheduleId: schedule.id,
-                              chiefId: selectedChief,
-                            })
-                          }
-                          disabled={!selectedChief || allocateChiefMutation.isPending}
-                          className="sm:w-auto"
-                        >
-                          {allocateChiefMutation.isPending ? "Alocando..." : "Alocar"}
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="border shadow-sm">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <Users className="w-4 h-4" />
-                      Clínico Geral
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="pb-4">
-                    <div className="space-y-3">
-                      <div>
-                        <Label className="text-sm">Clínico Atual</Label>
-                        <p className="font-medium mt-1">{getClinicoName(schedule.id_clinico_alocado || null)}</p>
-                      </div>
-                      <div className="flex flex-col sm:flex-row gap-2">
-                        <Select value={selectedClinico || ""} onValueChange={setSelectedClinico}>
-                          <SelectTrigger className="flex-1">
-                            <SelectValue placeholder="Selecionar novo clínico" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {Array.isArray(clinicos) &&
-                              clinicos.map((clinico) => (
-                                <SelectItem key={clinico.id} value={clinico.id}>
-                                  {clinico.nome} - {clinico.tipo}
-                                </SelectItem>
-                              ))}
-                          </SelectContent>
-                        </Select>
-                        <Button
-                          onClick={() => {
-                            // Implementar alocação de clínico
-                            if (selectedClinico) {
-                              ___showSuccessToastNotification({ message: "Funcionalidade em desenvolvimento" });
-                            }
-                          }}
-                          disabled={!selectedClinico}
-                          className="sm:w-auto"
-                        >
-                          Alocar
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </>
-            )}
-
-            {/* Exames */}
-            <Card className="border shadow-sm">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Stethoscope className="w-4 h-4" />
+            {/* TABS PARA NAVEGAÇÃO */}
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="grid grid-cols-3 w-full mb-6 bg-gray-100 p-1 rounded-xl">
+                <TabsTrigger value="overview" className="data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-blue-600 rounded-lg">
+                  <User className="w-4 h-4 mr-2" />
+                  Visão Geral
+                </TabsTrigger>
+                <TabsTrigger value="exams" className="data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-blue-600 rounded-lg">
+                  <Stethoscope className="w-4 h-4 mr-2" />
                   Exames ({activeExams.length})
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {activeExams.map((exam) => {
-                  const currentPrice = exam.Tipo_Exame?.preco || 0;
-                  const examCalendarDate = calendarDates.get(exam.id) || null;
-
-                  return (
-                    <div key={exam.id} className="border rounded-lg p-4 space-y-3">
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                        <div>
-                          <h4 className="font-semibold">{exam.Tipo_Exame?.nome || "Exame não especificado"}</h4>
-                          <div className="flex items-center gap-2 mt-1 text-gray-600 text-sm">
-                            <span>Status:</span>
-                            {getItemStatusBadge(exam.status)}
-                            <span>Financeiro:</span>
-                            {getFinanceiroStatusBadge(exam.status_financeiro)}
-                            <span>Reembolso:</span>
-                            {getReembolsoStatusBadge(exam.status_reembolso)}
-                          </div>
-                        </div>
-                        <div className="flex gap-2">
-                          {editingExam === exam.id ? (
-                            <div className="flex gap-2">
-                              <Button
-                                variant="default"
-                                size="sm"
-                                onClick={handleSaveExam}
-                                disabled={updateExamMutation.isPending || isSaveDisabled}
-                                className={isSaveDisabled ? "opacity-50 cursor-not-allowed" : ""}
-                                title={isSaveDisabled && saveDisabledReason ? saveDisabledReason : "Salvar alterações"}
-                              >
-                                <Save className="w-3 h-3 mr-1" />
-                                {updateExamMutation.isPending ? "Salvando..." : "Salvar"}
-                              </Button>
-                              <Button variant="outline" size="sm" onClick={handleCancelEdit} disabled={updateExamMutation.isPending}>
-                                <X className="w-3 h-3 mr-1" />
-                                Cancelar
-                              </Button>
-                            </div>
-                          ) : (
-                            <Button variant="outline" size="sm" onClick={() => handleEditExam(exam)}>
-                              <Edit3 className="w-3 h-3 mr-1" />
-                              Editar
-                            </Button>
-                          )}
-
-                          {(isLabChief || isLabTechnician) && canInitializeExam(exam) && (
-                            <Button
-                              variant="default"
-                              size="sm"
-                              className="bg-green-600 hover:bg-green-700"
-                              onClick={() => {
-                                console.log("Inicializar exame:", exam.id);
-                              }}
-                            >
-                              <Clock className="w-3 h-3 mr-1" />
-                              Iniciar
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-
-                      {editingExam === exam.id && editedExam ? (
-                        <div className="space-y-4 pt-3 border-t">
-                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                            <div>
-                              <Label className="text-sm">Tipo de Exame</Label>
-                              <Select value={editedExam.id_tipo_exame?.toString() || ""} onValueChange={(value) => handleExamFieldChange("id_tipo_exame", parseInt(value))}>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Selecionar tipo" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {Array.isArray(examTypes) &&
-                                    examTypes.map((examType: ExamType) => (
-                                      <SelectItem key={examType.id} value={examType.id.toString()}>
-                                        {examType.nome} -{" "}
-                                        {new Intl.NumberFormat("pt-AO", {
-                                          style: "currency",
-                                          currency: "AOA",
-                                        }).format(examType.preco)}
-                                      </SelectItem>
-                                    ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div>
-                              <Label className="text-sm">Status</Label>
-                              <Select value={editedExam.status} onValueChange={(value) => handleExamFieldChange("status", value)}>
-                                <SelectTrigger>
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="PENDENTE">Pendente</SelectItem>
-                                  <SelectItem value="POR_REAGENDAR">Por Reagendar</SelectItem>
-                                  <SelectItem value="EM_ANDAMENTO">Em Andamento</SelectItem>
-                                  <SelectItem value="CANCELADO">Cancelado</SelectItem>
-                                  {!isReceptionist && <SelectItem value="CONCLUIDO">Concluído</SelectItem>}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div>
-                              <Label className="text-sm">Estado Financeiro</Label>
-                              <Select value={editedExam.status_financeiro} onValueChange={(value) => handleExamFieldChange("status_financeiro", value)}>
-                                <SelectTrigger>
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="PAGO">Pago</SelectItem>
-                                  <SelectItem value="NAO_PAGO">Não Pago</SelectItem>
-                                  <SelectItem value="ISENTO">Isento</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div>
-                              <Label className="text-sm">Estado de Reembolso</Label>
-                              <Select value={editedExam.status_reembolso} onValueChange={(value) => handleExamFieldChange("status_reembolso", value)}>
-                                <SelectTrigger>
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="SEM_REEMBOLSO">Sem Reembolso</SelectItem>
-                                  <SelectItem value="POR_REEMBOLSAR">Por Reembolsar</SelectItem>
-                                  <SelectItem value="REEMBOLSADO">Reembolsado</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          </div>
-
-                          <div>
-                            <Label className="text-sm mb-2 block font-medium text-gray-700">Selecione a Data</Label>
-                            <div className="mt-2 flex gap-2">
-                              <div className="flex-1">
-                                <div className="relative">
-                                  <Input
-                                    type="text"
-                                    value={inputValue}
-                                    onChange={handleInputChange}
-                                    onBlur={handleInputBlur}
-                                    placeholder="dd/mm/aa"
-                                    className={`w-full h-10 px-3 bg-white border rounded-md shadow-sm focus:ring-1 ${
-                                      inputError
-                                        ? "border-red-300 hover:border-red-400 focus:border-red-500 focus:ring-red-500"
-                                        : dateValidationMessage
-                                        ? "border-amber-300 hover:border-amber-400 focus:border-amber-500 focus:ring-amber-500"
-                                        : "border-gray-300 hover:border-gray-400 focus:border-blue-500 focus:ring-blue-500"
-                                    }`}
-                                  />
-                                  <CalendarDays className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                                </div>
-                                {inputError && <p className="text-xs text-red-500 mt-1">{inputError}</p>}
-                                {dateValidationMessage && <p className="text-xs text-amber-600 mt-1">⚠️ {dateValidationMessage}</p>}
-                                {!inputError && !dateValidationMessage && <p className="text-xs text-gray-500 mt-1">Formato: dd/mm/aa (ex: 25/12/24)</p>}
-                              </div>
-
-                              <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
-                                <PopoverTrigger asChild>
-                                  <Button variant="outline" className="h-10 px-3 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 hover:border-gray-400">
-                                    <ChevronDown className="h-4 w-4" />
-                                  </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0 z-[100] border border-gray-300 shadow-lg" align="start" sideOffset={4}>
-                                  <div className="bg-white rounded-lg">
-                                    <Calendar
-                                      mode="single"
-                                      selected={calendarDate || undefined}
-                                      onSelect={handleCalendarSelect}
-                                      initialFocus
-                                      className="p-3"
-                                      disabled={(date) => isDateBeforeToday(date)}
-                                      classNames={{
-                                        month: "flex flex-col m-auto text-center space-y-4",
-                                        months: "flex flex-col m-auto justify-center items-center space-y-4",
-                                        caption_label: "text-sm font-semibold text-gray-800",
-                                        caption: "flex justify-center pt-1 relative items-center",
-                                        nav: "space-x-1 flex items-center",
-                                        nav_button: "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 text-gray-600 hover:text-gray-900",
-                                        nav_button_previous: "absolute left-1",
-                                        nav_button_next: "absolute right-1",
-                                        table: "w-full border-collapse space-y-1",
-                                        head_row: "flex",
-                                        head_cell: "text-gray-500 rounded-md w-9 font-normal text-[0.8rem]",
-                                        row: "flex w-full mt-2",
-                                        cell: "h-9 w-9 text-center text-sm p-0 relative",
-                                        day: "h-9 w-9 p-0 font-normal rounded-md transition-colors hover:bg-blue-100 hover:text-blue-700 data-[disabled]:text-gray-300 data-[disabled]:bg-gray-50 data-[disabled]:cursor-not-allowed data-[outside]:text-gray-300 data-[outside]:opacity-30",
-                                        day_selected: "bg-blue-600 text-white hover:bg-blue-700 hover:text-white",
-                                        day_today: "bg-blue-100 text-blue-700 border border-blue-300",
-                                      }}
-                                    />
-                                    <div className="border-t border-gray-200 p-3 bg-gray-50 rounded-b-lg">
-                                      <div className="flex justify-between items-center">
-                                        <p className="text-xs text-gray-500">
-                                          Data atual: <span className="font-medium">{format(new Date(), "dd/MM/yyyy")}</span>
-                                        </p>
-                                        <Button variant="ghost" size="sm" className="text-xs bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700 px-2 py-1" onClick={handleTodayClick}>
-                                          <CalendarDays className="h-3 w-3 mr-1" />
-                                          Hoje
-                                        </Button>
-                                      </div>
-                                    </div>
-                                  </div>
-                                </PopoverContent>
-                              </Popover>
-                            </div>
-
-                            {calendarDate && !inputError && (
-                              <div className="mt-2 text-sm text-gray-700">
-                                <span className="font-medium">Data selecionada:</span> {format(calendarDate, "dd/MM/yyyy")}
-                                {isToday(calendarDate) && <span className="ml-2 text-blue-600">(Hoje)</span>}
-                                {isDateBeforeToday(calendarDate) && <span className="ml-2 text-amber-600 font-medium">⚠️ Data anterior à atual</span>}
-                              </div>
-                            )}
-                          </div>
-
-                          <div>
-                            <Label className="text-sm">Selecione o Horário</Label>
-                            <div className="mt-2">
-                              <TimePicker value={editedExam.hora_agendamento} onChange={handleTimeChange} isToday={calendarDate ? isToday(calendarDate) : false} />
-                            </div>
-                            {timeError && <p className="text-xs text-red-500 mt-1">{timeError}</p>}
-                            {calendarDate && isToday(calendarDate) && !timeError && <p className="text-xs text-gray-500 mt-1">Horário válido para hoje. Hora atual: {getCurrentTimeString()}</p>}
-                          </div>
-
-                          {/* Mensagem de aviso sobre o botão de salvar */}
-                          {isSaveDisabled && saveDisabledReason && (
-                            <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-md">
-                              <div className="flex items-start gap-2">
-                                <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
-                                <div>
-                                  <p className="text-sm font-medium text-amber-800">Atenção</p>
-                                  <p className="text-xs text-amber-700 mt-1">
-                                    O botão de salvar está bloqueado porque: <span className="font-semibold">{saveDisabledReason}</span>
-                                  </p>
-                                  <p className="text-xs text-amber-600 mt-1">Corrija os campos acima para poder salvar as alterações.</p>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-sm pt-3 border-t">
-                          <div>
-                            <Label className="text-xs text-gray-500">Data e Hora</Label>
-                            <div className="flex items-center gap-2 mt-1">
-                              <CalendarDays className="w-3 h-3 text-gray-500" />
-                              <span className="font-medium">
-                                {(() => {
-                                  try {
-                                    // Parse a string para Date
-                                    const date = parseFromYYMMDD(exam.data_agendamento);
-                                    if (date && isValid(date)) {
-                                      return `${format(date, "dd/MM/yyyy")} às ${exam.hora_agendamento}`;
-                                    }
-                                    return `${exam.data_agendamento} às ${exam.hora_agendamento}`;
-                                  } catch (error) {
-                                    return `${exam.data_agendamento} às ${exam.hora_agendamento}`;
-                                  }
-                                })()}
-                              </span>
-                            </div>
-                          </div>
-                          <div>
-                            <Label className="text-xs text-gray-500">Preço</Label>
-                            <div className="flex items-center gap-2 mt-1">
-                              <DollarSign className="w-3 h-3 text-gray-500" />
-                              <span className="font-medium text-green-600">
-                                {new Intl.NumberFormat("pt-AO", {
-                                  style: "currency",
-                                  currency: "AOA",
-                                }).format(currentPrice)}
-                              </span>
-                            </div>
-                          </div>
-                          {(isLabChief || isLabTechnician) && (
-                            <div>
-                              <Label className="text-xs text-gray-500">Técnico Alocado</Label>
-                              <p className="font-medium mt-1">{getTechnicianName(exam.id_tecnico_alocado)}</p>
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      {isLabChief && editingExam !== exam.id && (
-                        <div className="pt-3 border-t">
-                          <Label className="text-sm">Alocar Técnico</Label>
-                          <div className="flex flex-col sm:flex-row gap-2 mt-2">
-                            <Select value={selectedTechnician || ""} onValueChange={setSelectedTechnician}>
-                              <SelectTrigger className="flex-1">
-                                <SelectValue placeholder="Selecionar técnico" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {Array.isArray(technicians) &&
-                                  technicians.map((t) => (
-                                    <SelectItem key={t.id} value={t.id}>
-                                      {t.nome} - {t.tipo}
-                                    </SelectItem>
-                                  ))}
-                              </SelectContent>
-                            </Select>
-                            <Button
-                              onClick={() =>
-                                selectedTechnician &&
-                                allocateTechnicianMutation.mutate({
-                                  examId: exam.id,
-                                  technicianId: selectedTechnician,
-                                })
-                              }
-                              disabled={!selectedTechnician || allocateTechnicianMutation.isPending}
-                              className="sm:w-auto"
-                            >
-                              {allocateTechnicianMutation.isPending ? "Alocando..." : "Alocar"}
-                            </Button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </CardContent>
-            </Card>
-
-            {/* Consultas */}
-            <Card className="border shadow-sm">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <ClipboardList className="w-4 h-4" />
+                </TabsTrigger>
+                <TabsTrigger value="consultations" className="data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-blue-600 rounded-lg">
+                  <ClipboardList className="w-4 h-4 mr-2" />
                   Consultas ({activeConsultas.length})
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {activeConsultas.map((consulta) => {
-                  const currentPrice = consulta.Tipo_Consulta?.preco || 0;
+                </TabsTrigger>
+              </TabsList>
 
-                  return (
-                    <div key={consulta.id} className="border rounded-lg p-4 space-y-3">
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                        <div>
-                          <h4 className="font-semibold">{consulta.Tipo_Consulta?.nome || "Consulta não especificada"}</h4>
-                          <div className="flex items-center gap-2 mt-1 text-gray-600 text-sm">
-                            <span>Status:</span>
-                            {getItemStatusBadge(consulta.status)}
-                            <span>Financeiro:</span>
-                            {getFinanceiroStatusBadge(consulta.status_financeiro)}
-                            <span>Reembolso:</span>
-                            {getReembolsoStatusBadge(consulta.status_reembolso)}
-                          </div>
+              {/* ABA DE VISÃO GERAL */}
+              <TabsContent value="overview" className="space-y-6">
+                {/* INFORMAÇÕES DO PACIENTE */}
+                <Card className="border-0 shadow-lg bg-gradient-to-br from-white to-gray-50 overflow-hidden">
+                  <CardHeader className="pb-3 border-b">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                        <div className="p-2 bg-gradient-to-br from-blue-100 to-blue-200 rounded-lg">
+                          <User className="w-5 h-5 text-blue-600" />
                         </div>
-                        <div className="flex gap-2">
-                          {editingConsulta === consulta.id ? (
-                            <div className="flex gap-2">
-                              <Button
-                                variant="default"
-                                size="sm"
-                                onClick={handleSaveConsulta}
-                                disabled={updateConsultaMutation.isPending || isSaveDisabled}
-                                className={isSaveDisabled ? "opacity-50 cursor-not-allowed" : ""}
-                                title={isSaveDisabled && saveDisabledReason ? saveDisabledReason : "Salvar alterações"}
-                              >
-                                <Save className="w-3 h-3 mr-1" />
-                                {updateConsultaMutation.isPending ? "Salvando..." : "Salvar"}
-                              </Button>
-                              <Button variant="outline" size="sm" onClick={handleCancelEdit} disabled={updateConsultaMutation.isPending}>
-                                <X className="w-3 h-3 mr-1" />
-                                Cancelar
-                              </Button>
-                            </div>
-                          ) : (
-                            <Button variant="outline" size="sm" onClick={() => handleEditConsulta(consulta)}>
-                              <Edit3 className="w-3 h-3 mr-1" />
-                              Editar
-                            </Button>
-                          )}
-
-                          {isClinico && canInitializeConsulta(consulta) && (
-                            <Button
-                              variant="default"
-                              size="sm"
-                              className="bg-green-600 hover:bg-green-700"
-                              onClick={() => {
-                                console.log("Inicializar consulta:", consulta.id);
-                              }}
-                            >
-                              <Clock className="w-3 h-3 mr-1" />
-                              Iniciar
-                            </Button>
-                          )}
+                        Informações do Paciente
+                      </CardTitle>
+                      <Badge variant="outline" className="border-blue-200 text-blue-600">
+                        ID: {schedule.Paciente?.numero_identificacao || "N/A"}
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="pt-6">
+                    <div className="flex flex-col md:flex-row gap-6">
+                      <div className="flex-shrink-0 flex flex-col items-center">
+                        <Avatar className="w-24 h-24 border-4 border-white shadow-lg">
+                          <AvatarImage src="" alt={schedule.Paciente?.nome_completo} />
+                          <AvatarFallback className="bg-gradient-to-br from-blue-500 to-blue-600 text-white text-2xl font-bold">{getPatientInitials()}</AvatarFallback>
+                        </Avatar>
+                        <div className="mt-4 text-center">
+                          <div className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-50 to-blue-100 px-4 py-2 rounded-full">
+                            <Heart className="w-4 h-4 text-red-500" />
+                            <span className="text-sm font-medium text-gray-700">{schedule.Paciente?.sexo?.nome || "Não informado"}</span>
+                          </div>
                         </div>
                       </div>
 
-                      {editingConsulta === consulta.id && editedConsulta ? (
-                        <div className="space-y-4 pt-3 border-t">
-                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1">
+                        <div className="space-y-4">
+                          <PatientInfoItem label="Nome Completo" value={schedule.Paciente?.nome_completo} icon={<User className="w-4 h-4" />} />
+                          <PatientInfoItem label="Idade" value={getPatientAge()} icon={<Calendar className="w-4 h-4" />} />
+                          <PatientInfoItem label="BI/Identificação" value={schedule.Paciente?.numero_identificacao || "Não informado"} icon={<FileText className="w-4 h-4" />} />
+                        </div>
+                        <div className="space-y-4">
+                          <PatientInfoItem label="Telefone" value={schedule.Paciente?.contacto_telefonico ?? "Não Informado"} icon={<Phone className="w-4 h-4" />} />
+                          <PatientInfoItem label="Email" value={schedule.Paciente?.email || "Não informado"} icon={<Mail className="w-4 h-4" />} />
+                          <div className="flex items-center gap-2 pt-2">
+                            <div className="p-2 bg-gradient-to-br from-green-100 to-green-200 rounded-lg">
+                              <Zap className="w-4 h-4 text-green-600" />
+                            </div>
                             <div>
-                              <Label className="text-sm">Tipo de Consulta</Label>
-                              <Select value={editedConsulta.id_tipo_consulta?.toString() || ""} onValueChange={(value) => handleConsultaFieldChange("id_tipo_consulta", parseInt(value))}>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Selecionar tipo" />
+                              <Label className="text-xs text-gray-500">Status Geral</Label>
+                              <StatusBadge status={overallStatus} type="item" />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* SEÇÃO DE ALOCAÇÕES (APENAS RECEPCIONISTA) */}
+                {isReceptionist && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <Card className="border-0 shadow-lg bg-gradient-to-br from-white to-blue-50">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                          <div className="p-2 bg-gradient-to-br from-blue-100 to-blue-200 rounded-lg">
+                            <Users className="w-5 h-5 text-blue-600" />
+                          </div>
+                          Chefe de Laboratório
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-4">
+                          <div className="p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl">
+                            <Label className="text-sm font-medium text-gray-700 mb-2">Chefe Atual</Label>
+                            <p className="font-semibold text-gray-800 text-lg">{getChiefName(schedule.id_chefe_alocado || null)}</p>
+                          </div>
+                          <div className="space-y-3">
+                            <Label className="text-sm font-medium text-gray-700">Alocar Novo Chefe</Label>
+                            <div className="flex flex-col sm:flex-row gap-2">
+                              <Select value={selectedChief ?? ""} onValueChange={setSelectedChief}>
+                                <SelectTrigger className="flex-1">
+                                  <SelectValue placeholder="Selecionar chefe..." />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  {Array.isArray(consultaTypes) &&
-                                    consultaTypes.map((consultaType: ConsultaType) => (
-                                      <SelectItem key={consultaType.id} value={consultaType.id.toString()}>
-                                        {consultaType.nome} -{" "}
-                                        {new Intl.NumberFormat("pt-AO", {
-                                          style: "currency",
-                                          currency: "AOA",
-                                        }).format(consultaType.preco)}
+                                  {Array.isArray(labChiefs) &&
+                                    labChiefs.map((chief) => (
+                                      <SelectItem key={chief.id} value={chief.id}>
+                                        {chief.nome} - {chief.tipo}
                                       </SelectItem>
                                     ))}
                                 </SelectContent>
                               </Select>
-                            </div>
-                            <div>
-                              <Label className="text-sm">Status</Label>
-                              <Select value={editedConsulta.status} onValueChange={(value) => handleConsultaFieldChange("status", value)}>
-                                <SelectTrigger>
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="PENDENTE">Pendente</SelectItem>
-                                  <SelectItem value="POR_REAGENDAR">Por Reagendar</SelectItem>
-                                  <SelectItem value="EM_ANDAMENTO">Em Andamento</SelectItem>
-                                  <SelectItem value="CANCELADO">Cancelado</SelectItem>
-                                  {!isReceptionist && <SelectItem value="CONCLUIDO">Concluído</SelectItem>}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div>
-                              <Label className="text-sm">Estado Financeiro</Label>
-                              <Select value={editedConsulta.status_financeiro} onValueChange={(value) => handleConsultaFieldChange("status_financeiro", value)}>
-                                <SelectTrigger>
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="PAGO">Pago</SelectItem>
-                                  <SelectItem value="NAO_PAGO">Não Pago</SelectItem>
-                                  <SelectItem value="ISENTO">Isento</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div>
-                              <Label className="text-sm">Estado de Reembolso</Label>
-                              <Select value={editedConsulta.status_reembolso} onValueChange={(value) => handleConsultaFieldChange("status_reembolso", value)}>
-                                <SelectTrigger>
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="SEM_REEMBOLSO">Sem Reembolso</SelectItem>
-                                  <SelectItem value="POR_REEMBOLSAR">Por Reembolsar</SelectItem>
-                                  <SelectItem value="REEMBOLSADO">Reembolsado</SelectItem>
-                                </SelectContent>
-                              </Select>
+                              <Button
+                                onClick={() =>
+                                  selectedChief &&
+                                  allocateChiefMutation.mutate({
+                                    scheduleId: schedule.id,
+                                    chiefId: selectedChief,
+                                  })
+                                }
+                                disabled={!selectedChief || allocateChiefMutation.isPending}
+                                className="sm:w-auto bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"
+                              >
+                                <Users className="w-4 h-4 mr-2" />
+                                {allocateChiefMutation.isPending ? "Alocando..." : "Alocar"}
+                              </Button>
                             </div>
                           </div>
-
-                          <div>
-                            <Label className="text-sm mb-2 block font-medium text-gray-700">Selecione a Data</Label>
-                            <div className="mt-2 flex gap-2">
-                              <div className="flex-1">
-                                <div className="relative">
-                                  <Input
-                                    type="text"
-                                    value={inputValue}
-                                    onChange={handleInputChange}
-                                    onBlur={handleInputBlur}
-                                    placeholder="dd/mm/aa"
-                                    className={`w-full h-10 px-3 bg-white border rounded-md shadow-sm focus:ring-1 ${
-                                      inputError
-                                        ? "border-red-300 hover:border-red-400 focus:border-red-500 focus:ring-red-500"
-                                        : dateValidationMessage
-                                        ? "border-amber-300 hover:border-amber-400 focus:border-amber-500 focus:ring-amber-500"
-                                        : "border-gray-300 hover:border-gray-400 focus:border-blue-500 focus:ring-blue-500"
-                                    }`}
-                                  />
-                                  <CalendarDays className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                                </div>
-                                {inputError && <p className="text-xs text-red-500 mt-1">{inputError}</p>}
-                                {dateValidationMessage && <p className="text-xs text-amber-600 mt-1">⚠️ {dateValidationMessage}</p>}
-                                {!inputError && !dateValidationMessage && <p className="text-xs text-gray-500 mt-1">Formato: dd/mm/aa (ex: 25/12/24)</p>}
-                              </div>
-
-                              <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
-                                <PopoverTrigger asChild>
-                                  <Button variant="outline" className="h-10 px-3 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 hover:border-gray-400">
-                                    <ChevronDown className="h-4 w-4" />
-                                  </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0 z-[100] border border-gray-300 shadow-lg" align="start" sideOffset={4}>
-                                  <div className="bg-white rounded-lg">
-                                    <Calendar
-                                      mode="single"
-                                      selected={calendarDate || undefined}
-                                      onSelect={handleCalendarSelect}
-                                      initialFocus
-                                      className="p-3"
-                                      disabled={(date) => isDateBeforeToday(date)}
-                                      classNames={{
-                                        month: "flex flex-col m-auto text-center space-y-4",
-                                        months: "flex flex-col m-auto justify-center items-center space-y-4",
-                                        caption_label: "text-sm font-semibold text-gray-800",
-                                        caption: "flex justify-center pt-1 relative items-center",
-                                        nav: "space-x-1 flex items-center",
-                                        nav_button: "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 text-gray-600 hover:text-gray-900",
-                                        nav_button_previous: "absolute left-1",
-                                        nav_button_next: "absolute right-1",
-                                        table: "w-full border-collapse space-y-1",
-                                        head_row: "flex",
-                                        head_cell: "text-gray-500 rounded-md w-9 font-normal text-[0.8rem]",
-                                        row: "flex w-full mt-2",
-                                        cell: "h-9 w-9 text-center text-sm p-0 relative",
-                                        day: "h-9 w-9 p-0 font-normal rounded-md transition-colors hover:bg-blue-100 hover:text-blue-700 data-[disabled]:text-gray-300 data-[disabled]:bg-gray-50 data-[disabled]:cursor-not-allowed data-[outside]:text-gray-300 data-[outside]:opacity-30",
-                                        day_selected: "bg-blue-600 text-white hover:bg-blue-700 hover:text-white",
-                                        day_today: "bg-blue-100 text-blue-700 border border-blue-300",
-                                      }}
-                                    />
-                                    <div className="border-t border-gray-200 p-3 bg-gray-50 rounded-b-lg">
-                                      <div className="flex justify-between items-center">
-                                        <p className="text-xs text-gray-500">
-                                          Data atual: <span className="font-medium">{format(new Date(), "dd/MM/yyyy")}</span>
-                                        </p>
-                                        <Button variant="ghost" size="sm" className="text-xs bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700 px-2 py-1" onClick={handleTodayClick}>
-                                          <CalendarDays className="h-3 w-3 mr-1" />
-                                          Hoje
-                                        </Button>
-                                      </div>
-                                    </div>
-                                  </div>
-                                </PopoverContent>
-                              </Popover>
-                            </div>
-
-                            {calendarDate && !inputError && (
-                              <div className="mt-2 text-sm text-gray-700">
-                                <span className="font-medium">Data selecionada:</span> {format(calendarDate, "dd/MM/yyyy")}
-                                {isToday(calendarDate) && <span className="ml-2 text-blue-600">(Hoje)</span>}
-                                {isDateBeforeToday(calendarDate) && <span className="ml-2 text-amber-600 font-medium">⚠️ Data anterior à atual</span>}
-                              </div>
-                            )}
-                          </div>
-
-                          <div>
-                            <Label className="text-sm">Selecione o Horário</Label>
-                            <div className="mt-2">
-                              <TimePicker value={editedConsulta.hora_agendamento} onChange={handleTimeChange} isToday={calendarDate ? isToday(calendarDate) : false} />
-                            </div>
-                            {timeError && <p className="text-xs text-red-500 mt-1">{timeError}</p>}
-                            {calendarDate && isToday(calendarDate) && !timeError && <p className="text-xs text-gray-500 mt-1">Horário válido para hoje. Hora atual: {getCurrentTimeString()}</p>}
-                          </div>
-
-                          {/* Mensagem de aviso sobre o botão de salvar */}
-                          {isSaveDisabled && saveDisabledReason && (
-                            <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-md">
-                              <div className="flex items-start gap-2">
-                                <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
-                                <div>
-                                  <p className="text-sm font-medium text-amber-800">Atenção</p>
-                                  <p className="text-xs text-amber-700 mt-1">
-                                    O botão de salvar está bloqueado porque: <span className="font-semibold">{saveDisabledReason}</span>
-                                  </p>
-                                  <p className="text-xs text-amber-600 mt-1">Corrija os campos acima para poder salvar as alterações.</p>
-                                </div>
-                              </div>
-                            </div>
-                          )}
                         </div>
-                      ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-sm pt-3 border-t">
-                          <div>
-                            <Label className="text-xs text-gray-500">Data e Hora</Label>
-                            <div className="flex items-center gap-2 mt-1">
-                              <CalendarDays className="w-3 h-3 text-gray-500" />
-                              <span className="font-medium">
-                                {(() => {
-                                  try {
-                                    // Parse a string para Date
-                                    const date = parseFromYYMMDD(consulta.data_agendamento);
-                                    if (date && isValid(date)) {
-                                      return `${format(date, "dd/MM/yyyy")} às ${consulta.hora_agendamento}`;
-                                    }
-                                    return `${consulta.data_agendamento} às ${consulta.hora_agendamento}`;
-                                  } catch (error) {
-                                    return `${consulta.data_agendamento} às ${consulta.hora_agendamento}`;
+                      </CardContent>
+                    </Card>
+
+                    <Card className="border-0 shadow-lg bg-gradient-to-br from-white to-green-50">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                          <div className="p-2 bg-gradient-to-br from-green-100 to-green-200 rounded-lg">
+                            <Users className="w-5 h-5 text-green-600" />
+                          </div>
+                          Clínico Geral
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-4">
+                          <div className="p-4 bg-gradient-to-r from-green-50 to-green-100 rounded-xl">
+                            <Label className="text-sm font-medium text-gray-700 mb-2">Clínico Atual</Label>
+                            <p className="font-semibold text-gray-800 text-lg">{getClinicoName(schedule.id_clinico_alocado ?? "")}</p>
+                          </div>
+                          <div className="space-y-3">
+                            <Label className="text-sm font-medium text-gray-700">Alocar Novo Clínico</Label>
+                            <div className="flex flex-col sm:flex-row gap-2">
+                              <Select value={selectedClinico || ""} onValueChange={setSelectedClinico}>
+                                <SelectTrigger className="flex-1 bg-white border-gray-300">
+                                  <SelectValue placeholder="Selecionar clínico..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {Array.isArray(clinicos) &&
+                                    clinicos.map((clinico) => (
+                                      <SelectItem key={clinico.id} value={clinico.id}>
+                                           {clinico.nome} -  {clinico.tipo}
+                                      </SelectItem>
+                                    ))}
+                                </SelectContent>
+                              </Select>
+                              <Button
+                                onClick={() => {
+                                  if(selectedClinico){
+                              ___showSuccessToastNotification({ message: "Funcionalidade em desenvolvimento" });
                                   }
-                                })()}
-                              </span>
+                                }}
+                                disabled={!selectedClinico}
+                                className="sm:w-auto bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700"
+                              >
+                                <Users className="w-4 h-4 mr-2" />
+                                Alocar
+                              </Button>
                             </div>
-                          </div>
-                          <div>
-                            <Label className="text-xs text-gray-500">Preço</Label>
-                            <div className="flex items-center gap-2 mt-1">
-                              <DollarSign className="w-3 h-3 text-gray-500" />
-                              <span className="font-medium text-green-600">
-                                {new Intl.NumberFormat("pt-AO", {
-                                  style: "currency",
-                                  currency: "AOA",
-                                }).format(currentPrice)}
-                              </span>
-                            </div>
-                          </div>
-                          <div>
-                            <Label className="text-xs text-gray-500">Clínico Alocado</Label>
-                            <p className="font-medium mt-1">{getClinicoName(consulta.id_clinico_alocado)}</p>
                           </div>
                         </div>
-                      )}
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
+              </TabsContent>
 
-                      {isReceptionist && editingConsulta !== consulta.id && (
-                        <div className="pt-3 border-t">
-                          <Label className="text-sm">Alocar Clínico</Label>
-                          <div className="flex flex-col sm:flex-row gap-2 mt-2">
-                            <Select value={selectedClinico || ""} onValueChange={setSelectedClinico}>
-                              <SelectTrigger className="flex-1">
-                                <SelectValue placeholder="Selecionar clínico" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {Array.isArray(clinicos) &&
-                                  clinicos.map((clinico) => (
-                                    <SelectItem key={clinico.id} value={clinico.id}>
-                                      {clinico.nome} - {clinico.tipo}
-                                    </SelectItem>
-                                  ))}
-                              </SelectContent>
-                            </Select>
-                            <Button
-                              onClick={() =>
-                                selectedClinico &&
-                                allocateClinicoMutation.mutate({
-                                  consultaId: consulta.id,
-                                  clinicoId: selectedClinico,
-                                })
-                              }
-                              disabled={!selectedClinico || allocateClinicoMutation.isPending}
-                              className="sm:w-auto"
-                            >
-                              {allocateClinicoMutation.isPending ? "Alocando..." : "Alocar"}
-                            </Button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </CardContent>
-            </Card>
+              {/* ABA DE EXAMES */}
+              <TabsContent value="exams" className="space-y-4">
+                {activeExams.length === 0 ? (
+                  <Card className="border-0 shadow-lg">
+                    <CardContent className="py-12 text-center">
+                      <div className="mx-auto w-16 h-16 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center mb-4">
+                        <Stethoscope className="w-8 h-8 text-gray-400" />
+                      </div>
+                      <h3 className="font-semibold text-gray-700 text-lg mb-2">Nenhum exame pendente</h3>
+                      <p className="text-gray-500">Todos os exames foram concluídos ou cancelados.</p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  activeExams.map((exam) => <ExamItem key={exam.id} exam={exam} editing={editingExam === exam.id} editedExam={editedExam} />)
+                )}
+              </TabsContent>
+
+              {/* ABA DE CONSULTAS */}
+              <TabsContent value="consultations" className="space-y-4">
+                {activeConsultas.length === 0 ? (
+                  <Card className="border-0 shadow-lg">
+                    <CardContent className="py-12 text-center">
+                      <div className="mx-auto w-16 h-16 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center mb-4">
+                        <ClipboardList className="w-8 h-8 text-gray-400" />
+                      </div>
+                      <h3 className="font-semibold text-gray-700 text-lg mb-2">Nenhuma consulta pendente</h3>
+                      <p className="text-gray-500">Todas as consultas foram concluídas ou canceladas.</p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  activeConsultas.map((consulta) => (
+                    <ConsultaItem
+                      key={consulta.id}
+                      consulta={consulta}
+                      editing={editingConsulta === consulta.id}
+                      editedConsulta={editedConsulta}
+                      // ... outras props necessárias
+                    />
+                  ))
+                )}
+              </TabsContent>
+            </Tabs>
           </div>
         </ScrollArea>
       </DialogContent>
     </Dialog>
   );
 }
+
+// ======================== COMPONENTES DE ITEM ========================
+
+const ExamItem = ({ exam, editing, editedExam, ...props }: any) => {
+  const [editingExam, setEditingExam] = useState<number | null>(null);
+  const [editingConsulta, setEditingConsulta] = useState<number | null>(null);
+  const [, setEditedExam] = useState<EditableExam | null>(null);
+  const [calendarDate, setCalendarDate] = useState<Date | null>(null);
+  const [inputValue, setInputValue] = useState("");
+  const [inputError, setInputError] = useState<string | null>(null);
+  const [isDateValid, setIsDateValid] = useState<boolean>(true);
+  const [dateValidationMessage, setDateValidationMessage] = useState<string | null>(null);
+  const [timeError, setTimeError] = useState<string | null>(null);
+
+  const handleEditExam = (exam: any) => {
+    setEditingExam(exam.id);
+    setEditingConsulta(null);
+
+    // Parse a data do exame
+    const parsedDate = parseFromYYMMDD(exam.data_agendamento);
+
+    // Formata para o input
+    const displayDate = parsedDate ? formatForInput(parsedDate) : "";
+
+    setEditedExam({
+      id: exam.id,
+      data_agendamento: exam.data_agendamento,
+      hora_agendamento: exam.hora_agendamento,
+      status: exam.status,
+      status_financeiro: exam.status_financeiro || "NAO_PAGO",
+      status_reembolso: exam.status_reembolso || "SEM_REEMBOLSO",
+      id_tipo_exame: exam.id_tipo_exame || exam.Tipo_Exame?.id,
+      id_tecnico_alocado: exam.id_tecnico_alocado || null,
+      // status_pagamento: exam.status_pagamento,
+    });
+
+    // Atualiza o estado do calendar e input
+    setCalendarDate(parsedDate);
+    setInputValue(displayDate);
+    setInputError(null);
+    setIsDateValid(parsedDate ? !isDateBeforeToday(parsedDate) : true);
+    setDateValidationMessage(parsedDate && isDateBeforeToday(parsedDate) ? "Data anterior à data atual" : null);
+
+    // Valida o horário se a data for hoje
+    if (parsedDate && isToday(parsedDate) && exam.hora_agendamento) {
+      if (isTimeBeforeNow(parsedDate, exam.hora_agendamento)) {
+        setTimeError(`Horário inválido para hoje. Hora atual: ${getCurrentTimeString()}`);
+      } else {
+        setTimeError(null);
+      }
+    } else {
+      setTimeError(null);
+    }
+  };
+
+  // Queries (mantidas)
+  const { data: technicians } = useQuery({
+    queryKey: ["lab-technicians"],
+    queryFn: async () => (await labTechniciansRoutes.getAllLabTechnicians()).data,
+  });
+
+  function getTechnicianName(id: string | null): string {
+    if (!id) return "Não alocado";
+
+    // Se você tiver acesso ao array de técnicos, use esta lógica:
+    if (technicians && Array.isArray(technicians)) {
+      const technician = technicians.find((t: any) => t.id === id);
+      return technician?.nome || "Técnico não encontrado";
+    }
+
+    return "Técnico não encontrado";
+  }
+
+  const getExamIcon = (examName: string) => {
+    const name = examName.toLowerCase();
+    if (name.includes("sangue") || name.includes("hemograma")) return <Syringe className="w-5 h-5 text-red-500" />;
+    if (name.includes("raio") || name.includes("x")) return <Eye className="w-5 h-5 text-blue-500" />;
+    if (name.includes("urina")) return <Thermometer className="w-5 h-5 text-yellow-500" />;
+    if (name.includes("coração") || name.includes("cardio")) return <Heart className="w-5 h-5 text-red-500" />;
+    if (name.includes("cérebro") || name.includes("neuro")) return <Brain className="w-5 h-5 text-purple-500" />;
+    return <Microscope className="w-5 h-5 text-green-500" />;
+  };
+
+  return (
+    <Card className="border-0 shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300">
+      <CardContent className="p-0">
+        <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-4 border-b">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-white rounded-lg shadow-sm">{getExamIcon(exam.Tipo_Exame?.nome || "Exame")}</div>
+              <div>
+                <h3 className="font-bold text-gray-800 text-lg">{exam.Tipo_Exame?.nome || "Exame não especificado"}</h3>
+                <div className="flex items-center gap-2 mt-1">
+                  <StatusBadge status={exam.status} type="item" />
+                  <StatusBadge status={exam.status_financeiro} type="financeiro" />
+                  <StatusBadge status={exam.status_reembolso} type="reembolso" />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {editing ? (
+                <div className="flex gap-2">
+                  <Button 
+                  variant="default" 
+                  size="sm" 
+                  className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700"
+                  // onClick={handleSaveExam}
+                  // title={isSav}
+                  >
+                    <Save className="w-4 h-4 mr-1" />
+                    Salvar
+                  </Button>
+                  <Button variant="outline" size="sm">
+                    <X className="w-4 h-4 mr-1" />
+                    Cancelar
+                  </Button>
+                </div>
+              ) : (
+                <Button variant="outline" size="sm" onClick={() => handleEditExam(exam)} className="border-blue-200 text-blue-600 hover:bg-blue-50">
+                  <Edit3 className="w-4 h-4 mr-1" />
+                  Editar
+                </Button>
+              )}
+
+              <Button variant="default" size="sm" className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700">
+                <Clock className="w-4 h-4 mr-1" />
+                Iniciar
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-4">
+          {/* Conteúdo do exame */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label className="text-xs text-gray-500 font-medium">Data e Hora</Label>
+              <div className="flex items-center gap-2 text-gray-800">
+                <CalendarDays className="w-4 h-4 text-blue-500" />
+                <span className="font-semibold">
+                  {formatForDisplay(parseFromYYMMDD(exam.data_agendamento))} às {exam.hora_agendamento}
+                </span>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs text-gray-500 font-medium">Preço</Label>
+              <div className="flex items-center gap-2 text-emerald-700">
+                <DollarSign className="w-4 h-4 text-emerald-500" />
+                <span className="font-bold">{formatCurrency(exam.Tipo_Exame?.preco || 0)}</span>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs text-gray-500 font-medium">Técnico Alocado</Label>
+              <div className="flex items-center gap-2">
+                <User className="w-4 h-4 text-gray-500" />
+                <span className="font-medium text-gray-700">{getTechnicianName(exam.id_tecnico_alocado)}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+const ConsultaItem = ({ consulta, editing, editedConsulta, ...props }: any) => {
+  const [editingConsulta, setEditingConsulta] = useState<number | null>(null);
+  const [editingExam, setEditingExam] = useState<EditableExam | null>(null);
+  const [, setEditedConsulta] = useState<EditableConsulta | null>(null);
+  const [calendarDate, setCalendarDate] = useState<Date | null>(null);
+  const [inputValue, setInputValue] = useState("");
+  const [inputError, setInputError] = useState<string | null>(null);
+  const [isDateValid, setIsDateValid] = useState<boolean>(true);
+  const [dateValidationMessage, setDateValidationMessage] = useState<string | null>(null);
+  const [timeError, setTimeError] = useState<string | null>(null);
+
+  const handleEditConsulta = (consulta: any) => {
+    setEditingConsulta(consulta.id);
+    setEditingExam(null);
+
+    // Parse a data da consulta
+    const parsedDate = parseFromYYMMDD(consulta.data_agendamento);
+
+    // Formata para o input
+    const displayDate = parsedDate ? formatForInput(parsedDate) : "";
+
+    setEditedConsulta({
+      id: consulta.id,
+      data_agendamento: consulta.data_agendamento,
+      hora_agendamento: consulta.hora_agendamento,
+      status: consulta.status,
+      status_financeiro: consulta.status_financeiro || "NAO_PAGO",
+      status_reembolso: consulta.status_reembolso || "SEM_REEMBOLSO",
+      id_tipo_consulta: consulta.id_tipo_consulta || consulta.Tipo_Consulta?.id,
+      id_clinico_alocado: consulta.id_clinico_alocado || null,
+    });
+
+    // Atualiza o estado do calendar e input
+    setCalendarDate(parsedDate);
+    setInputValue(displayDate);
+    setInputError(null);
+    setIsDateValid(parsedDate ? !isDateBeforeToday(parsedDate) : true);
+    setDateValidationMessage(parsedDate && isDateBeforeToday(parsedDate) ? "Data anterior à data atual" : null);
+
+    // Valida o horário se a data for hoje
+    if (parsedDate && isToday(parsedDate) && consulta.hora_agendamento) {
+      if (isTimeBeforeNow(parsedDate, consulta.hora_agendamento)) {
+        setTimeError(`Horário inválido para hoje. Hora atual: ${getCurrentTimeString()}`);
+      } else {
+        setTimeError(null);
+      }
+    } else {
+      setTimeError(null);
+    }
+  };
+
+  const { data: clinicos } = useQuery({
+    queryKey: ["clinicos"],
+    queryFn: async () => (await _axios.get("/general-practitioners")).data,
+  });
+
+  function getClinicoName(id: string | null): string {
+    if (!id) return "Não alocado";
+
+    // Se você tiver acesso ao array de clínicos, use esta lógica:
+    if (clinicos && Array.isArray(clinicos)) {
+      const clinico = clinicos.find((c: any) => c.id === id);
+      return clinico?.nome || "Clínico não encontrado";
+    }
+
+    return "Clínico não encontrado";
+  }
+  return (
+    <Card className="border-0 shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300">
+      <CardContent className="p-0">
+        <div className="bg-gradient-to-r from-green-50 to-green-100 p-4 border-b">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-white rounded-lg shadow-sm">
+                <Heart className="w-5 h-5 text-green-500" />
+              </div>
+              <div>
+                <h3 className="font-bold text-gray-800 text-lg">{consulta.Tipo_Consulta?.nome || "Consulta não especificada"}</h3>
+                <div className="flex items-center gap-2 mt-1">
+                  <StatusBadge status={consulta.status} type="item" />
+                  <StatusBadge status={consulta.status_financeiro} type="financeiro" />
+                  <StatusBadge status={consulta.status_reembolso} type="reembolso" />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {editing ? (
+                <div className="flex gap-2">
+                  <Button variant="default" size="sm" className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700">
+                    <Save className="w-4 h-4 mr-1" />
+                    Salvar
+                  </Button>
+                  <Button variant="outline" size="sm">
+                    <X className="w-4 h-4 mr-1" />
+                    Cancelar
+                  </Button>
+                </div>
+              ) : (
+                <Button variant="outline" size="sm" className="border-green-200 text-green-600 hover:bg-green-50">
+                  <Edit3 className="w-4 h-4 mr-1" />
+                  Editar
+                </Button>
+              )}
+
+              <Button variant="default" size="sm" className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700">
+                <Clock className="w-4 h-4 mr-1" />
+                Iniciar
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-4">
+          {/* Conteúdo da consulta */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label className="text-xs text-gray-500 font-medium">Data e Hora</Label>
+              <div className="flex items-center gap-2 text-gray-800">
+                <CalendarDays className="w-4 h-4 text-green-500" />
+                <span className="font-semibold">
+                  {formatForDisplay(parseFromYYMMDD(consulta.data_agendamento))} às {consulta.hora_agendamento}
+                </span>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs text-gray-500 font-medium">Preço</Label>
+              <div className="flex items-center gap-2 text-emerald-700">
+                <DollarSign className="w-4 h-4 text-emerald-500" />
+                <span className="font-bold">{formatCurrency(consulta.Tipo_Consulta?.preco || 0)}</span>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs text-gray-500 font-medium">Clínico Alocado</Label>
+              <div className="flex items-center gap-2">
+                <User className="w-4 h-4 text-gray-500" />
+                <span className="font-medium text-gray-700">{getClinicoName(consulta.id_clinico_alocado)}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
