@@ -248,7 +248,6 @@ const handleSubmitConsultas = async () => {
         })),
       };
 
-      console.log("Abordagem 1 - Endpoint específico:", payload1);
       const response1 = await _axios.post("/consultations/batch", payload1);
       
       if (response1.status === 201 || response1.status === 200) {
@@ -258,7 +257,7 @@ const handleSubmitConsultas = async () => {
         return true;
       }
     } catch (error1) {
-      console.log("Abordagem 1 falhou:", error1);
+      console.error("Abordagem 1 falhou:", error1);
     }
 
     // ABORDAGEM 2: Usar o endpoint tradicional mas com estrutura limpa
@@ -283,7 +282,6 @@ const handleSubmitConsultas = async () => {
         })),
       };
 
-      console.log("Abordagem 2 - Estrutura limpa:", payload2);
       const response2 = await _axios.post("/schedulings/consultations", payload2);
       
       if (response2.status === 201 || response2.status === 200) {
@@ -293,7 +291,7 @@ const handleSubmitConsultas = async () => {
         return true;
       }
     } catch (error2) {
-      console.log("Abordagem 2 falhou:", error2);
+      console.error("Abordagem 2 falhou:", error2);
     }
 
     // ABORDAGEM 3: Último recurso - criar cada consulta individualmente
@@ -314,7 +312,6 @@ const handleSubmitConsultas = async () => {
           valor_total: consulta.item?.preco || 0,
         };
 
-        console.log("Abordagem 3 - Consulta individual:", payload3);
         const response3 = await _axios.post("/consultations", payload3);
         
         if (response3.status === 201 || response3.status === 200) {
@@ -329,7 +326,7 @@ const handleSubmitConsultas = async () => {
         return true;
       }
     } catch (error3) {
-      console.log("Abordagem 3 falhou:", error3);
+      console.error("Abordagem 3 falhou:", error3);
     }
 
     // Se todas as abordagens falharem

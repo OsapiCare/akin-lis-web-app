@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -104,6 +104,8 @@ const agruparPorPaciente = (exames: any, consultas: any): PacienteAgendamento[] 
     }
   });
 
+  
+
   // Processar consultas
   consultasArray.forEach((consulta) => {
     try {
@@ -190,7 +192,6 @@ export default function Request() {
           // CORREÇÃO: Verificar se tem id e Exame (conforme sua interface)
           // Note: sua interface tem 'Exame' não 'Tipo_Exame'
           if (responseData.id !== undefined && responseData.Exame) {
-            console.log("É um único agendamento com exames, convertendo para array");
             return [responseData];
           }
         }
@@ -307,6 +308,7 @@ export default function Request() {
     });
   }, [pacientesAgendamentos]);
 
+  
   // Mutations
   const acceptMutation = useMutation({
     mutationFn: (scheduleId: number) => scheduleRoutes.acceptSchedule(scheduleId),
