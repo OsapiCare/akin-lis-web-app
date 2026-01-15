@@ -9,18 +9,11 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import {
-  CheckCircle,
-  XCircle,
-  Loader,
-  AlertTriangle,
-  Users,
-  Calendar,
-  Stethoscope,
-  CreditCard
-} from "lucide-react";
+import { CheckCircle, XCircle, Loader, AlertTriangle, Users, Calendar, Stethoscope, CreditCard } from "lucide-react";
 import { scheduleRoutes } from "@/Api/Routes/schedule/index.routes";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { api } from "@/Api/api";
+import { examRoutes } from "@/Api/Routes/Exam/index.route";
 
 interface BulkActionsProps {
   schedules: ScheduleType[];
@@ -28,37 +21,37 @@ interface BulkActionsProps {
   onSelectionChange: (scheduleIds: number[]) => void;
 }
 
-export function BulkActions({
-  schedules,
-  selectedSchedules,
-  onSelectionChange
-}: BulkActionsProps) {
+export function BulkActions({ schedules, selectedSchedules, onSelectionChange }: BulkActionsProps) {
   const [rejectReason, setRejectReason] = useState("");
   const [showBulkRejectDialog, setShowBulkRejectDialog] = useState(false);
   const queryClient = useQueryClient();
 
   const bulkAcceptMutation = useMutation({
     mutationFn: async (scheduleIds: number[]) => {
-      const results = await Promise.allSettled(
-        scheduleIds.map(id => scheduleRoutes.acceptSchedule(id))
-      );
+      const results = await Promise.allSettled(scheduleIds.map((id) => scheduleRoutes.acceptSchedule(id)));
       return results;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['pending-schedules'] });
+      queryClient.invalidateQueries({ queryKey: ["pending-schedules"] });
       onSelectionChange([]);
+    },
+  });
+
+  const { data: exam } = useQuery({
+    queryKey: ["exam"],
+    queryFn: async () => {
+      const response = await examRoutes.getExams();
+      return response.data;
     },
   });
 
   const bulkRejectMutation = useMutation({
     mutationFn: async ({ scheduleIds }: { scheduleIds: number[] }) => {
-      const results = await Promise.allSettled(
-        scheduleIds.map(id => scheduleRoutes.rejectSchedule(id))
-      );
+      const results = await Promise.allSettled(scheduleIds.map((id) => scheduleRoutes.rejectSchedule(id)));
       return results;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['pending-schedules'] });
+      queryClient.invalidateQueries({ queryKey: ["pending-schedules"] });
       onSelectionChange([]);
       setShowBulkRejectDialog(false);
       setRejectReason("");
@@ -67,7 +60,7 @@ export function BulkActions({
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      onSelectionChange(schedules.map(s => s.id));
+      onSelectionChange(schedules.map((s) => s.id));
     } else {
       onSelectionChange([]);
     }
@@ -77,7 +70,7 @@ export function BulkActions({
     if (checked) {
       onSelectionChange([...selectedSchedules, scheduleId]);
     } else {
-      onSelectionChange(selectedSchedules.filter(id => id !== scheduleId));
+      onSelectionChange(selectedSchedules.filter((id) => id !== scheduleId));
     }
   };
 
@@ -97,12 +90,10 @@ export function BulkActions({
 
   const getSelectedSchedulesTotal = () => {
     return selectedSchedules.reduce((total, scheduleId) => {
-      const schedule = schedules.find(s => s.id === scheduleId);
+      const schedule = schedules.find((s) => s.id === scheduleId);
       if (!schedule) return total;
 
-      const scheduleTotal = schedule.Exame?.reduce((examTotal, exam) =>
-        examTotal + (exam.Tipo_Exame?.preco || 0), 0
-      ) || 0;
+      const scheduleTotal = schedule.Exame?.reduce((examTotal, exam) => examTotal + (exam.Tipo_Exame?.preco || 0), 0) || 0;
 
       return total + scheduleTotal;
     }, 0);
@@ -120,13 +111,8 @@ export function BulkActions({
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <div className="flex items-center space-x-2">
-            <Checkbox
-              checked={isAllSelected}
-              onCheckedChange={handleSelectAll}
-            />
-            <span className="text-sm font-medium">
-              Selecionar todos ({schedules.length})
-            </span>
+            <Checkbox checked={isAllSelected} onCheckedChange={handleSelectAll} />
+            <span className="text-sm font-medium">Selecionar todos ({schedules.length})</span>
           </div>
 
           {selectedSchedules.length > 0 && (
@@ -139,27 +125,14 @@ export function BulkActions({
 
         {selectedSchedules.length > 0 && (
           <div className="flex items-center space-x-2">
-            <Button
-              onClick={handleBulkAccept}
-              disabled={bulkAcceptMutation.isPending}
-              className="bg-green-600 hover:bg-green-700 text-white"
-              size="sm"
-            >
-              {bulkAcceptMutation.isPending ? (
-                <Loader className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <CheckCircle className="w-4 h-4 mr-2" />
-              )}
+            <Button onClick={handleBulkAccept} disabled={bulkAcceptMutation.isPending} className="bg-green-600 hover:bg-green-700 text-white" size="sm">
+              {bulkAcceptMutation.isPending ? <Loader className="w-4 h-4 mr-2 animate-spin" /> : <CheckCircle className="w-4 h-4 mr-2" />}
               Aceitar ({selectedSchedules.length})
             </Button>
 
             <Dialog open={showBulkRejectDialog} onOpenChange={setShowBulkRejectDialog}>
               <DialogTrigger asChild>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  disabled={bulkRejectMutation.isPending}
-                >
+                <Button variant="destructive" size="sm" disabled={bulkRejectMutation.isPending}>
                   <XCircle className="w-4 h-4 mr-2" />
                   Recusar ({selectedSchedules.length})
                 </Button>
@@ -167,51 +140,27 @@ export function BulkActions({
               <DialogContent className="max-w-md">
                 <DialogHeader>
                   <DialogTitle>Recusar Agendamentos em Lote</DialogTitle>
-                  <DialogDescription>
-                    Você está prestes a recusar {selectedSchedules.length} agendamento(s).
-                    Esta ação não pode ser desfeita.
-                  </DialogDescription>
+                  <DialogDescription>Você está prestes a recusar {selectedSchedules.length} agendamento(s). Esta ação não pode ser desfeita.</DialogDescription>
                 </DialogHeader>
 
                 <div className="space-y-4">
                   <Alert>
                     <AlertTriangle className="h-4 w-4" />
-                    <AlertDescription>
-                      Todos os pacientes afetados serão notificados sobre a recusa.
-                    </AlertDescription>
+                    <AlertDescription>Todos os pacientes afetados serão notificados sobre a recusa.</AlertDescription>
                   </Alert>
 
                   <div>
-                    <Label htmlFor="bulk-reject-reason">
-                      Motivo da recusa (aplicado a todos)
-                    </Label>
-                    <Textarea
-                      id="bulk-reject-reason"
-                      placeholder="Digite o motivo da recusa..."
-                      value={rejectReason}
-                      onChange={(e) => setRejectReason(e.target.value)}
-                      className="mt-2"
-                    />
+                    <Label htmlFor="bulk-reject-reason">Motivo da recusa (aplicado a todos)</Label>
+                    <Textarea id="bulk-reject-reason" placeholder="Digite o motivo da recusa..." value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} className="mt-2" />
                   </div>
                 </div>
 
                 <DialogFooter>
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowBulkRejectDialog(false)}
-                  >
+                  <Button variant="outline" onClick={() => setShowBulkRejectDialog(false)}>
                     Cancelar
                   </Button>
-                  <Button
-                    variant="destructive"
-                    onClick={handleBulkReject}
-                    disabled={!rejectReason.trim() || bulkRejectMutation.isPending}
-                  >
-                    {bulkRejectMutation.isPending ? (
-                      <Loader className="w-4 h-4 mr-2 animate-spin" />
-                    ) : (
-                      "Confirmar Recusa"
-                    )}
+                  <Button variant="destructive" onClick={handleBulkReject} disabled={!rejectReason.trim() || bulkRejectMutation.isPending}>
+                    {bulkRejectMutation.isPending ? <Loader className="w-4 h-4 mr-2 animate-spin" /> : "Confirmar Recusa"}
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -239,7 +188,7 @@ export function BulkActions({
                     <span className="text-gray-600">Exames:</span>
                     <div className="font-semibold text-blue-700">
                       {selectedSchedules.reduce((total, scheduleId) => {
-                        const schedule = schedules.find(s => s.id === scheduleId);
+                        const schedule = schedules.find((s) => s.id === scheduleId);
                         return total + (schedule?.Exame?.length || 0);
                       }, 0)}
                     </div>
@@ -250,10 +199,10 @@ export function BulkActions({
                   <div>
                     <span className="text-gray-600">Valor Total:</span>
                     <div className="font-semibold text-green-700">
-                      {new Intl.NumberFormat('pt-AO', {
-                        style: 'currency',
-                        currency: 'AOA',
-                        notation: 'compact'
+                      {new Intl.NumberFormat("pt-AO", {
+                        style: "currency",
+                        currency: "AOA",
+                        notation: "compact",
                       }).format(getSelectedSchedulesTotal())}
                     </div>
                   </div>
@@ -263,89 +212,56 @@ export function BulkActions({
                   <div>
                     <span className="text-gray-600">Pacientes:</span>
                     <div className="font-semibold text-blue-700">
-                      {new Set(selectedSchedules.map(scheduleId => {
-                        const schedule = schedules.find(s => s.id === scheduleId);
-                        return schedule?.id_paciente;
-                      })).size}
+                      {
+                        new Set(
+                          selectedSchedules.map((scheduleId) => {
+                            const schedule = schedules.find((s) => s.id === scheduleId);
+                            return schedule?.id_paciente;
+                          })
+                        ).size
+                      }
                     </div>
                   </div>
                 </div>
               </div>
 
               <div className="flex flex-col sm:flex-row gap-2">
-                <Button
-                  onClick={handleBulkAccept}
-                  disabled={bulkAcceptMutation.isPending}
-                  className="bg-green-600 hover:bg-green-700 text-white"
-                  size="sm"
-                >
-                  {bulkAcceptMutation.isPending ? (
-                    <Loader className="w-4 h-4 mr-2 animate-spin" />
-                  ) : (
-                    <CheckCircle className="w-4 h-4 mr-2" />
-                  )}
-                  Aceitar {selectedSchedules.length > 1 ? 'Todos' : ''}
+                <Button onClick={handleBulkAccept} disabled={bulkAcceptMutation.isPending} className="bg-green-600 hover:bg-green-700 text-white" size="sm">
+                  {bulkAcceptMutation.isPending ? <Loader className="w-4 h-4 mr-2 animate-spin" /> : <CheckCircle className="w-4 h-4 mr-2" />}
+                  Aceitar {selectedSchedules.length > 1 ? "Todos" : ""}
                 </Button>
 
                 <Dialog open={showBulkRejectDialog} onOpenChange={setShowBulkRejectDialog}>
                   <DialogTrigger asChild>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      disabled={bulkRejectMutation.isPending}
-                    >
+                    <Button variant="destructive" size="sm" disabled={bulkRejectMutation.isPending}>
                       <XCircle className="w-4 h-4 mr-2" />
-                      Recusar {selectedSchedules.length > 1 ? 'Todos' : ''}
+                      Recusar {selectedSchedules.length > 1 ? "Todos" : ""}
                     </Button>
                   </DialogTrigger>
                   <DialogContent className="max-w-md">
                     <DialogHeader>
                       <DialogTitle>Recusar Agendamentos em Lote</DialogTitle>
-                      <DialogDescription>
-                        Você está prestes a recusar {selectedSchedules.length} agendamento(s).
-                        Esta ação não pode ser desfeita.
-                      </DialogDescription>
+                      <DialogDescription>Você está prestes a recusar {selectedSchedules.length} agendamento(s). Esta ação não pode ser desfeita.</DialogDescription>
                     </DialogHeader>
 
                     <div className="space-y-4">
                       <Alert>
                         <AlertTriangle className="h-4 w-4" />
-                        <AlertDescription>
-                          Todos os pacientes afetados serão notificados sobre a recusa.
-                        </AlertDescription>
+                        <AlertDescription>Todos os pacientes afetados serão notificados sobre a recusa.</AlertDescription>
                       </Alert>
 
                       <div>
-                        <Label htmlFor="bulk-reject-reason">
-                          Motivo da recusa (aplicado a todos)
-                        </Label>
-                        <Textarea
-                          id="bulk-reject-reason"
-                          placeholder="Digite o motivo da recusa..."
-                          value={rejectReason}
-                          onChange={(e) => setRejectReason(e.target.value)}
-                          className="mt-2"
-                        />
+                        <Label htmlFor="bulk-reject-reason">Motivo da recusa (aplicado a todos)</Label>
+                        <Textarea id="bulk-reject-reason" placeholder="Digite o motivo da recusa..." value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} className="mt-2" />
                       </div>
                     </div>
 
                     <DialogFooter>
-                      <Button
-                        variant="outline"
-                        onClick={() => setShowBulkRejectDialog(false)}
-                      >
+                      <Button variant="outline" onClick={() => setShowBulkRejectDialog(false)}>
                         Cancelar
                       </Button>
-                      <Button
-                        variant="destructive"
-                        onClick={handleBulkReject}
-                        disabled={!rejectReason.trim() || bulkRejectMutation.isPending}
-                      >
-                        {bulkRejectMutation.isPending ? (
-                          <Loader className="w-4 h-4 mr-2 animate-spin" />
-                        ) : (
-                          "Confirmar Recusa"
-                        )}
+                      <Button variant="destructive" onClick={handleBulkReject} disabled={!rejectReason.trim() || bulkRejectMutation.isPending}>
+                        {bulkRejectMutation.isPending ? <Loader className="w-4 h-4 mr-2 animate-spin" /> : "Confirmar Recusa"}
                       </Button>
                     </DialogFooter>
                   </DialogContent>
@@ -358,35 +274,21 @@ export function BulkActions({
 
       {/* Individual Schedule Selection */}
       <div className="space-y-2 max-h-60 overflow-y-auto">
-        {schedules.map((schedule) => (
-          <div
-            key={schedule.id}
-            className="flex items-center space-x-3 p-2 hover:bg-gray-50 rounded"
-          >
-            <Checkbox
-              checked={selectedSchedules.includes(schedule.id)}
-              onCheckedChange={(checked) =>
-                handleSelectSchedule(schedule.id, checked as boolean)
-              }
-            />
+        {exam?.map((schedule: any) => (
+          <div key={schedule.id} className="flex items-center space-x-3 p-2 hover:bg-gray-50 rounded">
+            <Checkbox checked={selectedSchedules.includes(schedule.id)} onCheckedChange={(checked) => handleSelectSchedule(schedule.id, checked as boolean)} />
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between">
-                <span className="font-medium truncate">
-                  {schedule.Paciente?.nome_completo}
-                </span>
+                <span className="font-medium truncate">{schedule.Agendamento.Paciente?.nome_completo}</span>
                 <div className="flex items-center space-x-2 text-xs text-gray-500">
                   <Calendar className="w-3 h-3" />
-                  <span>
-                    {new Date(schedule.Exame?.[0]?.data_agendamento).toLocaleDateString('pt-AO')}
-                  </span>
+                  <span>{new Date(schedule.data_agendamento).toLocaleDateString("pt-AO")}</span>
                   <span className="font-semibold text-green-600">
-                    {new Intl.NumberFormat('pt-AO', {
-                      style: 'currency',
-                      currency: 'AOA',
-                      notation: 'compact'
-                    }).format(
-                      schedule.Exame?.reduce((total, exam) => total + (exam.Tipo_Exame?.preco || 0), 0) || 0
-                    )}
+                    {new Intl.NumberFormat("pt-AO", {
+                      style: "currency",
+                      currency: "AOA",
+                      notation: "compact",
+                    }).format(Array.isArray(schedule?.Exame) ? schedule.Exame?.reduce((total: number, exam: any) => total + (exam?.Tipo_Exame?.preco || 0), 0) : schedule?.Tipo_Exame?.preco || 0)}
                   </span>
                 </div>
               </div>

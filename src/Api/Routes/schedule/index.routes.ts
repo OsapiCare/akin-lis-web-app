@@ -85,6 +85,11 @@ export const scheduleRoutes = new ScheduleRoutes();
 
 
 class ConsultaRoutes {
+
+    async getConsultas() {
+    const response = await _axios.get(`/consultations`);
+    return response.data;
+  }
     async getPendingConsultas(){
     try{
       const response = await _axios.get<ConsultasType[]>("/consultations/pending");

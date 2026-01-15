@@ -20,6 +20,7 @@ import { ptBR } from "date-fns/locale";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { examRoutes } from "@/Api/Routes/Exam/index.route";
 
 // Interface para agrupamento por paciente
 interface PacienteAgendamento {
@@ -82,7 +83,7 @@ const agruparPorPaciente = (exames: any, consultas: any): PacienteAgendamento[] 
     try {
       // Para exames, o paciente está em exame.Paciente
       const pacienteInfo = exame?.Paciente;
-      
+
       if (pacienteInfo) {
         const pacienteId = pacienteInfo.id;
         const pacienteNome = pacienteInfo.nome_completo || "Paciente";
@@ -119,7 +120,7 @@ const agruparPorPaciente = (exames: any, consultas: any): PacienteAgendamento[] 
     try {
       // Para consultas, o paciente está em consulta.Agendamento.Paciente
       const pacienteInfo = consulta?.Agendamento?.Paciente;
-      
+
       if (pacienteInfo) {
         const pacienteId = pacienteInfo.id;
         const pacienteNome = pacienteInfo.nome_completo || "Paciente";
@@ -180,43 +181,43 @@ export default function Request() {
   });
 
   const { data: consultasRaw, isLoading: isLoadingConsultas } = useQuery({
-  queryKey: ["pending-consultas"],
-  queryFn: async () => {
-    try {
-      const response = await consultaRoutes.getPendingConsultas();
-      
-      if (Array.isArray(response)) {
-        return response;
-      }
-      
-      if (response && typeof response === "object") {
-        const possibleDataProps = ["data", "results", "records", "items", "consultas"];
-        
-        for (const prop of possibleDataProps) {
-          if (response[prop] && Array.isArray(response[prop])) {
-            return response[prop];
+    queryKey: ["pending-consultas"],
+    queryFn: async () => {
+      try {
+        const response = await consultaRoutes.getPendingConsultas();
+
+        if (Array.isArray(response)) {
+          return response;
+        }
+
+        if (response && typeof response === "object") {
+          const possibleDataProps = ["data", "results", "records", "items", "consultas"];
+
+          for (const prop of possibleDataProps) {
+            if (response[prop] && Array.isArray(response[prop])) {
+              return response[prop];
+            }
+          }
+
+          const values = Object.values(response);
+          for (const value of values) {
+            if (Array.isArray(value)) {
+              console.log("Encontrado array em valores do objeto com", value.length, "itens");
+              return value;
+            }
           }
         }
-        
-        const values = Object.values(response);
-        for (const value of values) {
-          if (Array.isArray(value)) {
-            console.log("Encontrado array em valores do objeto com", value.length, "itens");
-            return value;
-          }
-        }
+
+        console.warn("Formato inesperado para consultas:", response);
+        return [];
+      } catch (error) {
+        console.error("Erro ao buscar consultas:", error);
+        return [];
       }
-      
-      console.warn("Formato inesperado para consultas:", response);
-      return [];
-    } catch (error) {
-      console.error("Erro ao buscar consultas:", error);
-      return [];
-    }
-  },
-  refetchInterval: 30000,
-  refetchOnWindowFocus: true,
-});
+    },
+    refetchInterval: 30000,
+    refetchOnWindowFocus: true,
+  });
 
   const consultas = useMemo(() => {
     if (!consultasRaw) return [];
@@ -304,8 +305,7 @@ export default function Request() {
         acceptMutation.mutate(exame.id);
       });
 
-      paciente.consultas.forEach((consulta: any) => {
-      });
+      paciente.consultas.forEach((consulta: any) => {});
     }
   };
 
@@ -321,131 +321,234 @@ export default function Request() {
       });
     }
   };
+  const { data: exams } = useQuery({
+    queryKey: ["exams"],
+    queryFn: async () => {
+      const response = await examRoutes.getExams();
+      return response.data;
+    },
+  });
+
+  const { data: consulta } = useQuery({
+    queryKey: ["consultas"],
+    queryFn: async () => {
+      const response = await consultaRoutes.getConsultas();
+      return response.data;
+    },
+  });
+  console.log("Consultas: ", consulta);
 
   const renderPacienteCard = (paciente: PacienteAgendamento) => {
-    const hasExames = paciente.exames.length > 0;
-    const hasConsultas = paciente.consultas.length > 0;
-    const totalItems = paciente.exames.length + paciente.consultas.length;
+    const hasExames = exams?.length > 0;
+    const hasConsultas = consulta?.length > 0;
+    const totalItems = exams?.length + consultas?.length;
+
+    console.log("P: ", paciente);
 
     const precoTotal =
-      paciente.exames.reduce((total, exame: any) => {
+      exams?.reduce((total: number, exame: any) => {
         const examePreco = exame?.Exame?.reduce((subTotal: number, item: any) => subTotal + (item?.Tipo_Exame?.preco || 0), 0) || 0;
         return total + examePreco;
       }, 0) + paciente.consultas.reduce((total, consulta: any) => total + (consulta?.Tipo_Consulta?.preco || 0), 0);
 
     return (
-      <Card key={paciente.id_paciente} className="w-full transition-shadow duration-200 hover:shadow-lg border-l-4 border-l-blue-500">
-        <CardHeader className="p-4">
-          <div className="flex flex-col lg:flex-row gap-2 items-center justify-between">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="h-12 w-12 flex-shrink-0 rounded-full bg-blue-500 flex items-center justify-center text-white font-semibold">
-                {paciente.paciente_nome
-                  .split(" ")
-                  .map((n: string) => n[0])
-                  .join("")
-                  .toUpperCase()
-                  .slice(0, 2)}
-              </div>
-              <div className="min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  {hasExames && hasConsultas && (
-                    <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
-                      <Stethoscope className="w-3 h-3 mr-1" />
-                      <FileText className="w-3 h-3 mr-1" />
-                      Exames + Consultas
-                    </Badge>
-                  )}
-                  {hasExames && !hasConsultas && (
-                    <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                      <Stethoscope className="w-3 h-3 mr-1" />
-                      Exames
-                    </Badge>
-                  )}
-                  {!hasExames && hasConsultas && (
-                    <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                      <FileText className="w-3 h-3 mr-1" />
-                      Consultas
-                    </Badge>
-                  )}
-                  <Badge variant="secondary" className="text-xs">
-                    {totalItems} {totalItems === 1 ? "item" : "itens"}
-                  </Badge>
+      <div className="flex flex-col gap-3">
+        <Card className="w-full m-auto justify-center rounded-md transition-shadow duration-200 hover:shadow-lg border">
+          <CardHeader className="p-4 w-full">
+            <div className="flex flex-col lg:flex-row gap-2 items-center justify-between">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="h-12 w-12 flex-shrink-0 rounded-full bg-blue-500 flex items-center justify-center text-white font-semibold">
+                  {paciente?.paciente_nome
+                    ?.split(" ")
+                    ?.map((n: string) => n[0])
+                    ?.join("")
+                    ?.toUpperCase()
+                    ?.slice(0, 2)}
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900 line-clamp-1">{paciente.paciente_nome}</h3>
-                <div className="flex flex-wrap items-center gap-2 text-sm text-gray-500 truncate">
-                  {paciente.paciente_numero_identificacao && (
-                    <>
-                      <span className="inline-flex items-center gap-1">ID: {paciente.paciente_numero_identificacao}</span>
-                      <span>•</span>
-                    </>
-                  )}
-                  <span>{paciente.paciente_sexo}</span>
-                  {paciente.paciente_contacto && (
-                    <>
-                      <span>•</span>
-                      <span>{paciente.paciente_contacto}</span>
-                    </>
-                  )}
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    {hasExames && !hasConsultas && (
+                      <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                        <Stethoscope className="w-3 h-3 mr-1" />
+                        Exames
+                      </Badge>
+                    )}
+                    {!hasExames && hasConsultas && (
+                      <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                        <FileText className="w-3 h-3 mr-1" />
+                        Consultas
+                      </Badge>
+                    )}
+                    <Badge variant="secondary" className="text-xs">
+                      {totalItems} {totalItems === 1 ? "item" : "itens"}
+                    </Badge>
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 line-clamp-1">{paciente.paciente_nome}</h3>
+                  <div className="flex flex-wrap items-center gap-2 text-sm text-gray-500 truncate">
+                    {paciente?.paciente_numero_identificacao && (
+                      <>
+                        <span className="inline-flex items-center gap-1">ID: {paciente.paciente_numero_identificacao}</span>
+                        <span>•</span>
+                      </>
+                    )}
+                    <span>{paciente?.paciente_sexo}</span>
+                    {paciente?.paciente_contacto && (
+                      <>
+                        <span>•</span>
+                        <span>{paciente?.paciente_contacto}</span>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
+
+              <div className="flex flex-col items-end gap-2">
+                <span className="inline-flex items-center gap-2 px-3 py-1 rounded-md text-xs font-semibold border bg-yellow-100 text-yellow-800 border-yellow-200">
+                  <AlertCircle className="w-3 h-3" />
+                  <span className="whitespace-nowrap">{exams?.status}</span>
+                </span>
+                <span className="text-xs text-gray-500">Paciente #{exams?.id_paciente}</span>
+              </div>
             </div>
+          </CardHeader>
 
-            <div className="flex flex-col items-end gap-2">
-              <span className="inline-flex items-center gap-2 px-3 py-1 rounded-md text-xs font-semibold border bg-yellow-100 text-yellow-800 border-yellow-200">
-                <AlertCircle className="w-3 h-3" />
-                <span className="whitespace-nowrap">{paciente.status}</span>
-              </span>
-              <span className="text-xs text-gray-500">Paciente #{paciente.id_paciente}</span>
-            </div>
-          </div>
-        </CardHeader>
+          <CardContent className="space-y-4 p-4">
+            {/* Resumo dos Itens */}
+            <div className="space-y-3">
+              {/* Exames */}
+              {hasExames && (
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <Label className="flex items-center text-sm font-semibold text-gray-700">
+                      <div className="p-1.5 mr-2 rounded-md bg-blue-100">
+                        <Stethoscope className="w-4 h-4 text-blue-600" />
+                      </div>
+                      <p>Exames ({exams?.length})</p>
+                    </Label>
+                  </div>
 
-        <CardContent className="space-y-4 p-4">
-          {/* Resumo dos Itens */}
-          <div className="space-y-3">
-            {/* Exames */}
-            {hasExames && (
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <Label className="flex items-center text-sm font-semibold text-gray-700">
-                    <div className="p-1.5 mr-2 rounded-md bg-blue-100">
-                      <Stethoscope className="w-4 h-4 text-blue-600" />
-                    </div>
-                    <p>Exames ({paciente.exames.length})</p>
-                  </Label>
-                </div>
-
-                <div className="space-y-2 max-h-32 overflow-y-auto">
-                  {paciente.exames.map((exame: any, index: number) => (
-                    <div key={index} className="p-3 bg-blue-50 border border-blue-100 rounded">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">
-                            {exame?.Exame?.[0]?.Tipo_Exame?.nome || "Exame"}
-                          </p>
-                          {exame?.Exame?.[0]?.data_agendamento && (
-                            <p className="text-xs text-gray-500 mt-1">
-                              {format(new Date(exame.Exame[0].data_agendamento), "dd/MM/yyyy")}
-                              {exame.Exame[0].hora_agendamento && ` • ${exame.Exame[0].hora_agendamento}`}
-                            </p>
+                  <div className="space-y-2 max-h-32 overflow-y-auto">
+                    {paciente.exames.map((exame: any, index: number) => (
+                      <div key={index} className="p-3 bg-blue-50 border border-blue-100 rounded">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">{exame?.Exame?.[0]?.Tipo_Exame?.nome || "Exame"}</p>
+                            {exame?.Exame?.[0]?.data_agendamento && (
+                              <p className="text-xs text-gray-500 mt-1">
+                                {format(new Date(exame.Exame[0].data_agendamento), "dd/MM/yyyy")}
+                                {exame.Exame[0].hora_agendamento && ` • ${exame.Exame[0].hora_agendamento}`}
+                              </p>
+                            )}
+                          </div>
+                          {exame?.Exame?.[0]?.Tipo_Exame?.preco && (
+                            <span className="text-sm font-semibold text-blue-700">
+                              {new Intl.NumberFormat("pt-AO", {
+                                style: "currency",
+                                currency: "AOA",
+                              }).format(exame.Exame[0].Tipo_Exame.preco)}
+                            </span>
                           )}
                         </div>
-                        {exame?.Exame?.[0]?.Tipo_Exame?.preco && (
-                          <span className="text-sm font-semibold text-blue-700">
-                            {new Intl.NumberFormat("pt-AO", {
-                              style: "currency",
-                              currency: "AOA",
-                            }).format(exame.Exame[0].Tipo_Exame.preco)}
-                          </span>
-                        )}
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
+              )}
+            </div>
+
+            {/* Valor Total */}
+            {precoTotal > 0 && (
+              <div className="flex items-center justify-between p-3 rounded-lg bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200">
+                <span className="flex items-center gap-2 text-sm font-semibold text-green-800">
+                  <div className="p-1.5 bg-green-500 rounded text-white">
+                    <TrendingUp className="w-4 h-4" />
+                  </div>
+                  Valor Total
+                </span>
+                <span className="text-xl font-bold text-green-700">
+                  {new Intl.NumberFormat("pt-AO", {
+                    style: "currency",
+                    currency: "AOA",
+                  }).format(precoTotal)}
+                </span>
               </div>
             )}
+          </CardContent>
 
-            {/* Consultas - AGORA VAI APARECER! */}
+          <CardFooter className="p-4 flex flex-col sm:flex-row gap-2 bg-gray-50 border-t">
+            <Button onClick={() => handleAccept(paciente.id_paciente)} className="w-full bg-green-600 hover:bg-green-700 text-white flex items-center gap-2" disabled={acceptMutation.isPending}>
+              <CheckCircle className="w-4 h-4" />
+              {acceptMutation.isPending ? "Processando..." : "Aceitar Tudo"}
+            </Button>
+
+            <Button variant="destructive" onClick={() => openRejectDialog(paciente.id_paciente)} className="w-full flex items-center gap-2">
+              <XCircle className="w-4 h-4" />
+              Recusar
+            </Button>
+          </CardFooter>
+        </Card>
+
+        <Card className="w-full rounded-md transition-shadow duration-200 hover:shadow-lg border">
+          <CardHeader className="p-4">
+            <div className="flex flex-col lg:flex-row gap-2 items-center justify-between">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="h-12 w-12 flex-shrink-0 rounded-full bg-blue-500 flex items-center justify-center text-white font-semibold">
+                  {paciente?.paciente_nome
+                    ?.split(" ")
+                    ?.map((n: string) => n[0])
+                    ?.join("")
+                    ?.toUpperCase()
+                    ?.slice(0, 2)}
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    {hasExames && !hasConsultas && (
+                      <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                        <Stethoscope className="w-3 h-3 mr-1" />
+                        Exames
+                      </Badge>
+                    )}
+                    {!hasExames && hasConsultas && (
+                      <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                        <FileText className="w-3 h-3 mr-1" />
+                        Consultas
+                      </Badge>
+                    )}
+                    <Badge variant="secondary" className="text-xs">
+                      {totalItems} {totalItems === 1 ? "item" : "itens"}
+                    </Badge>
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 line-clamp-1">{paciente.paciente_nome}</h3>
+                  <div className="flex flex-wrap items-center gap-2 text-sm text-gray-500 truncate">
+                    {paciente?.paciente_numero_identificacao && (
+                      <>
+                        <span className="inline-flex items-center gap-1">ID: {paciente.paciente_numero_identificacao}</span>
+                        <span>•</span>
+                      </>
+                    )}
+                    <span>{paciente?.paciente_sexo}</span>
+                    {paciente?.paciente_contacto && (
+                      <>
+                        <span>•</span>
+                        <span>{paciente?.paciente_contacto}</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-col items-end gap-2">
+                <span className="inline-flex items-center gap-2 px-3 py-1 rounded-md text-xs font-semibold border bg-yellow-100 text-yellow-800 border-yellow-200">
+                  <AlertCircle className="w-3 h-3" />
+                  <span className="whitespace-nowrap">{exams?.status}</span>
+                </span>
+                <span className="text-xs text-gray-500">Paciente #{exams?.id_paciente}</span>
+              </div>
+            </div>
+          </CardHeader>
+
+          <CardContent className="space-y-4 p-4">
+            <div className="space-y-3"></div>
             {hasConsultas && (
               <div>
                 <div className="flex items-center justify-between mb-2">
@@ -462,9 +565,7 @@ export default function Request() {
                     <div key={index} className="p-3 bg-green-50 border border-green-100 rounded">
                       <div className="flex justify-between items-start">
                         <div>
-                          <p className="text-sm font-medium text-gray-900">
-                            {consulta?.Tipo_Consulta?.nome || "Consulta"}
-                          </p>
+                          <p className="text-sm font-medium text-gray-900">{consulta?.Tipo_Consulta?.nome || "Consulta"}</p>
                           <p className="text-xs text-gray-500 mt-1">
                             {consulta?.data_agendamento && (
                               <>
@@ -488,39 +589,9 @@ export default function Request() {
                 </div>
               </div>
             )}
-          </div>
-
-          {/* Valor Total */}
-          {precoTotal > 0 && (
-            <div className="flex items-center justify-between p-3 rounded-lg bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200">
-              <span className="flex items-center gap-2 text-sm font-semibold text-green-800">
-                <div className="p-1.5 bg-green-500 rounded text-white">
-                  <TrendingUp className="w-4 h-4" />
-                </div>
-                Valor Total
-              </span>
-              <span className="text-xl font-bold text-green-700">
-                {new Intl.NumberFormat("pt-AO", {
-                  style: "currency",
-                  currency: "AOA",
-                }).format(precoTotal)}
-              </span>
-            </div>
-          )}
-        </CardContent>
-
-        <CardFooter className="p-4 flex flex-col sm:flex-row gap-2 bg-gray-50 border-t">
-          <Button onClick={() => handleAccept(paciente.id_paciente)} className="w-full bg-green-600 hover:bg-green-700 text-white flex items-center gap-2" disabled={acceptMutation.isPending}>
-            <CheckCircle className="w-4 h-4" />
-            {acceptMutation.isPending ? "Processando..." : "Aceitar Tudo"}
-          </Button>
-
-          <Button variant="destructive" onClick={() => openRejectDialog(paciente.id_paciente)} className="w-full flex items-center gap-2">
-            <XCircle className="w-4 h-4" />
-            Recusar
-          </Button>
-        </CardFooter>
-      </Card>
+          </CardContent>
+        </Card>
+      </div>
     );
   };
 
@@ -633,21 +704,10 @@ export default function Request() {
       {showStats && <ScheduleStats schedules={pacientesAgendamentos as any} isLoading={isLoading} />}
 
       {/* Bulk Actions */}
-      {!isLoading && filteredPacientes.length > 0 && (
-        <BulkActions 
-          schedules={filteredPacientes as any} 
-          selectedSchedules={selectedSchedules} 
-          onSelectionChange={setSelectedSchedules} 
-        />
-      )}
+      {!isLoading && filteredPacientes.length > 0 && <BulkActions schedules={filteredPacientes as any} selectedSchedules={selectedSchedules} onSelectionChange={setSelectedSchedules} />}
 
       {/* Filters */}
-      <ScheduleFilters 
-        onSearch={handleSearch} 
-        onFilterChange={handleFilterChange} 
-        totalSchedules={totalPacientes} 
-        filteredCount={filteredPacientes.length} 
-      />
+      <ScheduleFilters onSearch={handleSearch} onFilterChange={handleFilterChange} totalSchedules={totalPacientes} filteredCount={filteredPacientes.length} />
 
       {/* View Toggle and Content */}
       <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as "grid" | "list")}>
@@ -681,9 +741,7 @@ export default function Request() {
             <div className="text-center">
               <AlertTriangle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-gray-900 mb-2">Nenhum agendamento encontrado</h3>
-              <p className="text-gray-600 mb-4">
-                {totalPacientes === 0 ? "Não há agendamentos pendentes no momento." : "Tente ajustar os filtros para encontrar agendamentos."}
-              </p>
+              <p className="text-gray-600 mb-4">{totalPacientes === 0 ? "Não há agendamentos pendentes no momento." : "Tente ajustar os filtros para encontrar agendamentos."}</p>
               {filters.searchQuery && (
                 <Button variant="outline" onClick={() => handleSearch("")}>
                   Limpar busca
@@ -694,11 +752,7 @@ export default function Request() {
         ) : (
           <>
             <TabsContent value="grid" className="space-y-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-6">
-                {(filteredPacientes as unknown as PacienteAgendamento[])?.map((paciente: PacienteAgendamento) => 
-                  renderPacienteCard(paciente)
-                )}
-              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-6">{(filteredPacientes as unknown as PacienteAgendamento[])?.map((paciente: PacienteAgendamento) => renderPacienteCard(paciente))}</div>
             </TabsContent>
 
             <TabsContent value="list" className="space-y-4">
@@ -776,22 +830,11 @@ export default function Request() {
                           </td>
                           <td className="px-4 py-2 whitespace-nowrap">
                             <div className="flex gap-2">
-                              <Button 
-                                onClick={() => handleAccept(paciente.id_paciente)} 
-                                disabled={acceptMutation.isPending} 
-                                size="sm" 
-                                className="bg-green-600 hover:bg-green-700 text-white px-3"
-                              >
+                              <Button onClick={() => handleAccept(paciente.id_paciente)} disabled={acceptMutation.isPending} size="sm" className="bg-green-600 hover:bg-green-700 text-white px-3">
                                 <CheckCircle className="w-4 h-4" />
                               </Button>
 
-                              <Button 
-                                variant="destructive" 
-                                size="sm" 
-                                onClick={() => openRejectDialog(paciente.id_paciente)} 
-                                disabled={rejectMutation.isPending} 
-                                className="px-3"
-                              >
+                              <Button variant="destructive" size="sm" onClick={() => openRejectDialog(paciente.id_paciente)} disabled={rejectMutation.isPending} className="px-3">
                                 <XCircle className="w-4 h-4" />
                               </Button>
                             </div>
@@ -817,13 +860,7 @@ export default function Request() {
           <div className="space-y-4">
             <div>
               <Label htmlFor="reject-reason">Motivo da recusa</Label>
-              <Textarea 
-                id="reject-reason" 
-                placeholder="Digite o motivo da recusa..." 
-                value={rejectReason} 
-                onChange={(e) => setRejectReason(e.target.value)} 
-                className="mt-2" 
-              />
+              <Textarea id="reject-reason" placeholder="Digite o motivo da recusa..." value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} className="mt-2" />
             </div>
           </div>
           <DialogFooter>
@@ -837,11 +874,7 @@ export default function Request() {
             >
               Cancelar
             </Button>
-            <Button 
-              variant="destructive" 
-              onClick={handleConfirmReject} 
-              disabled={!rejectReason.trim() || rejectMutation.isPending}
-            >
+            <Button variant="destructive" onClick={handleConfirmReject} disabled={!rejectReason.trim() || rejectMutation.isPending}>
               {rejectMutation.isPending ? "Recusando..." : "Confirmar Recusa"}
             </Button>
           </DialogFooter>

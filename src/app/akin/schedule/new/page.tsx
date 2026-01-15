@@ -219,80 +219,133 @@ export default function New() {
     return { isValid: true };
   };
 
-  // Função para agendar CONSULTAS usando o novo endpoint
-  const handleSubmitConsultas = async () => {
+ // Função para agendar CONSULTAS usando o novo endpoint
+// Função para agendar CONSULTAS - Versão melhorada
+const handleSubmitConsultas = async () => {
+  try {
+    const consultas = schedules.filter((schedule) => schedule.tipo === TipoItem.CONSULTA);
+
+    if (consultas.length === 0) {
+      ___showErrorToastNotification({ message: "Nenhuma consulta para agendar." });
+      return false;
+    }
+
+    // Vamos tentar diferentes abordagens em sequência
+
+    // ABORDAGEM 1: Endpoint específico para consultas
     try {
-      const consultas = schedules.filter((schedule) => schedule.tipo === TipoItem.CONSULTA);
-
-      if (consultas.length === 0) {
-        ___showErrorToastNotification({ message: "Nenhuma consulta para agendar." });
-        return;
-      }
-
-      // **PAYLOAD PARA O NOVO ENDPOINT /schedulings/set-schedules**
-      const payload = {
+      const payload1 = {
         id_paciente: Number(selectedPatient!.id),
         id_unidade_de_saude: unit_health.toString(),
-        consultas_paciente: consultas.map((schedule) => ({
+        tipo: "CONSULTA", // Adicionar tipo explícito
+        consultas: consultas.map((schedule) => ({
           id_tipo_consulta: Number(schedule.item?.id),
-          data_agendamento: schedule.date instanceof Date ? schedule.date.toISOString().split("T")[0] : schedule.date ? new Date(schedule.date).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
+          data_agendamento: schedule.date instanceof Date ? schedule.date.toISOString().split("T")[0] : 
+                          schedule.date ? new Date(schedule.date).toISOString().split("T")[0] : 
+                          new Date().toISOString().split("T")[0],
           hora_agendamento: schedule.time,
-          status_reembolso: schedule.item && schedule.item.preco > 0 ? "NAO_PAGO" : "ISENTO",
+          status_pagamento: schedule.item && schedule.item.preco > 0 ? "NAO_PAGO" : "ISENTO",
         })),
       };
 
-      console.log("Enviando consultas para /schedulings/set-schedule:", JSON.stringify(payload, null, 2));
-
-      const response = await _axios.post("/schedulings/set-schedule", payload);
-
-      if (response.status === 201 || response.status === 200) {
+      console.log("Abordagem 1 - Endpoint específico:", payload1);
+      const response1 = await _axios.post("/consultations/batch", payload1);
+      
+      if (response1.status === 201 || response1.status === 200) {
         ___showSuccessToastNotification({
           message: `${consultas.length} consulta(s) agendada(s) com sucesso!`,
         });
         return true;
       }
+    } catch (error1) {
+      console.log("Abordagem 1 falhou:", error1);
+    }
 
-      return false;
-    } catch (error: any) {
-      console.error("Erro ao agendar consultas:", error);
-      console.error("Resposta do erro:", error.response?.data);
+    // ABORDAGEM 2: Usar o endpoint tradicional mas com estrutura limpa
+    try {
+      const payload2 = {
+        id_paciente: Number(selectedPatient!.id),
+        id_unidade_de_saude: unit_health.toString(),
+        id_recepcionista: user_id,
+        tipo_agendamento: "CONSULTA", 
+        status: "ACTIVO",
+        status_pagamento: "NAO_PAGO",
+        status_reembolso: "SEM_REEMBOLSO",
+        itens_consulta: consultas.map((schedule) => ({
+          id_tipo_consulta: Number(schedule.item?.id),
+          data_agendamento: schedule.date instanceof Date ? schedule.date.toISOString().split("T")[0] : 
+                          schedule.date ? new Date(schedule.date).toISOString().split("T")[0] : 
+                          new Date().toISOString().split("T")[0],
+          hora_agendamento: schedule.time,
+          status: "PENDENTE",
+          status_pagamento: schedule.item && schedule.item.preco > 0 ? "NAO_PAGO" : "ISENTO",
+          valor_total: schedule.item?.preco || 0,
+        })),
+      };
 
-      // Tentar endpoint alternativo se o principal falhar
-      try {
-        console.log("Tentando endpoint alternativo /schedulings...");
-        const payload = {
+      console.log("Abordagem 2 - Estrutura limpa:", payload2);
+      const response2 = await _axios.post("/schedulings/consultations", payload2);
+      
+      if (response2.status === 201 || response2.status === 200) {
+        ___showSuccessToastNotification({
+          message: "Consultas agendadas com sucesso!",
+        });
+        return true;
+      }
+    } catch (error2) {
+      console.log("Abordagem 2 falhou:", error2);
+    }
+
+    // ABORDAGEM 3: Último recurso - criar cada consulta individualmente
+    try {
+      let successCount = 0;
+      
+      for (const consulta of consultas) {
+        const payload3 = {
           id_paciente: Number(selectedPatient!.id),
           id_unidade_de_saude: unit_health.toString(),
-          id_recepcionista: user_id,
-          status: "ACTIVO",
-          status_pagamento: "NAO_PAGO",
-          status_reembolso: "SEM_REEMBOLSO",
-          consultas_paciente: schedules
-            .filter((schedule) => schedule.tipo === TipoItem.CONSULTA)
-            .map((schedule) => ({
-              id_tipo_consulta: Number(schedule.item?.id),
-              data_agendamento: schedule.date instanceof Date ? schedule.date.toISOString().split("T")[0] : schedule.date ? new Date(schedule.date).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
-              hora_agendamento: schedule.time,
-              status_pagamento: schedule.item && schedule.item.preco > 0 ? "NAO_PAGO" : "ISENTO",
-            })),
+          id_tipo_consulta: Number(consulta.item?.id),
+          data_agendamento: consulta.date instanceof Date ? consulta.date.toISOString().split("T")[0] : 
+                          consulta.date ? new Date(consulta.date).toISOString().split("T")[0] : 
+                          new Date().toISOString().split("T")[0],
+          hora_agendamento: consulta.time,
+          status: "PENDENTE",
+          status_pagamento: consulta.item && consulta.item.preco > 0 ? "NAO_PAGO" : "ISENTO",
+          valor_total: consulta.item?.preco || 0,
         };
 
-        const responseAlt = await _axios.post("/schedulings", payload);
-
-        if (responseAlt.status === 201 || responseAlt.status === 200) {
-          ___showSuccessToastNotification({
-            message: "Consultas agendadas com endpoint alternativo!",
-          });
-          return true;
+        console.log("Abordagem 3 - Consulta individual:", payload3);
+        const response3 = await _axios.post("/consultations", payload3);
+        
+        if (response3.status === 201 || response3.status === 200) {
+          successCount++;
         }
-      } catch (error2: any) {
-        console.error("Erro no endpoint alternativo:", error2);
       }
 
-      throw error;
+      if (successCount === consultas.length) {
+        ___showSuccessToastNotification({
+          message: `${successCount} consulta(s) agendada(s) individualmente!`,
+        });
+        return true;
+      }
+    } catch (error3) {
+      console.log("Abordagem 3 falhou:", error3);
     }
-  };
 
+    // Se todas as abordagens falharem
+    ___showErrorToastNotification({
+      message: "Não foi possível agendar as consultas. Verifique os endpoints disponíveis.",
+    });
+    return false;
+
+  } catch (error: any) {
+    console.error("Erro geral ao agendar consultas:", error);
+    ___showErrorToastNotification({
+      message: `Erro: ${error?.response?.data?.message || error.message || "Contate o suporte"}`,
+    });
+    return false;
+  }
+};
   // Função para agendar EXAMES usando o endpoint tradicional
   const handleSubmitExames = async () => {
     try {
@@ -321,8 +374,6 @@ export default function New() {
           isento: schedule.item?.preco === 0,
         })),
       };
-
-      console.log("Enviando exames para /schedulings:", JSON.stringify(payload, null, 2));
 
       const response = await _axios.post("/schedulings", payload);
 
@@ -390,8 +441,6 @@ export default function New() {
 
       // **SOLUÇÃO DE EMERGÊNCIA: Criar processo em duas etapas se falhar**
       try {
-        console.log("Tentando solução de emergência...");
-
         // **ETAPA 1: Criar o processo básico**
         const processoPayload = {
           id_paciente: Number(selectedPatient!.id),
@@ -402,11 +451,9 @@ export default function New() {
           status_reembolso: "SEM_REEMBOLSO",
         };
 
-        console.log("Criando processo básico:", processoPayload);
         const processoResponse = await _axios.post("/schedulings", processoPayload);
         const idProcesso = processoResponse.data.id;
 
-        console.log("Processo criado com ID:", idProcesso);
 
         // **ETAPA 2: Adicionar os itens**
         const consultas = schedules.filter((schedule) => schedule.tipo === TipoItem.CONSULTA);
@@ -424,7 +471,6 @@ export default function New() {
               valor_total: consulta.item?.preco || 0,
             };
 
-            console.log("Adicionando consulta:", consultaPayload);
             await _axios.post("/consultations", consultaPayload);
           }
 
