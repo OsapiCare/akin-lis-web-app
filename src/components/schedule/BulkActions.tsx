@@ -12,10 +12,9 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CheckCircle, XCircle, Loader, AlertTriangle, Users, Calendar, Stethoscope, CreditCard, FileText } from "lucide-react";
 import { scheduleRoutes } from "@/Api/Routes/schedule/index.routes";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { examRoutes } from "@/Api/Routes/Exam/index.route";
 
 interface BulkActionsProps {
-  schedules: ScheduleType[];
+  schedules: any[]; // Mudado de ScheduleType[] para any[]
   selectedSchedules: number[];
   onSelectionChange: (scheduleIds: number[]) => void;
 }
@@ -27,7 +26,9 @@ export function BulkActions({ schedules, selectedSchedules, onSelectionChange }:
 
   const bulkAcceptMutation = useMutation({
     mutationFn: async (scheduleIds: number[]) => {
-      const results = await Promise.allSettled(scheduleIds.map((id) => scheduleRoutes.acceptSchedule(id)));
+      const results = await Promise.allSettled(
+        scheduleIds.map((id) => scheduleRoutes.acceptSchedule(id))
+      );
       return results;
     },
     onSuccess: () => {
@@ -37,17 +38,11 @@ export function BulkActions({ schedules, selectedSchedules, onSelectionChange }:
     },
   });
 
-  const { data: exam } = useQuery({
-    queryKey: ["exam"],
-    queryFn: async () => {
-      const response = await examRoutes.getExams();
-      return response.data;
-    },
-  });
-
   const bulkRejectMutation = useMutation({
     mutationFn: async ({ scheduleIds }: { scheduleIds: number[] }) => {
-      const results = await Promise.allSettled(scheduleIds.map((id) => scheduleRoutes.rejectSchedule(id)));
+      const results = await Promise.allSettled(
+        scheduleIds.map((id) => scheduleRoutes.rejectSchedule(id))
+      );
       return results;
     },
     onSuccess: () => {
@@ -60,14 +55,17 @@ export function BulkActions({ schedules, selectedSchedules, onSelectionChange }:
   });
 
   const handleSelectAll = (checked: boolean) => {
+    
     if (checked) {
-      onSelectionChange(schedules.map((s) => s.id));
+      // Usar id_paciente em vez de id
+      const ids = schedules.map((s) => s.id_paciente || s.id);
+      onSelectionChange(ids);
     } else {
       onSelectionChange([]);
     }
   };
 
-  const handleSelectSchedule = (scheduleId: number, checked: boolean) => {
+  const handleSelectSchedule = (scheduleId: number, checked: boolean) => {    
     if (checked) {
       onSelectionChange([...selectedSchedules, scheduleId]);
     } else {
@@ -89,39 +87,38 @@ export function BulkActions({ schedules, selectedSchedules, onSelectionChange }:
     }
   };
 
-  const getSelectedSchedulesTotal = () => {
-    return selectedSchedules.reduce((total, scheduleId) => {
-      const schedule = schedules.find((s) => s.id === scheduleId);
-      if (!schedule) return total;
-
-      // Calcular total de exames
-      const examesTotal = schedule.Exame?.reduce((totalExame, exame) => {
-        return totalExame + (exame?.Tipo_Exame?.preco || 0);
-      }, 0) || 0;
-
-      // Calcular total de consultas
-      const consultasTotal = schedule.Consulta?.reduce((totalConsulta, consulta) => {
-        return totalConsulta + (consulta?.Tipo_Consulta?.preco || 0);
-      }, 0) || 0;
-
-      return total + examesTotal + consultasTotal;
-    }, 0);
-  };
-
+  // CORREÇÃO CRÍTICA: Função para contar exames e consultas
   const getSelectedSchedulesCounts = () => {
-    const counts = selectedSchedules.reduce(
-      (acc, scheduleId) => {
-        const schedule = schedules.find((s) => s.id === scheduleId);
-        if (schedule) {
-          acc.exames += schedule.Exame?.length || 0;
-          acc.consultas += schedule.Consulta?.length || 0;
-        }
-        return acc;
-      },
-      { exames: 0, consultas: 0 }
-    );
+    let examesCount = 0;
+    let consultasCount = 0;
+    let valorTotal = 0;
 
-    return counts;
+    selectedSchedules.forEach((pacienteId) => {
+      const paciente = schedules.find((p) => p.id_paciente === pacienteId);
+      if (paciente) {
+        // Contar exames
+        if (paciente.exames && Array.isArray(paciente.exames)) {
+          examesCount += paciente.exames.length;
+          
+          // Somar valor dos exames
+          paciente.exames.forEach((exame: any) => {
+            valorTotal += exame?.Tipo_Exame?.preco || 0;
+          });
+        }
+
+        // Contar consultas
+        if (paciente.consultas && Array.isArray(paciente.consultas)) {
+          consultasCount += paciente.consultas.length;
+          
+          // Somar valor das consultas
+          paciente.consultas.forEach((consulta: any) => {
+            valorTotal += consulta?.Tipo_Consulta?.preco || 0;
+          });
+        }
+      }
+    });
+
+    return { exames: examesCount, consultas: consultasCount, valorTotal };
   };
 
   const isIndeterminate = selectedSchedules.length > 0 && selectedSchedules.length < schedules.length;
@@ -162,34 +159,47 @@ export function BulkActions({ schedules, selectedSchedules, onSelectionChange }:
 
     return (
       <div className="space-y-1">
-        {allItems.map((item, index) => (
-          <div key={index} className="flex items-center gap-2 text-xs">
-            <Badge variant="outline" className={`${item.tipo === "Exame" ? "bg-blue-50 text-blue-700 border-blue-200" : "bg-green-50 text-green-700 border-green-200"} px-1 py-0`}>
-              {item.tipo === "Exame" ? <Stethoscope className="w-2 h-2 mr-1" /> : <FileText className="w-2 h-2 mr-1" />}
-              {item.tipo}
-            </Badge>
-            <span className="text-gray-600">{formatDate(item.data)}</span>
-            {item.preco > 0 && (
-              <span className="font-semibold text-green-600 ml-auto">
-                {new Intl.NumberFormat("pt-AO", {
-                  style: "currency",
-                  currency: "AOA",
-                }).format(item.preco)}
-              </span>
-            )}
-          </div>
-        ))}
+        {allItems.length > 0 ? (
+          allItems.map((item, index) => (
+            <div key={index} className="flex items-center gap-2 text-xs">
+              <Badge variant="outline" className={`${item.tipo === "Exame" ? "bg-blue-50 text-blue-700 border-blue-200" : "bg-green-50 text-green-700 border-green-200"} px-1 py-0`}>
+                {item.tipo === "Exame" ? <Stethoscope className="w-2 h-2 mr-1" /> : <FileText className="w-2 h-2 mr-1" />}
+                {item.tipo}
+              </Badge>
+              <span className="text-gray-600">{formatDate(item.data)}</span>
+              {item.preco > 0 && (
+                <span className="font-semibold text-green-600 ml-auto">
+                  {new Intl.NumberFormat("pt-AO", {
+                    style: "currency",
+                    currency: "AOA",
+                  }).format(item.preco)}
+                </span>
+              )}
+            </div>
+          ))
+        ) : (
+          <span className="text-xs text-gray-500 italic">Sem agendamentos detalhados</span>
+        )}
       </div>
     );
   };
+
+  // Obter contagens atualizadas
+  const counts = getSelectedSchedulesCounts();
 
   return (
     <div className="bg-white border rounded-lg p-4 space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <div className="flex items-center space-x-2">
-            <Checkbox checked={isAllSelected} onCheckedChange={handleSelectAll} />
-            <span className="text-sm font-medium">Selecionar todos ({schedules.length})</span>
+            <Checkbox 
+              id="select-all"
+              checked={isAllSelected}
+              onCheckedChange={handleSelectAll}
+            />
+            <Label htmlFor="select-all" className="text-sm font-medium cursor-pointer">
+              Selecionar todos ({schedules.length})
+            </Label>
           </div>
 
           {selectedSchedules.length > 0 && (
@@ -202,7 +212,12 @@ export function BulkActions({ schedules, selectedSchedules, onSelectionChange }:
 
         {selectedSchedules.length > 0 && (
           <div className="flex items-center space-x-2">
-            <Button onClick={handleBulkAccept} disabled={bulkAcceptMutation.isPending} className="bg-green-600 hover:bg-green-700 text-white" size="sm">
+            <Button 
+              onClick={handleBulkAccept} 
+              disabled={bulkAcceptMutation.isPending} 
+              className="bg-green-600 hover:bg-green-700 text-white" 
+              size="sm"
+            >
               {bulkAcceptMutation.isPending ? <Loader className="w-4 h-4 mr-2 animate-spin" /> : <CheckCircle className="w-4 h-4 mr-2" />}
               Aceitar ({selectedSchedules.length})
             </Button>
@@ -217,18 +232,28 @@ export function BulkActions({ schedules, selectedSchedules, onSelectionChange }:
               <DialogContent className="max-w-md">
                 <DialogHeader>
                   <DialogTitle>Recusar Agendamentos em Lote</DialogTitle>
-                  <DialogDescription>Você está prestes a recusar {selectedSchedules.length} agendamento(s). Esta ação não pode ser desfeita.</DialogDescription>
+                  <DialogDescription>
+                    Você está prestes a recusar {selectedSchedules.length} agendamento(s). Esta ação não pode ser desfeita.
+                  </DialogDescription>
                 </DialogHeader>
 
                 <div className="space-y-4">
                   <Alert>
                     <AlertTriangle className="h-4 w-4" />
-                    <AlertDescription>Todos os pacientes afetados serão notificados sobre a recusa.</AlertDescription>
+                    <AlertDescription>
+                      Todos os pacientes afetados serão notificados sobre a recusa.
+                    </AlertDescription>
                   </Alert>
 
                   <div>
                     <Label htmlFor="bulk-reject-reason">Motivo da recusa (aplicado a todos)</Label>
-                    <Textarea id="bulk-reject-reason" placeholder="Digite o motivo da recusa..." value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} className="mt-2" />
+                    <Textarea 
+                      id="bulk-reject-reason" 
+                      placeholder="Digite o motivo da recusa..." 
+                      value={rejectReason} 
+                      onChange={(e) => setRejectReason(e.target.value)} 
+                      className="mt-2" 
+                    />
                   </div>
                 </div>
 
@@ -236,7 +261,11 @@ export function BulkActions({ schedules, selectedSchedules, onSelectionChange }:
                   <Button variant="outline" onClick={() => setShowBulkRejectDialog(false)}>
                     Cancelar
                   </Button>
-                  <Button variant="destructive" onClick={handleBulkReject} disabled={!rejectReason.trim() || bulkRejectMutation.isPending}>
+                  <Button 
+                    variant="destructive" 
+                    onClick={handleBulkReject} 
+                    disabled={!rejectReason.trim() || bulkRejectMutation.isPending}
+                  >
                     {bulkRejectMutation.isPending ? <Loader className="w-4 h-4 mr-2 animate-spin" /> : "Confirmar Recusa"}
                   </Button>
                 </DialogFooter>
@@ -255,7 +284,7 @@ export function BulkActions({ schedules, selectedSchedules, onSelectionChange }:
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                   <div>
-                    <span className="text-gray-600">Agendamentos:</span>
+                    <span className="text-gray-600">Pacientes:</span>
                     <div className="font-semibold text-blue-700">{selectedSchedules.length}</div>
                   </div>
                 </div>
@@ -264,7 +293,7 @@ export function BulkActions({ schedules, selectedSchedules, onSelectionChange }:
                   <div>
                     <span className="text-gray-600">Exames:</span>
                     <div className="font-semibold text-blue-700">
-                      {getSelectedSchedulesCounts().exames}
+                      {counts.exames}
                     </div>
                   </div>
                 </div>
@@ -273,7 +302,7 @@ export function BulkActions({ schedules, selectedSchedules, onSelectionChange }:
                   <div>
                     <span className="text-gray-600">Consultas:</span>
                     <div className="font-semibold text-green-700">
-                      {getSelectedSchedulesCounts().consultas}
+                      {counts.consultas}
                     </div>
                   </div>
                 </div>
@@ -285,14 +314,19 @@ export function BulkActions({ schedules, selectedSchedules, onSelectionChange }:
                       {new Intl.NumberFormat("pt-AO", {
                         style: "currency",
                         currency: "AOA",
-                      }).format(getSelectedSchedulesTotal())}
+                      }).format(counts.valorTotal)}
                     </div>
                   </div>
                 </div>
               </div>
 
               <div className="flex flex-col sm:flex-row gap-2">
-                <Button onClick={handleBulkAccept} disabled={bulkAcceptMutation.isPending} className="bg-green-600 hover:bg-green-700 text-white" size="sm">
+                <Button 
+                  onClick={handleBulkAccept} 
+                  disabled={bulkAcceptMutation.isPending} 
+                  className="bg-green-600 hover:bg-green-700 text-white" 
+                  size="sm"
+                >
                   {bulkAcceptMutation.isPending ? <Loader className="w-4 h-4 mr-2 animate-spin" /> : <CheckCircle className="w-4 h-4 mr-2" />}
                   Aceitar {selectedSchedules.length > 1 ? "Todos" : ""}
                 </Button>
@@ -307,18 +341,28 @@ export function BulkActions({ schedules, selectedSchedules, onSelectionChange }:
                   <DialogContent className="max-w-md">
                     <DialogHeader>
                       <DialogTitle>Recusar Agendamentos em Lote</DialogTitle>
-                      <DialogDescription>Você está prestes a recusar {selectedSchedules.length} agendamento(s). Esta ação não pode ser desfeita.</DialogDescription>
+                      <DialogDescription>
+                        Você está prestes a recusar {selectedSchedules.length} agendamento(s). Esta ação não pode ser desfeita.
+                      </DialogDescription>
                     </DialogHeader>
 
                     <div className="space-y-4">
                       <Alert>
                         <AlertTriangle className="h-4 w-4" />
-                        <AlertDescription>Todos os pacientes afetados serão notificados sobre a recusa.</AlertDescription>
+                        <AlertDescription>
+                          Todos os pacientes afetados serão notificados sobre a recusa.
+                        </AlertDescription>
                       </Alert>
 
                       <div>
                         <Label htmlFor="bulk-reject-reason">Motivo da recusa (aplicado a todos)</Label>
-                        <Textarea id="bulk-reject-reason" placeholder="Digite o motivo da recusa..." value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} className="mt-2" />
+                        <Textarea 
+                          id="bulk-reject-reason" 
+                          placeholder="Digite o motivo da recusa..." 
+                          value={rejectReason} 
+                          onChange={(e) => setRejectReason(e.target.value)} 
+                          className="mt-2" 
+                        />
                       </div>
                     </div>
 
@@ -326,7 +370,11 @@ export function BulkActions({ schedules, selectedSchedules, onSelectionChange }:
                       <Button variant="outline" onClick={() => setShowBulkRejectDialog(false)}>
                         Cancelar
                       </Button>
-                      <Button variant="destructive" onClick={handleBulkReject} disabled={!rejectReason.trim() || bulkRejectMutation.isPending}>
+                      <Button 
+                        variant="destructive" 
+                        onClick={handleBulkReject} 
+                        disabled={!rejectReason.trim() || bulkRejectMutation.isPending}
+                      >
                         {bulkRejectMutation.isPending ? <Loader className="w-4 h-4 mr-2 animate-spin" /> : "Confirmar Recusa"}
                       </Button>
                     </DialogFooter>
@@ -340,35 +388,65 @@ export function BulkActions({ schedules, selectedSchedules, onSelectionChange }:
 
       {/* Individual Schedule Selection */}
       <div className="space-y-2 max-h-60 overflow-y-auto">
-        {schedules.map((schedule: any) => (
-          <div key={schedule.id_paciente} className="flex items-start space-x-3 p-2 hover:bg-gray-50 rounded">
-            <Checkbox 
-              checked={selectedSchedules.includes(schedule.id_paciente)} 
-              onCheckedChange={(checked) => handleSelectSchedule(schedule.id_paciente, checked as boolean)} 
-              className="mt-1"
-            />
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between mb-1">
-                <span className="font-medium truncate">{schedule.paciente_nome}</span>
-                <div className="flex items-center space-x-2 text-xs text-gray-500">
-                  <Calendar className="w-3 h-3" />
-                  <span className="font-medium">
-                    Total: {new Intl.NumberFormat("pt-AO", {
-                      style: "currency",
-                      currency: "AOA",
-                    }).format(
-                      (schedule.exames?.reduce((total: number, exame: any) => total + (exame?.Tipo_Exame?.preco || 0), 0) || 0) +
-                      (schedule.consultas?.reduce((total: number, consulta: any) => total + (consulta?.Tipo_Consulta?.preco || 0), 0) || 0)
-                    )}
-                  </span>
+        {schedules.map((schedule) => {
+          const scheduleId = schedule.id_paciente || schedule.id;
+          const isSelected = selectedSchedules.includes(scheduleId);
+          
+          // Calcular valor total para este paciente
+          const valorTotal = 
+            (schedule.exames?.reduce((total: number, exame: any) => total + (exame?.Tipo_Exame?.preco || 0), 0) || 0) +
+            (schedule.consultas?.reduce((total: number, consulta: any) => total + (consulta?.Tipo_Consulta?.preco || 0), 0) || 0);
+
+          return (
+            <div 
+              key={scheduleId} 
+              className={`flex items-start space-x-3 p-2 rounded cursor-pointer ${isSelected ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
+              onClick={() => handleSelectSchedule(scheduleId, !isSelected)}
+            >
+              <Checkbox 
+                checked={isSelected}
+                onCheckedChange={(checked) => handleSelectSchedule(scheduleId, checked as boolean)}
+                className="mt-1"
+              />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="font-medium truncate">{schedule.paciente_nome || schedule.nome_completo}</span>
+                  <div className="flex items-center space-x-2 text-xs text-gray-500">
+                    <Calendar className="w-3 h-3" />
+                    <span className="font-medium">
+                      Total: {new Intl.NumberFormat("pt-AO", {
+                        style: "currency",
+                        currency: "AOA",
+                      }).format(valorTotal)}
+                    </span>
+                  </div>
+                </div>
+                
+                {/* Informações detalhadas de exames e consultas */}
+                {renderScheduleInfo(schedule)}
+                
+                {/* Contadores */}
+                <div className="flex items-center gap-3 mt-1">
+                  {(schedule.exames?.length || 0) > 0 && (
+                    <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-xs">
+                      <Stethoscope className="w-2 h-2 mr-1" />
+                      {schedule.exames.length} exame(s)
+                    </Badge>
+                  )}
+                  {(schedule.consultas?.length || 0) > 0 && (
+                    <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-xs">
+                      <FileText className="w-2 h-2 mr-1" />
+                      {schedule.consultas.length} consulta(s)
+                    </Badge>
+                  )}
+                  {(schedule.exames?.length === 0 && schedule.consultas?.length === 0) && (
+                    <span className="text-xs text-gray-500 italic">Sem agendamentos</span>
+                  )}
                 </div>
               </div>
-              
-              {/* Informações detalhadas de exames e consultas */}
-              {renderScheduleInfo(schedule)}
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
