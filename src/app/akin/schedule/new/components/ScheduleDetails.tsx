@@ -87,7 +87,7 @@ export function ScheduleDetails({
           
           {/* Seletor de Item (Exame ou Consulta) */}
           <div className="flex flex-col justify-between w-full">
-            <label className="font-bold mb-2 flex items-center gap-2">
+            <label className="font-bold mb-2 flex items-center  gap-2">
               {schedule.tipo === TipoItem.EXAME ? (
                 <>
                   <Microscope className="h-4 w-4" />
@@ -100,27 +100,6 @@ export function ScheduleDetails({
                 </>
               )}
             </label>
-            
-            <div className="flex gap-2 mb-2">
-              <Button
-                type="button"
-                size="sm"
-                variant={schedule.tipo === TipoItem.EXAME ? "default" : "outline"}
-                onClick={() => handleScheduleChange(index, "tipo", TipoItem.EXAME)}
-                className={`text-xs ${schedule.tipo === TipoItem.EXAME ? "bg-akin-turquoise hover:bg-akin-turquoise/90": ""}`}
-              >
-                Exame
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant={schedule.tipo === TipoItem.CONSULTA ? "default" : "outline"}
-                onClick={() => handleScheduleChange(index, "tipo", TipoItem.CONSULTA)}
-                className={`text-xs ${schedule.tipo === TipoItem.CONSULTA ? "bg-akin-turquoise hover:bg-akin-turquoise/90": ""}`}
-              >
-                Consulta
-              </Button>
-            </div>
             
             <Combobox 
               data={items.filter(item => item.tipo === schedule.tipo)} 

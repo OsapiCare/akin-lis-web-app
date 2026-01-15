@@ -15,6 +15,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 
 // Enum para tipos de itens
 enum TipoItem {
@@ -113,7 +114,6 @@ export default function New() {
 
       // Buscar pacientes
       const patientsResponse = await patientRoutes.getAllPacients();
-      console.log("Pacientes: ", patientsResponse);
 
       // Converter pacientes para PatientType
       const patientTypes: PatientType[] = patientsResponse.map((p: IPaciente) => convertToPatientType(p));
@@ -528,19 +528,17 @@ export default function New() {
             <div className="p-4 bg-gray-100 rounded-lg border">
               <div className="flex flex-col gap-3">
                 <div className="flex justify-between items-center">
-                  <label className="font-bold text-lg">Clínico Geral Disponível</label>
+                  <Label className="font-bold text-lg">Clínico Geral</Label>
                 </div>
 
                 <div className="space-y-4">
                   <div className="flex flex-col gap-2">
-                    <label className="font-medium">Clínico Responsável</label>
-
                     {isLoadingClinicos ? (
                       <div className="p-3 bg-gray-50 border border-gray-200 rounded-md">
                         <p className="text-gray-500">Carregando...</p>
                       </div>
                     ) : (
-                      <Select defaultValue={availableClinicos[0]?.id || ""}>
+                      <Select>
                         <SelectTrigger className="w-full">
                           <SelectValue placeholder="Selecione um clínico" />
                         </SelectTrigger>
