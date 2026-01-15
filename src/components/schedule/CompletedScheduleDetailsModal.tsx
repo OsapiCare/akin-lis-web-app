@@ -1327,7 +1327,7 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden p-0 z-[100]">
+      <DialogContent className="max-w-6xl max-h-[100vh] overflow-hidden p-0 z-[100]">
         {/* HEADER MODERNIZADO */}
         <DialogHeader className="sticky top-0 z-10 px-6 py-4 border-b bg-gradient-to-r from-blue-50 to-white">
           <div className="flex items-center justify-between">
@@ -1460,7 +1460,7 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
                 {/* SEÇÃO DE ALOCAÇÕES (APENAS RECEPCIONISTA) */}
                 {isReceptionist && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <Card className="border-0 shadow-lg bg-gradient-to-br from-white to-blue-50">
+                    <Card className="border-0 shadow-lg bg-gradient-to-br from-white to-blue-50 mb-44">
                       <CardHeader className="pb-3">
                         <CardTitle className="text-lg font-bold text-gray-800 flex items-center gap-2">
                           <div className="p-2 bg-gradient-to-br from-blue-100 to-blue-200 rounded-lg">
@@ -1511,7 +1511,7 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
                       </CardContent>
                     </Card>
 
-                    <Card className="border-0 shadow-lg bg-gradient-to-br from-white to-green-50">
+                    <Card className="border-0 shadow-lg bg-gradient-to-br from-white to-green-50 mb-44">
                       <CardHeader className="pb-3">
                         <CardTitle className="text-lg font-bold text-gray-800 flex items-center gap-2">
                           <div className="p-2 bg-gradient-to-br from-green-100 to-green-200 rounded-lg">
@@ -1564,7 +1564,7 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
               </TabsContent>
 
               {/* ABA DE EXAMES */}
-              <TabsContent value="exams" className="space-y-4">
+              <TabsContent value="exams" className="space-y-4 mb-11">
                 {activeExams.length === 0 ? (
                   <Card className="border-0 shadow-lg">
                     <CardContent className="py-12 text-center">
@@ -1581,7 +1581,7 @@ export function CompletedScheduleDetailsModal({ schedule, isOpen, onClose }: Com
               </TabsContent>
 
               {/* ABA DE CONSULTAS */}
-              <TabsContent value="consultations" className="space-y-4">
+              <TabsContent value="consultations" className="space-y-4 mb-11">
                 {activeConsultas.length === 0 ? (
                   <Card className="border-0 shadow-lg">
                     <CardContent className="py-12 text-center">
@@ -1695,7 +1695,7 @@ const ExamItem = ({ exam, editing, editedExam, ...props }: any) => {
   };
 
   return (
-    <Card className="border-0 shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300">
+    <Card className="border-0 shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300 mb-44">
       <CardContent className="p-0">
         <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-4 border-b">
           <div className="flex items-center justify-between">
@@ -1845,7 +1845,7 @@ const ConsultaItem = ({ consulta, editing, editedConsulta, ...props }: any) => {
     return "Clínico não encontrado";
   }
   return (
-    <Card className="border-0 shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300">
+    <Card className="border-0 shadow-lg mb-44 overflow-hidden hover:shadow-xl transition-shadow duration-300">
       <CardContent className="p-0">
         <div className="bg-gradient-to-r from-green-50 to-green-100 p-4 border-b">
           <div className="flex items-center justify-between">
